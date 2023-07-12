@@ -1731,6 +1731,18 @@ class _defs_weight_paint:
         )
 
 
+class _defs_paint_grease_pencil:
+
+    @ToolDef.from_fn
+    def draw():
+        return dict(
+            idname="builtin_brush.Draw",
+            label="Draw",
+            icon="brush.gpencil_draw.draw",
+            data_block='DRAW',
+        )
+
+
 class _defs_image_generic:
 
     @staticmethod
@@ -1972,13 +1984,6 @@ class _defs_gpencil_paint:
 
     @staticmethod
     def generate_from_brushes(context):
-        if context and context.preferences.experimental.use_grease_pencil_version3:
-            return tuple([ToolDef.from_dict(dict(
-                idname="builtin_brush.Draw",
-                label="Draw",
-                icon="brush.gpencil_draw.draw",
-                data_block='DRAW',
-            ))])
         return generate_from_enum_ex(
             context,
             idname_prefix="builtin_brush.",
@@ -3008,6 +3013,9 @@ class VIEW3D_PT_tools_active(ToolSelectPanelHelper, Panel):
             *_tools_annotate,
             _defs_view3d_generic.ruler,
         ],
+        'EDIT_GREASE_PENCIL': [
+            *_tools_select,
+        ],
         'PARTICLE': [
             *_tools_select,
             _defs_view3d_generic.cursor,
@@ -3093,6 +3101,11 @@ class VIEW3D_PT_tools_active(ToolSelectPanelHelper, Panel):
             ),
             *_tools_annotate,
         ],
+        'PAINT_GREASE_PENCIL': [
+            _defs_view3d_generic.cursor,
+            None,
+            _defs_paint_grease_pencil.draw,
+        ],
         'PAINT_GPENCIL': [
             _defs_view3d_generic.cursor,
             None,
@@ -3113,7 +3126,7 @@ class VIEW3D_PT_tools_active(ToolSelectPanelHelper, Panel):
             *_tools_annotate,
         ],
         'EDIT_GPENCIL': [
-            *_tools_select,
+            *_tools_gpencil_select,
             _defs_view3d_generic.cursor,
             None,
             *_tools_transform,

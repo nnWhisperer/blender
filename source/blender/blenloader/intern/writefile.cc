@@ -54,8 +54,8 @@
  * - write #BLO_CODE_GLOB (#FileGlobal struct) (some global vars).
  * - write #BLO_CODE_DNA1 (#SDNA struct)
  * - write #BLO_CODE_USER (#UserDef struct) for file paths:
-     - #BLENDER_STARTUP_FILE (on UNIX `~/.config/blender/X.X/config/startup.blend`).
-     - #BLENDER_USERPREF_FILE (on UNIX `~/.config/blender/X.X/config/userpref.blend`).
+ *   - #BLENDER_STARTUP_FILE (on UNIX `~/.config/blender/X.X/config/startup.blend`).
+ *   - #BLENDER_USERPREF_FILE (on UNIX `~/.config/blender/X.X/config/userpref.blend`).
  */
 
 #include <cerrno>
@@ -1094,11 +1094,11 @@ static void write_thumb(WriteData *wd, const BlendThumbnail *thumb)
 
 #define ID_BUFFER_STATIC_SIZE 8192
 
-typedef struct BLO_Write_IDBuffer {
+struct BLO_Write_IDBuffer {
   const IDTypeInfo *id_type;
   ID *temp_id;
   char id_buffer_static[ID_BUFFER_STATIC_SIZE];
-} BLO_Write_IDBuffer;
+};
 
 static void id_buffer_init_for_id_type(BLO_Write_IDBuffer *id_buffer, const IDTypeInfo *id_type)
 {

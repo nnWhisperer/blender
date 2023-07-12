@@ -10,12 +10,9 @@ if(WITH_COMPOSITOR_CPU)
     intern
     nodes
     operations
-    ../blenkernel
-    ../blenlib
     ../blentranslation
     ../depsgraph
     ../imbuf
-    ../makesdna
     ../makesrna
     ../nodes
     ../windowmanager
@@ -24,12 +21,8 @@ if(WITH_COMPOSITOR_CPU)
     ../render
     ../render/intern
     ../../../extern/clew/include
-    ../../../intern/atomic
     ../../../intern/clog
-    ../../../intern/guardedalloc
 
-    # dna_type_offsets.h
-    ${CMAKE_CURRENT_BINARY_DIR}/../makesdna/intern
     # RNA_prototypes.h
     ${CMAKE_BINARY_DIR}/source/blender/makesrna
   )
@@ -322,8 +315,8 @@ if(WITH_COMPOSITOR_CPU)
     nodes/COM_FilterNode.h
     nodes/COM_InpaintNode.cc
     nodes/COM_InpaintNode.h
-    nodes/COM_KuwaharaNode.h
     nodes/COM_KuwaharaNode.cc
+    nodes/COM_KuwaharaNode.h
     nodes/COM_PosterizeNode.cc
     nodes/COM_PosterizeNode.h
 
@@ -351,10 +344,10 @@ if(WITH_COMPOSITOR_CPU)
     operations/COM_GaussianXBlurOperation.h
     operations/COM_GaussianYBlurOperation.cc
     operations/COM_GaussianYBlurOperation.h
-    operations/COM_KuwaharaClassicOperation.h
-    operations/COM_KuwaharaClassicOperation.cc
-    operations/COM_KuwaharaAnisotropicOperation.h
     operations/COM_KuwaharaAnisotropicOperation.cc
+    operations/COM_KuwaharaAnisotropicOperation.h
+    operations/COM_KuwaharaClassicOperation.cc
+    operations/COM_KuwaharaClassicOperation.h
     operations/COM_MovieClipAttributeOperation.cc
     operations/COM_MovieClipAttributeOperation.h
     operations/COM_MovieDistortionOperation.cc
@@ -600,9 +593,12 @@ if(WITH_COMPOSITOR_CPU)
   )
 
   set(LIB
-    bf_blenkernel
-    bf_blenlib
+    PRIVATE bf::blenkernel
+    PRIVATE bf::blenlib
+    PRIVATE bf::dna
+    PRIVATE bf::intern::guardedalloc
     extern_clew
+    PRIVATE bf::intern::atomic
   )
 
   list(APPEND INC
@@ -624,9 +620,6 @@ if(WITH_COMPOSITOR_CPU)
     COMMAND ${CMAKE_COMMAND} -E make_directory ${GENSRC_DIR}
     COMMAND "$<TARGET_FILE:smaa_areatex>" ${GENSRC}
     DEPENDS smaa_areatex
-  )
-  add_custom_target(smaa_areatex_header
-    SOURCES ${GENSRC}
   )
   list(APPEND SRC
     ${GENSRC}
@@ -662,8 +655,6 @@ if(WITH_COMPOSITOR_CPU)
     target_compile_options(bf_compositor PRIVATE "-Wsuggest-override")
   endif()
 
-  add_dependencies(bf_compositor smaa_areatex_header)
-
   if(WITH_GTESTS)
     set(TEST_SRC
       tests/COM_BufferArea_test.cc
@@ -680,8 +671,6 @@ if(WITH_COMPOSITOR_CPU)
     blender_add_test_lib(bf_compositor_tests "${TEST_SRC}" "${INC};${TEST_INC}" "${INC_SYS}" "${LIB};${TEST_LIB}")
   endif()
 
-  # Needed so we can use dna_type_offsets.h for defaults initialization.
-  add_dependencies(bf_compositor bf_dna)
   # RNA_prototypes.h
   add_dependencies(bf_compositor bf_rna)
 

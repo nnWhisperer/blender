@@ -197,8 +197,7 @@ bool sequencer_editing_initialized_and_active(bContext *C)
 bool sequencer_strip_poll(bContext *C)
 {
   Editing *ed;
-  return (((ed = SEQ_editing_get(CTX_data_scene(C))) != nullptr) &&
-          (ed->act_seq != nullptr));
+  return (((ed = SEQ_editing_get(CTX_data_scene(C))) != nullptr) && (ed->act_seq != nullptr));
 }
 #endif
 
@@ -2741,9 +2740,9 @@ void SEQUENCER_OT_swap_data(wmOperatorType *ot)
  * \{ */
 
 static const EnumPropertyItem prop_change_effect_input_types[] = {
-    {0, "A_B", 0, "A -> B", ""},
-    {1, "B_C", 0, "B -> C", ""},
-    {2, "A_C", 0, "A -> C", ""},
+    {0, "A_B", 0, "A " BLI_STR_UTF8_RIGHTWARDS_ARROW " B", ""},
+    {1, "B_C", 0, "B " BLI_STR_UTF8_RIGHTWARDS_ARROW " C", ""},
+    {2, "A_C", 0, "A " BLI_STR_UTF8_RIGHTWARDS_ARROW " C", ""},
     {0, nullptr, 0, nullptr, nullptr},
 };
 
@@ -3174,7 +3173,7 @@ static int sequencer_export_subtitles_exec(bContext *C, wmOperator *op)
   Sequence *seq, *seq_next;
   Editing *ed = SEQ_editing_get(scene);
   ListBase text_seq = {0};
-  int iter = 0;
+  int iter = 1; /* Sequence numbers in .srt files are 1-indexed. */
   FILE *file;
   char filepath[FILE_MAX];
 

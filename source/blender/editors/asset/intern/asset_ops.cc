@@ -8,6 +8,7 @@
 
 #include "AS_asset_library.h"
 #include "AS_asset_library.hh"
+#include "AS_asset_representation.hh"
 
 #include "BKE_bpath.h"
 #include "BKE_context.h"
@@ -288,7 +289,7 @@ void AssetClearHelper::reportResults(const bContext *C, ReportList &reports) con
     /* Dedicated error message for when there is an active asset detected, but it's not an ID local
      * to this file. Helps users better understanding what's going on. */
     if (AssetHandle active_asset = CTX_wm_asset_handle(C, &is_valid);
-        is_valid && !ED_asset_handle_get_local_id(&active_asset))
+        is_valid && !ED_asset_handle_get_representation(&active_asset)->local_id())
     {
       BKE_report(&reports,
                  RPT_ERROR,
@@ -889,6 +890,7 @@ struct FileCheckCallbackInfo {
 
 static bool external_file_check_callback(BPathForeachPathData *bpath_data,
                                          char * /*path_dst*/,
+                                         size_t /*path_dst_maxncpy*/,
                                          const char *path_src)
 {
   FileCheckCallbackInfo *callback_info = static_cast<FileCheckCallbackInfo *>(

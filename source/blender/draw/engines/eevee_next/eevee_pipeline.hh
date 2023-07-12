@@ -23,23 +23,51 @@ namespace blender::eevee {
 class Instance;
 
 /* -------------------------------------------------------------------- */
-/** \name World Pipeline
+/** \name World Background Pipeline
  *
- * Render world values.
+ * Render world background values.
  * \{ */
 
-class WorldPipeline {
+class BackgroundPipeline {
  private:
   Instance &inst_;
 
   PassSimple world_ps_ = {"World.Background"};
 
  public:
+  BackgroundPipeline(Instance &inst) : inst_(inst){};
+
+  void sync(GPUMaterial *gpumat, float background_opacity);
+  void render(View &view);
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name World Probe Pipeline
+ *
+ * Renders a single side for the world reflection probe.
+ * \{ */
+
+class WorldPipeline {
+ private:
+  Instance &inst_;
+
+  /* Dummy textures: required to reuse background shader and avoid another shader variation. */
+  Texture dummy_renderpass_tx_;
+  Texture dummy_cryptomatte_tx_;
+  Texture dummy_aov_color_tx_;
+  Texture dummy_aov_value_tx_;
+
+  PassSimple cubemap_face_ps_ = {"World.Probe"};
+
+ public:
   WorldPipeline(Instance &inst) : inst_(inst){};
 
   void sync(GPUMaterial *gpumat);
   void render(View &view);
-};
+
+};  // namespace blender::eevee
 
 /** \} */
 
@@ -183,6 +211,28 @@ class DeferredPipeline {
 /** \} */
 
 /* -------------------------------------------------------------------- */
+/** \name Capture Pipeline
+ *
+ * \{ */
+
+class CapturePipeline {
+ private:
+  Instance &inst_;
+
+  PassMain surface_ps_ = {"Capture.Surface"};
+
+ public:
+  CapturePipeline(Instance &inst) : inst_(inst){};
+
+  PassMain::Sub *surface_material_add(GPUMaterial *gpumat);
+
+  void sync();
+  void render(View &view);
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name Utility texture
  *
  * 64x64 2D array texture containing LUT tables and blue noises.
@@ -265,21 +315,30 @@ class UtilityTexture : public Texture {
 
 class PipelineModule {
  public:
+  BackgroundPipeline background;
   WorldPipeline world;
   DeferredPipeline deferred;
   ForwardPipeline forward;
   ShadowPipeline shadow;
+  CapturePipeline capture;
 
   UtilityTexture utility_tx;
 
  public:
-  PipelineModule(Instance &inst) : world(inst), deferred(inst), forward(inst), shadow(inst){};
+  PipelineModule(Instance &inst)
+      : background(inst),
+        world(inst),
+        deferred(inst),
+        forward(inst),
+        shadow(inst),
+        capture(inst){};
 
   void begin_sync()
   {
     deferred.begin_sync();
     forward.sync();
     shadow.sync();
+    capture.sync();
   }
 
   void end_sync()
@@ -322,6 +381,8 @@ class PipelineModule {
         return nullptr;
       case MAT_PIPE_SHADOW:
         return shadow.surface_material_add(gpumat);
+      case MAT_PIPE_CAPTURE:
+        return capture.surface_material_add(gpumat);
     }
     return nullptr;
   }

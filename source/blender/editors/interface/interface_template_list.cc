@@ -455,21 +455,21 @@ static void ui_template_list_collect_items(PointerRNA *list_ptr,
         activei_mapping_pending = false;
       }
 #if 0 /* For now, do not alter active element, even if it will be hidden... */
-          else if (activei < i) {
-            /* We do not want an active but invisible item!
-             * Only exception is when all items are filtered out...
-             */
-            if (prev_order_idx >= 0) {
-              activei = prev_order_idx;
-              RNA_property_int_set(active_dataptr, activeprop, prev_i);
-            }
-            else {
-              activei = new_order_idx;
-              RNA_property_int_set(active_dataptr, activeprop, i);
-            }
-          }
-          prev_i = i;
-          prev_ii = new_order_idx;
+      else if (activei < i) {
+        /* We do not want an active but invisible item!
+         * Only exception is when all items are filtered out...
+         */
+        if (prev_order_idx >= 0) {
+          activei = prev_order_idx;
+          RNA_property_int_set(active_dataptr, activeprop, prev_i);
+        }
+        else {
+          activei = new_order_idx;
+          RNA_property_int_set(active_dataptr, activeprop, i);
+        }
+      }
+      prev_i = i;
+      prev_ii = new_order_idx;
 #endif
     }
     i++;
@@ -610,9 +610,8 @@ static void uilist_prepare(uiList *ui_list,
                                   items->tot_items);
 }
 
-static void uilist_resize_update_cb(bContext *C, void *arg1, void * /*arg2*/)
+static void uilist_resize_update(bContext *C, uiList *ui_list)
 {
-  uiList *ui_list = static_cast<uiList *>(arg1);
   uiListDyn *dyn_data = ui_list->dyn_data;
 
   /* This way we get diff in number of additional items to show (positive) or hide (negative). */
@@ -1148,7 +1147,7 @@ static void ui_template_list_layout_draw(const bContext *C,
                             0,
                             0,
                             "");
-        UI_but_func_set(but, uilist_resize_update_cb, ui_list, nullptr);
+        UI_but_func_set(but, [ui_list](bContext &C) { uilist_resize_update(&C, ui_list); });
       }
 
       UI_block_emboss_set(subblock, UI_EMBOSS);
@@ -1205,7 +1204,7 @@ static void ui_template_list_layout_draw(const bContext *C,
                             0,
                             0,
                             "");
-        UI_but_func_set(but, uilist_resize_update_cb, ui_list, nullptr);
+        UI_but_func_set(but, [ui_list](bContext &C) { uilist_resize_update(&C, ui_list); });
       }
 
       UI_block_emboss_set(subblock, UI_EMBOSS);

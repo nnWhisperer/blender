@@ -106,6 +106,12 @@ wmKeyMap *WM_keymap_guess_from_context(const bContext *C)
       case CTX_MODE_EDIT_LATTICE:
         km_id = "Lattice";
         break;
+      case CTX_MODE_EDIT_GREASE_PENCIL:
+        km_id = "Grease Pencil Edit Mode";
+        break;
+      case CTX_MODE_EDIT_POINT_CLOUD:
+        km_id = "Point Cloud Edit Mode";
+        break;
       case CTX_MODE_POSE:
         km_id = "Pose";
         break;
@@ -127,28 +133,26 @@ wmKeyMap *WM_keymap_guess_from_context(const bContext *C)
       case CTX_MODE_OBJECT:
         km_id = "Object Mode";
         break;
-      case CTX_MODE_PAINT_GPENCIL:
+      case CTX_MODE_PAINT_GPENCIL_LEGACY:
         km_id = "Grease Pencil Stroke Paint Mode";
         break;
-      case CTX_MODE_EDIT_GPENCIL:
-        if (U.experimental.use_grease_pencil_version3) {
-          km_id = "Grease Pencil Edit Mode";
-        }
-        else {
-          km_id = "Grease Pencil Stroke Edit Mode";
-        }
+      case CTX_MODE_EDIT_GPENCIL_LEGACY:
+        km_id = "Grease Pencil Stroke Edit Mode";
         break;
-      case CTX_MODE_SCULPT_GPENCIL:
+      case CTX_MODE_SCULPT_GPENCIL_LEGACY:
         km_id = "Grease Pencil Stroke Sculpt Mode";
         break;
-      case CTX_MODE_WEIGHT_GPENCIL:
+      case CTX_MODE_WEIGHT_GPENCIL_LEGACY:
         km_id = "Grease Pencil Stroke Weight Mode";
         break;
-      case CTX_MODE_VERTEX_GPENCIL:
+      case CTX_MODE_VERTEX_GPENCIL_LEGACY:
         km_id = "Grease Pencil Stroke Vertex Mode";
         break;
       case CTX_MODE_SCULPT_CURVES:
         km_id = "Sculpt Curves";
+        break;
+      case CTX_MODE_PAINT_GREASE_PENCIL:
+        km_id = "Grease Pencil Paint Mode";
         break;
     }
   }

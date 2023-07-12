@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 3.6.0 Beta (b'de4fb0e570b4')\n"
+"Project-Id-Version: Blender 4.0.0 Alpha (b'2f5245b4340a')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-06-05 09:47:30\n"
+"POT-Creation-Date: 2023-07-10 12:34:48\n"
 "PO-Revision-Date: 2015-03-03 16:21+0530\n"
 "Last-Translator: Roshan Lal Gumasta <roshan@anisecrets.com>\n"
 "Language-Team: Hindi <www.anisecrets.com>\n"
@@ -455,6 +455,10 @@ msgid "Brushes"
 msgstr "तूलिका"
 
 
+msgid "Grease Pencil"
+msgstr "तैलीय पेंसिल"
+
+
 msgid "Images"
 msgstr "छवि"
 
@@ -693,10 +697,6 @@ msgstr "पुनरूक्तियाँ"
 
 msgid "Hue"
 msgstr "छटा"
-
-
-msgid "Path"
-msgstr "पथ"
 
 
 msgid "Background Image"
@@ -1156,22 +1156,6 @@ msgid "Factor"
 msgstr "कारक"
 
 
-msgid "Wave Type"
-msgstr "लहर प्रकार"
-
-
-msgid "Depth Change"
-msgstr "गहनता परिवर्तन"
-
-
-msgid "Obstacle"
-msgstr "प्रतिबंधी"
-
-
-msgid "Force"
-msgstr "बल"
-
-
 msgid "Canvas Settings"
 msgstr "चित्रपटी विन्यास"
 
@@ -1300,6 +1284,10 @@ msgid "Drag"
 msgstr "खींचें"
 
 
+msgid "Force"
+msgstr "बल"
+
+
 msgid "Wind"
 msgstr "पवन"
 
@@ -1385,18 +1373,6 @@ msgid "Axis"
 msgstr "अक्ष"
 
 
-msgid "Kink"
-msgstr "ऐंठन"
-
-
-msgid "Curl"
-msgstr "लट"
-
-
-msgid "Wave"
-msgstr "लहर"
-
-
 msgid "Noise"
 msgstr "खुरदुरा"
 
@@ -1417,16 +1393,16 @@ msgid "Texture Mode"
 msgstr "बनावट रूप"
 
 
+msgid "Curl"
+msgstr "लट"
+
+
 msgid "2D"
 msgstr "द्वि-आयाम"
 
 
 msgid "Fonts"
 msgstr "मुद्र्"
-
-
-msgid "Grease Pencil"
-msgstr "तैलीय पेंसिल"
 
 
 msgid "Save"
@@ -1511,6 +1487,10 @@ msgstr "धुआँ"
 
 msgid "Fluid"
 msgstr "तरल पदार्थ"
+
+
+msgid "Obstacle"
+msgstr "प्रतिबंधी"
 
 
 msgid "Full Sample"
@@ -1854,18 +1834,6 @@ msgid "Clamp"
 msgstr "कीलक"
 
 
-msgid "Soften"
-msgstr "मॄदु"
-
-
-msgid "Clone"
-msgstr "प्रतिरूप"
-
-
-msgid "Mask"
-msgstr "आवरण"
-
-
 msgid "Brush"
 msgstr "तूलिका"
 
@@ -1894,44 +1862,16 @@ msgid "View Plane"
 msgstr "दृश्य समतल"
 
 
-msgid "Sculpt Tool"
-msgstr "शिल्प यंत्र"
-
-
-msgid "Clay"
-msgstr "मिट्टी"
-
-
-msgid "Blob"
-msgstr "बूँद"
-
-
-msgid "Flatten"
-msgstr "समतल"
-
-
-msgid "Thumb"
-msgstr "अंगूठा"
-
-
-msgid "Pose"
-msgstr "मुद्रा"
-
-
-msgid "Rotate"
-msgstr "घूर्णन"
-
-
-msgid "Cloth"
-msgstr "कपड़ा"
-
-
 msgid "Dots"
 msgstr "बिन्दु्"
 
 
 msgid "Use Vertex"
 msgstr "शिरोबिन्दु का उपयोग करें"
+
+
+msgid "Sculpt Tool"
+msgstr "शिल्प यंत्र"
 
 
 msgid "Relax"
@@ -2008,6 +1948,10 @@ msgstr "बिंदू विस्तार v"
 
 msgid "Z-Up"
 msgstr "Z-ऊर्ध्व"
+
+
+msgid "Path"
+msgstr "पथ"
 
 
 msgid "Flush"
@@ -2230,6 +2174,10 @@ msgid "Hair"
 msgstr "बाल"
 
 
+msgid "Cloth"
+msgstr "कपड़ा"
+
+
 msgid "Edges"
 msgstr "किनारों"
 
@@ -2286,30 +2234,6 @@ msgid "Nodes"
 msgstr "ग्रन्थि्"
 
 
-msgid "32x32"
-msgstr "३२ x ३२"
-
-
-msgid "64x64"
-msgstr "६४ x ६४"
-
-
-msgid "128x128"
-msgstr "१२८ x १२८"
-
-
-msgid "256x256"
-msgstr "२५६ x २५६"
-
-
-msgid "512x512"
-msgstr "५१२ x ५१२"
-
-
-msgid "1024x1024"
-msgstr "१०२४ x १०२४"
-
-
 msgid "High"
 msgstr "उच्च"
 
@@ -2342,10 +2266,6 @@ msgid "Circle"
 msgstr "चक्र"
 
 
-msgid "Both"
-msgstr "दोनों"
-
-
 msgid "Faces"
 msgstr "सतह"
 
@@ -2364,6 +2284,10 @@ msgstr "शिल्प रूप"
 
 msgid "Motion Path"
 msgstr "गति पथ"
+
+
+msgid "Pose"
+msgstr "मुद्रा"
 
 
 msgid "Rigid Body Constraint"
@@ -2839,6 +2763,10 @@ msgid "Flip"
 msgstr "पलटें"
 
 
+msgid "Mask"
+msgstr "आवरण"
+
+
 msgctxt "MovieClip"
 msgid "Clip"
 msgstr "छांटन"
@@ -3039,6 +2967,10 @@ msgstr "त्वचा"
 
 msgid "Warp"
 msgstr "विकृति"
+
+
+msgid "Wave"
+msgstr "लहर"
 
 
 msgid "Dynamic Paint"
@@ -3278,6 +3210,10 @@ msgid "Zoom"
 msgstr "निकट करें"
 
 
+msgid "Soften"
+msgstr "मॄदु"
+
+
 msgid "Shadow"
 msgstr "छाया"
 
@@ -3316,6 +3252,10 @@ msgstr "लाल सरणि"
 
 msgid "Motion Blur"
 msgstr "गतिकीय धुंधलापन"
+
+
+msgid "Rotate"
+msgstr "घूर्णन"
 
 
 msgid "Translate"
@@ -3372,6 +3312,10 @@ msgstr "प्रक्षेपण"
 
 msgid "Air"
 msgstr "वायु"
+
+
+msgid "Wave Type"
+msgstr "लहर प्रकार"
 
 
 msgid "At"
@@ -3843,8 +3787,20 @@ msgid "Modifier"
 msgstr "संशोधक"
 
 
+msgid "Both"
+msgstr "दोनों"
+
+
+msgid "Flatten"
+msgstr "समतल"
+
+
 msgid "Sigma"
 msgstr "सिग्मा"
+
+
+msgid "Next Keyframe"
+msgstr "अगले अनुबोधक चिन्ह"
 
 
 msgid "Create a new image"
@@ -4159,6 +4115,10 @@ msgid "Reset"
 msgstr "पूर्ववत करें"
 
 
+msgid "Clone"
+msgstr "प्रतिरूप"
+
+
 msgid "Fill the whole mask with a given value, or invert its values"
 msgstr "पूरे मुखौटा एक दिए गए मान के साथ भरने, या इसके मान पलटना"
 
@@ -4166,10 +4126,6 @@ msgstr "पूरे मुखौटा एक दिए गए मान के
 msgctxt "Operator"
 msgid "Remove Doubles"
 msgstr "युगल हटाएँ"
-
-
-msgid "Next Keyframe"
-msgstr "अगले अनुबोधक चिन्ह"
 
 
 msgctxt "Operator"
@@ -4731,6 +4687,10 @@ msgid "Predefined node color"
 msgstr "पूर्वनिर्धारित नोड रंग"
 
 
+msgid "Kink"
+msgstr "ऐंठन"
+
+
 msgid "Physics"
 msgstr "भौतिकी"
 
@@ -4841,22 +4801,6 @@ msgstr "जारी रखें"
 
 msgid "Dolly"
 msgstr "डॉली"
-
-
-msgid "2x"
-msgstr "२ एक्स"
-
-
-msgid "4x"
-msgstr "४ एक्स"
-
-
-msgid "8x"
-msgstr "८ एक्स"
-
-
-msgid "16x"
-msgstr "१६ x"
 
 
 msgid "Manual"
@@ -5335,6 +5279,11 @@ msgstr "वक्र"
 
 
 msgctxt "WindowManager"
+msgid "Grease Pencil"
+msgstr "तैलीय पेंसिल"
+
+
+msgctxt "WindowManager"
 msgid "Pose"
 msgstr "मुद्रा"
 
@@ -5390,11 +5339,6 @@ msgstr "छांटन बिंदुरेख संपादक"
 
 
 msgctxt "WindowManager"
-msgid "Grease Pencil"
-msgstr "तैलीय पेंसिल"
-
-
-msgctxt "WindowManager"
 msgid "Mask Editing"
 msgstr "आवरण संपादन"
 
@@ -5414,10 +5358,6 @@ msgstr "OSL स्क्रिप्ट संकलन में विफल, 
 
 msgid "No text or file specified in node, nothing to compile"
 msgstr "कोई पाठ या संचिका निर्दिष्ट नोड में, संकलन के लिए कुछ भी नहीं"
-
-
-msgid "OSL query failed to open "
-msgstr "OSL क्वेरी को खोलने में विफल रहा "
 
 
 msgid "External shader script must have .osl or .oso extension, or be a module name"

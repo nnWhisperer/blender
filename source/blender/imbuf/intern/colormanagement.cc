@@ -90,11 +90,11 @@ float imbuf_aces_to_scene_linear[3][3] = {{0.0f}};
  */
 static pthread_mutex_t processor_lock = BLI_MUTEX_INITIALIZER;
 
-typedef struct ColormanageProcessor {
+struct ColormanageProcessor {
   OCIO_ConstCPUProcessorRcPtr *cpu_processor;
   CurveMapping *curve_mapping;
   bool is_data_result;
-} ColormanageProcessor;
+};
 
 static struct global_gpu_state {
   /* GPU shader currently bound. */
@@ -185,7 +185,7 @@ static struct global_color_picking_state {
  *       requiring to pass all variables which affects on display buffer
  *       to color management cache system and keeps calls small and nice.
  */
-typedef struct ColormanageCacheViewSettings {
+struct ColormanageCacheViewSettings {
   int flag;
   int look;
   int view;
@@ -193,18 +193,18 @@ typedef struct ColormanageCacheViewSettings {
   float gamma;
   float dither;
   CurveMapping *curve_mapping;
-} ColormanageCacheViewSettings;
+};
 
-typedef struct ColormanageCacheDisplaySettings {
+struct ColormanageCacheDisplaySettings {
   int display;
-} ColormanageCacheDisplaySettings;
+};
 
-typedef struct ColormanageCacheKey {
+struct ColormanageCacheKey {
   int view;    /* view transformation used for display buffer */
   int display; /* display device name */
-} ColormanageCacheKey;
+};
 
-typedef struct ColormanageCacheData {
+struct ColormanageCacheData {
   int flag;                    /* view flags of cached buffer */
   int look;                    /* Additional artistic transform. */
   float exposure;              /* exposure value cached buffer is calculated with */
@@ -212,13 +212,13 @@ typedef struct ColormanageCacheData {
   float dither;                /* dither value cached buffer is calculated with */
   CurveMapping *curve_mapping; /* curve mapping used for cached buffer */
   int curve_mapping_timestamp; /* time stamp of curve mapping used for cached buffer */
-} ColormanageCacheData;
+};
 
-typedef struct ColormanageCache {
+struct ColormanageCache {
   MovieCache *moviecache;
 
   ColormanageCacheData *data;
-} ColormanageCache;
+};
 
 static MovieCache *colormanage_moviecache_get(const ImBuf *ibuf)
 {
@@ -587,7 +587,7 @@ static void colormanage_load_config(OCIO_ConstConfigRcPtr *config)
   invert_m3_m3(imbuf_scene_linear_to_aces, imbuf_aces_to_scene_linear);
 }
 
-static void colormanage_free_config(void)
+static void colormanage_free_config()
 {
   ColorSpace *colorspace;
   ColorManagedDisplay *display;
@@ -647,7 +647,7 @@ static void colormanage_free_config(void)
   OCIO_exit();
 }
 
-void colormanagement_init(void)
+void colormanagement_init()
 {
   const char *ocio_env;
   const char *configdir;
@@ -704,7 +704,7 @@ void colormanagement_init(void)
   BLI_init_srgb_conversion();
 }
 
-void colormanagement_exit(void)
+void colormanagement_exit()
 {
   OCIO_gpuCacheFree();
 
@@ -1036,7 +1036,7 @@ void colorspace_set_default_role(char *colorspace, int size, int role)
 
 void colormanage_imbuf_set_default_spaces(ImBuf *ibuf)
 {
-  ibuf->rect_colorspace = colormanage_colorspace_get_named(global_role_default_byte);
+  ibuf->byte_buffer.colorspace = colormanage_colorspace_get_named(global_role_default_byte);
 }
 
 void colormanage_imbuf_make_linear(ImBuf *ibuf, const char *from_colorspace)
@@ -1286,7 +1286,7 @@ void IMB_colormanagement_check_is_data(ImBuf *ibuf, const char *name)
 
 void IMB_colormanagegent_copy_settings(ImBuf *ibuf_src, ImBuf *ibuf_dst)
 {
-  IMB_colormanagement_assign_rect_colorspace(ibuf_dst,
+  IMB_colormanagement_assign_byte_colorspace(ibuf_dst,
                                              IMB_colormanagement_get_rect_colorspace(ibuf_src));
   IMB_colormanagement_assign_float_colorspace(ibuf_dst,
                                               IMB_colormanagement_get_float_colorspace(ibuf_src));
@@ -1305,7 +1305,7 @@ void IMB_colormanagement_assign_float_colorspace(ImBuf *ibuf, const char *name)
 {
   ColorSpace *colorspace = colormanage_colorspace_get_named(name);
 
-  ibuf->float_colorspace = colorspace;
+  ibuf->float_buffer.colorspace = colorspace;
 
   if (colorspace && colorspace->is_data) {
     ibuf->colormanage_flag |= IMB_COLORMANAGE_IS_DATA;
@@ -1315,11 +1315,11 @@ void IMB_colormanagement_assign_float_colorspace(ImBuf *ibuf, const char *name)
   }
 }
 
-void IMB_colormanagement_assign_rect_colorspace(ImBuf *ibuf, const char *name)
+void IMB_colormanagement_assign_byte_colorspace(ImBuf *ibuf, const char *name)
 {
   ColorSpace *colorspace = colormanage_colorspace_get_named(name);
 
-  ibuf->rect_colorspace = colorspace;
+  ibuf->byte_buffer.colorspace = colorspace;
 
   if (colorspace && colorspace->is_data) {
     ibuf->colormanage_flag |= IMB_COLORMANAGE_IS_DATA;
@@ -1331,8 +1331,8 @@ void IMB_colormanagement_assign_rect_colorspace(ImBuf *ibuf, const char *name)
 
 const char *IMB_colormanagement_get_float_colorspace(ImBuf *ibuf)
 {
-  if (ibuf->float_colorspace) {
-    return ibuf->float_colorspace->name;
+  if (ibuf->float_buffer.colorspace) {
+    return ibuf->float_buffer.colorspace->name;
   }
 
   return IMB_colormanagement_role_colorspace_name_get(COLOR_ROLE_SCENE_LINEAR);
@@ -1340,8 +1340,8 @@ const char *IMB_colormanagement_get_float_colorspace(ImBuf *ibuf)
 
 const char *IMB_colormanagement_get_rect_colorspace(ImBuf *ibuf)
 {
-  if (ibuf->rect_colorspace) {
-    return ibuf->rect_colorspace->name;
+  if (ibuf->byte_buffer.colorspace) {
+    return ibuf->byte_buffer.colorspace->name;
   }
 
   return IMB_colormanagement_role_colorspace_name_get(COLOR_ROLE_DEFAULT_BYTE);
@@ -1401,7 +1401,7 @@ bool IMB_colormanagement_space_name_is_srgb(const char *name)
   return (colorspace && IMB_colormanagement_space_is_srgb(colorspace));
 }
 
-const float *IMB_colormanagement_get_xyz_to_scene_linear(void)
+const float *IMB_colormanagement_get_xyz_to_scene_linear()
 {
   return &imbuf_xyz_to_scene_linear[0][0];
 }
@@ -1412,7 +1412,7 @@ const float *IMB_colormanagement_get_xyz_to_scene_linear(void)
 /** \name Threaded Display Buffer Transform Routines
  * \{ */
 
-typedef struct DisplayBufferThread {
+struct DisplayBufferThread {
   ColormanageProcessor *cm_processor;
 
   const float *buffer;
@@ -1432,9 +1432,9 @@ typedef struct DisplayBufferThread {
 
   const char *byte_colorspace;
   const char *float_colorspace;
-} DisplayBufferThread;
+};
 
-typedef struct DisplayBufferInitData {
+struct DisplayBufferInitData {
   ImBuf *ibuf;
   ColormanageProcessor *cm_processor;
   const float *buffer;
@@ -1447,7 +1447,7 @@ typedef struct DisplayBufferInitData {
 
   const char *byte_colorspace;
   const char *float_colorspace;
-} DisplayBufferInitData;
+};
 
 static void display_buffer_init_handle(void *handle_v,
                                        int start_line,
@@ -1687,8 +1687,8 @@ static void display_buffer_apply_threaded(ImBuf *ibuf,
   init_data.display_buffer = display_buffer;
   init_data.display_buffer_byte = display_buffer_byte;
 
-  if (ibuf->rect_colorspace != nullptr) {
-    init_data.byte_colorspace = ibuf->rect_colorspace->name;
+  if (ibuf->byte_buffer.colorspace != nullptr) {
+    init_data.byte_colorspace = ibuf->byte_buffer.colorspace->name;
   }
   else {
     /* happens for viewer images, which are not so simple to determine where to
@@ -1697,9 +1697,9 @@ static void display_buffer_apply_threaded(ImBuf *ibuf,
     init_data.byte_colorspace = global_role_default_byte;
   }
 
-  if (ibuf->float_colorspace != nullptr) {
+  if (ibuf->float_buffer.colorspace != nullptr) {
     /* sequencer stores float buffers in non-linear space */
-    init_data.float_colorspace = ibuf->float_colorspace->name;
+    init_data.float_colorspace = ibuf->float_buffer.colorspace->name;
   }
   else {
     init_data.float_colorspace = nullptr;
@@ -1719,7 +1719,7 @@ static bool is_ibuf_rect_in_display_space(ImBuf *ibuf,
   if ((view_settings->flag & COLORMANAGE_VIEW_USE_CURVES) == 0 &&
       view_settings->exposure == 0.0f && view_settings->gamma == 1.0f)
   {
-    const char *from_colorspace = ibuf->rect_colorspace->name;
+    const char *from_colorspace = ibuf->byte_buffer.colorspace->name;
     const char *to_colorspace = get_display_colorspace_name(view_settings, display_settings);
     ColorManagedLook *look_descr = colormanage_look_get_named(view_settings->look);
     if (look_descr != nullptr && !STREQ(look_descr->process_space, "")) {
@@ -1749,7 +1749,7 @@ static void colormanage_display_buffer_process_ex(
    * this would save byte -> float -> byte conversions making display buffer
    * computation noticeable faster
    */
-  if (ibuf->float_buffer.data == nullptr && ibuf->rect_colorspace) {
+  if (ibuf->float_buffer.data == nullptr && ibuf->byte_buffer.colorspace) {
     skip_transform = is_ibuf_rect_in_display_space(ibuf, view_settings, display_settings);
   }
 
@@ -1784,7 +1784,7 @@ static void colormanage_display_buffer_process(ImBuf *ibuf,
 /** \name Threaded Processor Transform Routines
  * \{ */
 
-typedef struct ProcessorTransformThread {
+struct ProcessorTransformThread {
   ColormanageProcessor *cm_processor;
   uchar *byte_buffer;
   float *float_buffer;
@@ -1794,9 +1794,9 @@ typedef struct ProcessorTransformThread {
   int channels;
   bool predivide;
   bool float_from_byte;
-} ProcessorTransformThread;
+};
 
-typedef struct ProcessorTransformInit {
+struct ProcessorTransformInitData {
   ColormanageProcessor *cm_processor;
   uchar *byte_buffer;
   float *float_buffer;
@@ -1805,7 +1805,7 @@ typedef struct ProcessorTransformInit {
   int channels;
   bool predivide;
   bool float_from_byte;
-} ProcessorTransformInitData;
+};
 
 static void processor_transform_init_handle(void *handle_v,
                                             int start_line,
@@ -2189,9 +2189,9 @@ void IMB_colormanagement_imbuf_to_byte_texture(uchar *out_buffer,
    * color space conversions can't be done on the GPU. */
   BLI_assert(ibuf->byte_buffer.data);
   BLI_assert(ibuf->float_buffer.data == nullptr);
-  BLI_assert(IMB_colormanagement_space_is_srgb(ibuf->rect_colorspace) ||
-             IMB_colormanagement_space_is_scene_linear(ibuf->rect_colorspace) ||
-             IMB_colormanagement_space_is_data(ibuf->rect_colorspace));
+  BLI_assert(IMB_colormanagement_space_is_srgb(ibuf->byte_buffer.colorspace) ||
+             IMB_colormanagement_space_is_scene_linear(ibuf->byte_buffer.colorspace) ||
+             IMB_colormanagement_space_is_data(ibuf->byte_buffer.colorspace));
 
   const uchar *in_buffer = ibuf->byte_buffer.data;
   const bool use_premultiply = IMB_alpha_affects_rgb(ibuf) && store_premultiplied;
@@ -2223,14 +2223,14 @@ void IMB_colormanagement_imbuf_to_byte_texture(uchar *out_buffer,
   }
 }
 
-typedef struct ImbufByteToFloatData {
+struct ImbufByteToFloatData {
   OCIO_ConstCPUProcessorRcPtr *processor;
   int width;
   int offset, stride;
   const uchar *in_buffer;
   float *out_buffer;
   bool use_premultiply;
-} ImbufByteToFloatData;
+};
 
 static void imbuf_byte_to_float_cb(void *__restrict userdata,
                                    const int y,
@@ -2318,9 +2318,9 @@ void IMB_colormanagement_imbuf_to_float_texture(float *out_buffer,
     const uchar *in_buffer = ibuf->byte_buffer.data;
     const bool use_premultiply = IMB_alpha_affects_rgb(ibuf) && store_premultiplied;
 
-    OCIO_ConstCPUProcessorRcPtr *processor = (ibuf->rect_colorspace) ?
+    OCIO_ConstCPUProcessorRcPtr *processor = (ibuf->byte_buffer.colorspace) ?
                                                  colorspace_to_scene_linear_cpu_processor(
-                                                     ibuf->rect_colorspace) :
+                                                     ibuf->byte_buffer.colorspace) :
                                                  nullptr;
 
     ImbufByteToFloatData data = {};
@@ -2556,11 +2556,11 @@ ImBuf *IMB_colormanagement_imbuf_for_write(ImBuf *ibuf,
     if (colormanaged_ibuf->float_buffer.data) {
       /* Float buffer isn't linear anymore,
        * image format write callback should check for this flag and assume
-       * no space conversion should happen if ibuf->float_colorspace != nullptr. */
-      colormanaged_ibuf->float_colorspace = display_transform_get_colorspace(
+       * no space conversion should happen if ibuf->float_buffer.colorspace != nullptr. */
+      colormanaged_ibuf->float_buffer.colorspace = display_transform_get_colorspace(
           &image_format->view_settings, &image_format->display_settings);
       if (byte_output) {
-        colormanaged_ibuf->rect_colorspace = colormanaged_ibuf->float_colorspace;
+        colormanaged_ibuf->byte_buffer.colorspace = colormanaged_ibuf->float_buffer.colorspace;
       }
     }
   }
@@ -2568,12 +2568,16 @@ ImBuf *IMB_colormanagement_imbuf_for_write(ImBuf *ibuf,
     /* Linear render or regular file output: conversion between two color spaces. */
 
     /* Detect which color space we need to convert between. */
-    const char *from_colorspace =
-        (ibuf->float_buffer.data && !(byte_output && ibuf->byte_buffer.data)) ?
-            /* From float buffer. */
-            (ibuf->float_colorspace) ? ibuf->float_colorspace->name : global_role_scene_linear :
-            /* From byte buffer. */
-            (ibuf->rect_colorspace) ? ibuf->rect_colorspace->name : global_role_default_byte;
+    const char *from_colorspace = (ibuf->float_buffer.data &&
+                                   !(byte_output && ibuf->byte_buffer.data)) ?
+                                      /* From float buffer. */
+                                      (ibuf->float_buffer.colorspace) ?
+                                      ibuf->float_buffer.colorspace->name :
+                                      global_role_scene_linear :
+                                      /* From byte buffer. */
+                                      (ibuf->byte_buffer.colorspace) ?
+                                      ibuf->byte_buffer.colorspace->name :
+                                      global_role_default_byte;
 
     const char *to_colorspace = image_format->linear_colorspace_settings.name;
 
@@ -2581,7 +2585,7 @@ ImBuf *IMB_colormanagement_imbuf_for_write(ImBuf *ibuf,
     if (to_colorspace[0] == '\0' || STREQ(from_colorspace, to_colorspace)) {
       /* No conversion needed, but may still need to allocate byte buffer for output. */
       if (byte_output && !ibuf->byte_buffer.data) {
-        ibuf->rect_colorspace = ibuf->float_colorspace;
+        ibuf->byte_buffer.colorspace = ibuf->float_buffer.colorspace;
         IMB_rect_from_float(ibuf);
       }
     }
@@ -2590,7 +2594,8 @@ ImBuf *IMB_colormanagement_imbuf_for_write(ImBuf *ibuf,
       colormanaged_ibuf = imbuf_ensure_editable(ibuf, colormanaged_ibuf, allocate_result);
 
       if (byte_output) {
-        colormanaged_ibuf->rect_colorspace = colormanage_colorspace_get_named(to_colorspace);
+        colormanaged_ibuf->byte_buffer.colorspace = colormanage_colorspace_get_named(
+            to_colorspace);
 
         if (colormanaged_ibuf->byte_buffer.data) {
           /* Byte to byte. */
@@ -2626,7 +2631,8 @@ ImBuf *IMB_colormanagement_imbuf_for_write(ImBuf *ibuf,
                                         to_colorspace,
                                         false);
 
-          colormanaged_ibuf->float_colorspace = colormanage_colorspace_get_named(to_colorspace);
+          colormanaged_ibuf->float_buffer.colorspace = colormanage_colorspace_get_named(
+              to_colorspace);
         }
       }
     }
@@ -2672,7 +2678,7 @@ uchar *IMB_display_buffer_acquire(ImBuf *ibuf,
   /* early out: no float buffer and byte buffer is already in display space,
    * let's just use if
    */
-  if (ibuf->float_buffer.data == nullptr && ibuf->rect_colorspace && ibuf->channels == 4) {
+  if (ibuf->float_buffer.data == nullptr && ibuf->byte_buffer.colorspace && ibuf->channels == 4) {
     if (is_ibuf_rect_in_display_space(ibuf, applied_view_settings, display_settings)) {
       return ibuf->byte_buffer.data;
     }
@@ -2801,7 +2807,7 @@ void IMB_display_buffer_release(void *cache_handle)
 /** \name Display Functions
  * \{ */
 
-const char *colormanage_display_get_default_name(void)
+const char *colormanage_display_get_default_name()
 {
   OCIO_ConstConfigRcPtr *config = OCIO_getCurrentConfig();
   const char *display_name;
@@ -2813,7 +2819,7 @@ const char *colormanage_display_get_default_name(void)
   return display_name;
 }
 
-ColorManagedDisplay *colormanage_display_get_default(void)
+ColorManagedDisplay *colormanage_display_get_default()
 {
   const char *display_name = colormanage_display_get_default_name();
 
@@ -2889,7 +2895,7 @@ const char *IMB_colormanagement_display_get_indexed_name(int index)
   return nullptr;
 }
 
-const char *IMB_colormanagement_display_get_default_name(void)
+const char *IMB_colormanagement_display_get_default_name()
 {
   ColorManagedDisplay *display = colormanage_display_get_default();
 
@@ -2901,7 +2907,7 @@ ColorManagedDisplay *IMB_colormanagement_display_get_named(const char *name)
   return colormanage_display_get_named(name);
 }
 
-const char *IMB_colormanagement_display_get_none_name(void)
+const char *IMB_colormanagement_display_get_none_name()
 {
   if (colormanage_display_get_named("None") != nullptr) {
     return "None";
@@ -3380,7 +3386,7 @@ static void partial_buffer_update_rect(ImBuf *ibuf,
   int x, y;
   int channels = ibuf->channels;
   float dither = ibuf->dither;
-  ColorSpace *rect_colorspace = ibuf->rect_colorspace;
+  ColorSpace *rect_colorspace = ibuf->byte_buffer.colorspace;
   float *display_buffer_float = nullptr;
   const int width = xmax - xmin;
   const int height = ymax - ymin;
@@ -3513,7 +3519,7 @@ static void partial_buffer_update_rect(ImBuf *ibuf,
   }
 }
 
-typedef struct PartialThreadData {
+struct PartialThreadData {
   ImBuf *ibuf;
   uchar *display_buffer;
   const float *linear_buffer;
@@ -3523,7 +3529,7 @@ typedef struct PartialThreadData {
   int linear_offset_x, linear_offset_y;
   ColormanageProcessor *cm_processor;
   int xmin, ymin, xmax;
-} PartialThreadData;
+};
 
 static void partial_buffer_update_rect_thread_do(void *data_v, int scanline)
 {
@@ -4099,7 +4105,7 @@ bool IMB_colormanagement_setup_glsl_draw_ctx(const bContext *C, float dither, bo
   return IMB_colormanagement_setup_glsl_draw_from_space_ctx(C, nullptr, dither, predivide);
 }
 
-void IMB_colormanagement_finish_glsl_draw(void)
+void IMB_colormanagement_finish_glsl_draw()
 {
   if (global_gpu_state.gpu_shader_bound) {
     OCIO_gpuDisplayShaderUnbind();

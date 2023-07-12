@@ -615,7 +615,7 @@ int BM_uv_element_get_unique_index(UvElementMap *element_map, UvElement *child)
   return unique_index[index];
 }
 
-#define INVALID_ISLAND (uint(-1))
+#define INVALID_ISLAND uint(-1)
 
 static void bm_uv_assign_island(UvElementMap *element_map,
                                 UvElement *element,
@@ -1951,7 +1951,7 @@ void EDBM_project_snap_verts(
                                                     depsgraph,
                                                     region,
                                                     CTX_wm_view3d(C),
-                                                    SCE_SNAP_MODE_FACE,
+                                                    SCE_SNAP_TO_FACE,
                                                     &params,
                                                     nullptr,
                                                     mval,

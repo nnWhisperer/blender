@@ -181,6 +181,10 @@ static void OVERLAY_cache_init(void *vedata)
     case CTX_MODE_EDIT_LATTICE:
       OVERLAY_edit_lattice_cache_init(data);
       break;
+    case CTX_MODE_PAINT_GREASE_PENCIL:
+    case CTX_MODE_EDIT_GREASE_PENCIL:
+      OVERLAY_edit_grease_pencil_cache_init(data);
+      break;
     case CTX_MODE_PARTICLE:
       OVERLAY_edit_particle_cache_init(data);
       break;
@@ -193,18 +197,13 @@ static void OVERLAY_cache_init(void *vedata)
     case CTX_MODE_SCULPT:
       OVERLAY_sculpt_cache_init(data);
       break;
-    case CTX_MODE_EDIT_GPENCIL:
-      if (U.experimental.use_grease_pencil_version3) {
-        OVERLAY_edit_grease_pencil_cache_init(data);
-      }
-      else {
-        OVERLAY_edit_gpencil_legacy_cache_init(data);
-      }
+    case CTX_MODE_EDIT_GPENCIL_LEGACY:
+      OVERLAY_edit_gpencil_legacy_cache_init(data);
       break;
-    case CTX_MODE_PAINT_GPENCIL:
-    case CTX_MODE_SCULPT_GPENCIL:
-    case CTX_MODE_VERTEX_GPENCIL:
-    case CTX_MODE_WEIGHT_GPENCIL:
+    case CTX_MODE_PAINT_GPENCIL_LEGACY:
+    case CTX_MODE_SCULPT_GPENCIL_LEGACY:
+    case CTX_MODE_VERTEX_GPENCIL_LEGACY:
+    case CTX_MODE_WEIGHT_GPENCIL_LEGACY:
       OVERLAY_edit_gpencil_legacy_cache_init(data);
       break;
     case CTX_MODE_EDIT_CURVES:
@@ -213,6 +212,7 @@ static void OVERLAY_cache_init(void *vedata)
     case CTX_MODE_SCULPT_CURVES:
       OVERLAY_sculpt_curves_cache_init(data);
       break;
+    case CTX_MODE_EDIT_POINT_CLOUD:
     case CTX_MODE_OBJECT:
       break;
     default:
@@ -287,7 +287,7 @@ static bool overlay_object_is_edit_mode(const OVERLAY_PrivateData *pd, const Obj
         /* No edit mode yet. */
         return false;
       case OB_GREASE_PENCIL:
-        return pd->ctx_mode == CTX_MODE_EDIT_GPENCIL;
+        return pd->ctx_mode == CTX_MODE_EDIT_GREASE_PENCIL;
     }
   }
   return false;
@@ -731,24 +731,22 @@ static void OVERLAY_draw_scene(void *vedata)
     case CTX_MODE_PARTICLE:
       OVERLAY_edit_particle_draw(data);
       break;
-    case CTX_MODE_EDIT_GPENCIL:
-      if (U.experimental.use_grease_pencil_version3) {
-        OVERLAY_edit_grease_pencil_draw(data);
-      }
-      else {
-        OVERLAY_edit_gpencil_legacy_draw(data);
-      }
+    case CTX_MODE_EDIT_GPENCIL_LEGACY:
+      OVERLAY_edit_gpencil_legacy_draw(data);
       break;
-    case CTX_MODE_PAINT_GPENCIL:
-    case CTX_MODE_SCULPT_GPENCIL:
-    case CTX_MODE_VERTEX_GPENCIL:
-    case CTX_MODE_WEIGHT_GPENCIL:
+    case CTX_MODE_PAINT_GPENCIL_LEGACY:
+    case CTX_MODE_SCULPT_GPENCIL_LEGACY:
+    case CTX_MODE_VERTEX_GPENCIL_LEGACY:
+    case CTX_MODE_WEIGHT_GPENCIL_LEGACY:
       OVERLAY_edit_gpencil_legacy_draw(data);
       break;
     case CTX_MODE_SCULPT_CURVES:
       break;
     case CTX_MODE_EDIT_CURVES:
       OVERLAY_edit_curves_draw(data);
+      break;
+    case CTX_MODE_EDIT_GREASE_PENCIL:
+      OVERLAY_edit_grease_pencil_draw(data);
       break;
     default:
       break;

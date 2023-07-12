@@ -35,12 +35,9 @@ namespace blender::ui::light_linking {
 
 namespace {
 
-class CollectionDropTarget : public AbstractViewItemDropTarget {
+class CollectionDropTarget : public DropTargetInterface {
  public:
-  CollectionDropTarget(AbstractView &view, Collection &collection)
-      : AbstractViewItemDropTarget(view), collection_(collection)
-  {
-  }
+  CollectionDropTarget(Collection &collection) : collection_(collection) {}
 
   bool can_drop(const wmDrag &drag, const char **r_disabled_hint) const override
   {
@@ -64,17 +61,17 @@ class CollectionDropTarget : public AbstractViewItemDropTarget {
     return true;
   }
 
-  std::string drop_tooltip(const wmDrag & /*drag*/) const override
+  std::string drop_tooltip(const DragInfo & /*drag*/) const override
   {
     return TIP_("Add to light linking collection");
   }
 
-  bool on_drop(struct bContext *C, const wmDrag &drag) const override
+  bool on_drop(struct bContext *C, const DragInfo &drag) const override
   {
     Main *bmain = CTX_data_main(C);
     Scene *scene = CTX_data_scene(C);
 
-    LISTBASE_FOREACH (wmDragID *, drag_id, &drag.ids) {
+    LISTBASE_FOREACH (wmDragID *, drag_id, &drag.drag_data.ids) {
       BKE_light_linking_add_receiver_to_collection(
           bmain, &collection_, drag_id->id, COLLECTION_LIGHT_LINKING_STATE_INCLUDE);
     }
@@ -131,13 +128,8 @@ class CollectionViewItem : public BasicTreeViewItem {
     return ICON_NONE;
   }
 
-  static void link_state_toggle_cb(bContext * /*C*/,
-                                   void * /*collection_v*/,
-                                   void *collection_light_linking_v)
+  static void link_state_toggle(CollectionLightLinking &collection_light_linking)
   {
-    CollectionLightLinking &collection_light_linking = *static_cast<CollectionLightLinking *>(
-        collection_light_linking_v);
-
     switch (collection_light_linking.link_state) {
       case COLLECTION_LIGHT_LINKING_STATE_INCLUDE:
         collection_light_linking.link_state = COLLECTION_LIGHT_LINKING_STATE_EXCLUDE;
@@ -178,7 +170,7 @@ class CollectionViewItem : public BasicTreeViewItem {
                                   0.0f,
                                   nullptr);
 
-    UI_but_func_set(button, link_state_toggle_cb, &collection_, &collection_light_linking_);
+    UI_but_func_set(button, [this](bContext &) { link_state_toggle(collection_light_linking_); });
   }
 
   void build_remove_button(uiLayout &row)
@@ -222,9 +214,9 @@ class CollectionView : public AbstractTreeView {
     }
   }
 
-  std::unique_ptr<AbstractViewDropTarget> create_drop_target() override
+  std::unique_ptr<DropTargetInterface> create_drop_target() override
   {
-    return std::make_unique<CollectionDropTarget>(*this, collection_);
+    return std::make_unique<CollectionDropTarget>(collection_);
   }
 
  private:

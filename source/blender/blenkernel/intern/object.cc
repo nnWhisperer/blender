@@ -82,7 +82,7 @@
 #include "BKE_displist.h"
 #include "BKE_duplilist.h"
 #include "BKE_editmesh.h"
-#include "BKE_editmesh_cache.h"
+#include "BKE_editmesh_cache.hh"
 #include "BKE_effect.h"
 #include "BKE_fcurve.h"
 #include "BKE_fcurve_driver.h"
@@ -117,7 +117,6 @@
 #include "BKE_object.h"
 #include "BKE_paint.h"
 #include "BKE_particle.h"
-#include "BKE_pbvh.h"
 #include "BKE_pointcache.h"
 #include "BKE_pointcloud.h"
 #include "BKE_pose_backup.h"
@@ -489,7 +488,7 @@ static void object_foreach_path_pointcache(ListBase *ptcache_list,
   for (PointCache *cache = (PointCache *)ptcache_list->first; cache != nullptr;
        cache = cache->next) {
     if (cache->flag & PTCACHE_DISK_CACHE) {
-      BKE_bpath_foreach_path_fixed_process(bpath_data, cache->path);
+      BKE_bpath_foreach_path_fixed_process(bpath_data, cache->path, sizeof(cache->path));
     }
   }
 }
@@ -504,14 +503,16 @@ static void object_foreach_path(ID *id, BPathForeachPathData *bpath_data)
       case eModifierType_Fluidsim: {
         FluidsimModifierData *fluidmd = reinterpret_cast<FluidsimModifierData *>(md);
         if (fluidmd->fss) {
-          BKE_bpath_foreach_path_fixed_process(bpath_data, fluidmd->fss->surfdataPath);
+          BKE_bpath_foreach_path_fixed_process(
+              bpath_data, fluidmd->fss->surfdataPath, sizeof(fluidmd->fss->surfdataPath));
         }
         break;
       }
       case eModifierType_Fluid: {
         FluidModifierData *fmd = reinterpret_cast<FluidModifierData *>(md);
         if (fmd->type & MOD_FLUID_TYPE_DOMAIN && fmd->domain) {
-          BKE_bpath_foreach_path_fixed_process(bpath_data, fmd->domain->cache_directory);
+          BKE_bpath_foreach_path_fixed_process(
+              bpath_data, fmd->domain->cache_directory, sizeof(fmd->domain->cache_directory));
         }
         break;
       }
@@ -522,12 +523,12 @@ static void object_foreach_path(ID *id, BPathForeachPathData *bpath_data)
       }
       case eModifierType_Ocean: {
         OceanModifierData *omd = reinterpret_cast<OceanModifierData *>(md);
-        BKE_bpath_foreach_path_fixed_process(bpath_data, omd->cachepath);
+        BKE_bpath_foreach_path_fixed_process(bpath_data, omd->cachepath, sizeof(omd->cachepath));
         break;
       }
       case eModifierType_MeshCache: {
         MeshCacheModifierData *mcmd = reinterpret_cast<MeshCacheModifierData *>(md);
-        BKE_bpath_foreach_path_fixed_process(bpath_data, mcmd->filepath);
+        BKE_bpath_foreach_path_fixed_process(bpath_data, mcmd->filepath, sizeof(mcmd->filepath));
         break;
       }
       default:
@@ -576,7 +577,9 @@ static void object_blend_write(BlendWriter *writer, ID *id, const void *id_addre
     arm = (bArmature *)ob->data;
   }
 
-  BKE_pose_blend_write(writer, ob->pose, arm);
+  if (ob->pose) {
+    BKE_pose_blend_write(writer, ob->pose, arm);
+  }
   BKE_constraint_blend_write(writer, &ob->constraints);
   animviz_motionpath_blend_write(writer, ob->mpath);
 
@@ -1961,8 +1964,7 @@ bool BKE_object_is_in_editmode(const Object *ob)
       /* Grease Pencil object has no edit mode data. */
       return GPENCIL_EDIT_MODE((bGPdata *)ob->data);
     case OB_CURVES:
-      /* Curves object has no edit mode data. */
-      return ob->mode == OB_MODE_EDIT;
+    case OB_POINTCLOUD:
     case OB_GREASE_PENCIL:
       return ob->mode == OB_MODE_EDIT;
     default:
@@ -1992,6 +1994,7 @@ bool BKE_object_data_is_in_editmode(const Object *ob, const ID *id)
     case ID_AR:
       return ((const bArmature *)id)->edbo != nullptr;
     case ID_CV:
+    case ID_PT:
     case ID_GP:
       if (ob) {
         return BKE_object_is_in_editmode(ob);
@@ -2044,14 +2047,10 @@ char *BKE_object_data_editmode_flush_ptr_get(ID *id)
       bArmature *arm = (bArmature *)id;
       return &arm->needs_flush_to_id;
     }
-    case ID_CV: {
-      /* Curves have no edit mode data. */
+    case ID_GP:
+    case ID_PT:
+    case ID_CV:
       return nullptr;
-    }
-    case ID_GP: {
-      /* Grease Pencil has no edit mode data. */
-      return nullptr;
-    }
     default:
       BLI_assert_unreachable();
       return nullptr;
@@ -2625,7 +2624,7 @@ Object *BKE_object_pose_armature_get_with_wpaint_check(Object *ob)
         break;
       }
       case OB_GPENCIL_LEGACY: {
-        if ((ob->mode & OB_MODE_WEIGHT_GPENCIL) == 0) {
+        if ((ob->mode & OB_MODE_WEIGHT_GPENCIL_LEGACY) == 0) {
           return nullptr;
         }
         break;
@@ -2961,7 +2960,6 @@ void BKE_object_obdata_size_init(Object *ob, const float size)
     }
     case OB_LAMP: {
       Light *lamp = (Light *)ob->data;
-      lamp->dist *= size;
       lamp->radius *= size;
       lamp->area_size *= size;
       lamp->area_sizey *= size;
@@ -3002,7 +3000,7 @@ void BKE_object_rot_to_mat3(const Object *ob, float mat[3][3], bool use_drot)
    * with the rotation matrix to yield the appropriate rotation
    */
 
-  /* rotations may either be quats, eulers (with various rotation orders), or axis-angle */
+  /* Rotations may either be quaternions, eulers (with various rotation orders), or axis-angle. */
   if (ob->rotmode > 0) {
     /* Euler rotations
      * (will cause gimbal lock, but this can be alleviated a bit with rotation orders). */
@@ -3333,7 +3331,8 @@ static void give_parvert(Object *par, int nr, float vec[3])
 #endif
         }
         if (nr < numVerts) {
-          if (me_eval && me_eval->runtime->edit_data && me_eval->runtime->edit_data->vertexCos) {
+          if (me_eval && me_eval->runtime->edit_data &&
+              !me_eval->runtime->edit_data->vertexCos.is_empty()) {
             add_v3_v3(vec, me_eval->runtime->edit_data->vertexCos[nr]);
           }
           else {

@@ -43,6 +43,7 @@
 #include "BKE_report.h"
 #include "BKE_scene.h"
 #include "BKE_volume.h"
+#include "BKE_volume_openvdb.hh"
 
 #include "BLT_translation.h"
 
@@ -585,7 +586,7 @@ static void volume_foreach_path(ID *id, BPathForeachPathData *bpath_data)
     return;
   }
 
-  BKE_bpath_foreach_path_fixed_process(bpath_data, volume->filepath);
+  BKE_bpath_foreach_path_fixed_process(bpath_data, volume->filepath, sizeof(volume->filepath));
 }
 
 static void volume_blend_write(BlendWriter *writer, ID *id, const void *id_address)

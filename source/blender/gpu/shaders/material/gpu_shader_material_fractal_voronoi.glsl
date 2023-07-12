@@ -18,14 +18,14 @@
 \
     for (int i = 0; i <= ceil(params.detail); ++i) { \
       VoronoiOutput octave; \
-      if (params.feature == 0) /* SHD_VORONOI_F1 */ { \
-        octave = voronoi_f1(params, coord * scale); \
+      if (params.feature == SHD_VORONOI_F2) { \
+        octave = voronoi_f2(params, coord * scale); \
       } \
-      else if (params.feature == 2) /* SHD_VORONOI_SMOOTH_F1 */ { \
+      else if (params.feature == SHD_VORONOI_SMOOTH_F1 && params.smoothness != 0.0) { \
         octave = voronoi_smooth_f1(params, coord * scale); \
       } \
       else { \
-        octave = voronoi_f2(params, coord * scale); \
+        octave = voronoi_f1(params, coord * scale); \
       } \
 \
       if (zero_input) { \
@@ -69,7 +69,7 @@
   float fractal_voronoi_distance_to_edge(VoronoiParams params, T coord) \
   { \
     float amplitude = 1.0; \
-    float max_amplitude = 0.5 + 0.5 * params.randomness; \
+    float max_amplitude = params.max_distance; \
     float scale = 1.0; \
     float distance = 8.0; \
 \
@@ -84,7 +84,7 @@
         break; \
       } \
       else if (i <= params.detail) { \
-        max_amplitude = mix(max_amplitude, (0.5 + 0.5 * params.randomness) / scale, amplitude); \
+        max_amplitude = mix(max_amplitude, params.max_distance / scale, amplitude); \
         distance = mix(distance, min(distance, octave_distance / scale), amplitude); \
         scale *= params.lacunarity; \
         amplitude *= params.roughness; \
@@ -92,8 +92,7 @@
       else { \
         float remainder = params.detail - floor(params.detail); \
         if (remainder != 0.0) { \
-          float lerp_amplitude = mix( \
-              max_amplitude, (0.5 + 0.5 * params.randomness) / scale, amplitude); \
+          float lerp_amplitude = mix(max_amplitude, params.max_distance / scale, amplitude); \
           max_amplitude = mix(max_amplitude, lerp_amplitude, remainder); \
           float lerp_distance = mix(distance, min(distance, octave_distance / scale), amplitude); \
           distance = mix(distance, min(distance, lerp_distance), remainder); \

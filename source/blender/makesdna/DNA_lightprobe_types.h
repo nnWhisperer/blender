@@ -55,7 +55,16 @@ typedef struct LightProbe {
   int grid_resolution_x;
   int grid_resolution_y;
   int grid_resolution_z;
-  char _pad1[4];
+  /** Irradiance grid: number of directions to evaluate light transfer in. */
+  int grid_bake_samples;
+
+  /** Surface element density for scene surface cache. In surfel per unit distance. */
+  float surfel_density;
+
+  /**
+   * Resolution of the light probe when baked to a texture. Contains `eLightProbeResolution`.
+   */
+  int resolution;
 
   /** Object to use as a parallax origin. */
   struct Object *parallax_ob;
@@ -64,6 +73,16 @@ typedef struct LightProbe {
   /** Object visibility group, inclusive or exclusive. */
   struct Collection *visibility_grp;
 } LightProbe;
+
+/* LightProbe->resolution, World->probe_resolution. */
+typedef enum eLightProbeResolution {
+  LIGHT_PROBE_RESOLUTION_64 = 6,
+  LIGHT_PROBE_RESOLUTION_128 = 7,
+  LIGHT_PROBE_RESOLUTION_256 = 8,
+  LIGHT_PROBE_RESOLUTION_512 = 9,
+  LIGHT_PROBE_RESOLUTION_1024 = 10,
+  LIGHT_PROBE_RESOLUTION_2048 = 11,
+} eLightProbeResolution;
 
 /* Probe->type */
 enum {

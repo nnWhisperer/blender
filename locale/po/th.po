@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 3.6.0 Beta (b'de4fb0e570b4')\n"
+"Project-Id-Version: Blender 4.0.0 Alpha (b'2f5245b4340a')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-06-05 09:47:30\n"
+"POT-Creation-Date: 2023-07-10 12:34:48\n"
 "PO-Revision-Date: 2019-12-08 17:40+0700\n"
 "Last-Translator: gongpha <gongpha@gmail.com>\n"
 "Language-Team: Thai Translation Team <gongpha@gmail.com>\n"
@@ -548,10 +548,6 @@ msgstr "เครื่องหมาย"
 
 msgid "Smooth"
 msgstr "ราบเรียบ"
-
-
-msgid "Path"
-msgstr "เส้นทาง"
 
 
 msgid "Opacity"
@@ -1359,24 +1355,12 @@ msgid "Repeat"
 msgstr "ทำซ้ำ"
 
 
-msgid "Mask"
-msgstr "หน้ากาก"
-
-
 msgid "Mask Texture"
 msgstr "พื้นผิวหน้ากาก"
 
 
 msgid "Sculpt Tool"
 msgstr "เครื่องแกะสลัก"
-
-
-msgid "Pose"
-msgstr "ท่าทาง"
-
-
-msgid "Rotate"
-msgstr "หมุน"
 
 
 msgid "Grab UVs"
@@ -1425,6 +1409,10 @@ msgstr "ความละเอียด U"
 
 msgid "Resolution V"
 msgstr "ความละเอียด V"
+
+
+msgid "Path"
+msgstr "เส้นทาง"
 
 
 msgid "Font"
@@ -1553,14 +1541,6 @@ msgid "Area"
 msgstr "พื้นที่"
 
 
-msgid "Inverse Square"
-msgstr "จัตุรัสผกผัน"
-
-
-msgid "Samples"
-msgstr "ตัวอย่าง"
-
-
 msgid "Rectangle"
 msgstr "สี่เหลี่ยม"
 
@@ -1631,30 +1611,6 @@ msgstr "ผลลัพธ์"
 
 msgid "Shader"
 msgstr "เชดเดอร์"
-
-
-msgid "32x32"
-msgstr "32x32"
-
-
-msgid "64x64"
-msgstr "64x64"
-
-
-msgid "128x128"
-msgstr "128x128"
-
-
-msgid "256x256"
-msgstr "256x256"
-
-
-msgid "512x512"
-msgstr "512x512"
-
-
-msgid "1024x1024"
-msgstr "1024x1024"
 
 
 msgid "Edit Quality"
@@ -1759,6 +1715,10 @@ msgstr "วาดน้ำหนัก"
 
 msgid "Texture Paint"
 msgstr "วาดพื้นผิว"
+
+
+msgid "Pose"
+msgstr "ท่าทาง"
 
 
 msgid "Euler Rotation"
@@ -2006,10 +1966,6 @@ msgid "Pause"
 msgstr "พัก"
 
 
-msgid "|<<"
-msgstr "|<<"
-
-
 msgid "Mouse"
 msgstr "เมาส์"
 
@@ -2053,6 +2009,10 @@ msgstr "ชั้นหน้ากาก"
 
 msgid "Mix Color"
 msgstr "ผสมสี"
+
+
+msgid "Mask"
+msgstr "หน้ากาก"
 
 
 msgid "Pivot Point"
@@ -2245,6 +2205,10 @@ msgid "Root"
 msgstr "ฐาน"
 
 
+msgid "Samples"
+msgstr "ตัวอย่าง"
+
+
 msgid "Intersect"
 msgstr "ตัดกัน"
 
@@ -2412,6 +2376,10 @@ msgstr "ช่องสีแดง"
 
 msgid "RGB to BW"
 msgstr "RGB ไปยัง BW"
+
+
+msgid "Rotate"
+msgstr "หมุน"
 
 
 msgid "Ray Length"
@@ -3208,10 +3176,6 @@ msgid "Mask Filter"
 msgstr "กรองหน้ากาก"
 
 
-msgid "B -> C"
-msgstr "B -> C"
-
-
 msgctxt "Operator"
 msgid "Copy"
 msgstr "คัดลอก"
@@ -3255,10 +3219,6 @@ msgstr "บันทึกเป็น"
 
 msgid "Transformation orientation"
 msgstr "ทิศทางการแปลง"
-
-
-msgid "Snap to increments of grid"
-msgstr "ยึดตามจำนวนที่เพิ่มขึ้นของตาราง"
 
 
 msgid "Snap to vertices"
@@ -3610,10 +3570,6 @@ msgid "Zoom Style"
 msgstr "สไตล์การซูม"
 
 
-msgid "16x"
-msgstr "16x"
-
-
 msgid "192 kHz"
 msgstr "192 kHz"
 
@@ -3942,6 +3898,10 @@ msgstr "ยึดตามตาราง"
 
 msgid "Snap Target"
 msgstr "ยึดตามเป้าหมาย"
+
+
+msgid "Snap to increments of grid"
+msgstr "ยึดตามจำนวนที่เพิ่มขึ้นของตาราง"
 
 
 msgid "Automatically merge vertices moved to the same location"
@@ -5344,14 +5304,6 @@ msgid "Paper"
 msgstr "กระดาษ"
 
 
-msgid "| Last:%s "
-msgstr "| ปลาย:%s "
-
-
-msgid "| Mem:%.2fM, Peak: %.2fM "
-msgstr "| หน่วยความจำ:%.2fM, สูงสุด: %.2fM "
-
-
 msgid "Blender Render"
 msgstr "ตัวเรนเดอร์ของ Blender"
 
@@ -5408,10 +5360,6 @@ msgid "Add Modifier"
 msgstr "เพิ่มการปรับแต่ง"
 
 
-msgid "%d x %d, "
-msgstr "%d x %d, "
-
-
 msgid " RGBA float"
 msgstr " ทศนิยม RGBA"
 
@@ -5426,10 +5374,6 @@ msgstr " ไบต์ RGBA"
 
 msgid " RGB byte"
 msgstr " ไบต์ RGB"
-
-
-msgid " + Z"
-msgstr " + Z"
 
 
 msgid "(Key) "

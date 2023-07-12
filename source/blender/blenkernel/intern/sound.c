@@ -127,7 +127,7 @@ static void sound_foreach_path(ID *id, BPathForeachPathData *bpath_data)
   }
 
   /* FIXME: This does not check for empty path... */
-  BKE_bpath_foreach_path_fixed_process(bpath_data, sound->filepath);
+  BKE_bpath_foreach_path_fixed_process(bpath_data, sound->filepath, sizeof(sound->filepath));
 }
 
 static void sound_blend_write(BlendWriter *writer, ID *id, const void *id_address)
@@ -549,7 +549,7 @@ static void sound_load_audio(Main *bmain, bSound *sound, bool free_waveform)
     /* load sound */
     PackedFile *pf = sound->packedfile;
 
-    /* don't modify soundact->sound->filepath, only change a copy */
+    /* Don't modify `sound->filepath`, only change a copy. */
     STRNCPY(fullpath, sound->filepath);
     BLI_path_abs(fullpath, ID_BLEND_PATH(bmain, &sound->id));
 

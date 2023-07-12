@@ -1,9 +1,9 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Blender 3.6.0 Beta (b'de4fb0e570b4')\n"
+"Project-Id-Version: Blender 4.0.0 Alpha (b'2f5245b4340a')\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-06-05 09:47:30\n"
+"POT-Creation-Date: 2023-07-10 12:34:48\n"
 "PO-Revision-Date: 2012-10-31 17:00-0800\n"
 "Last-Translator: Amin Babaeipanah <translate@leomoon.com>\n"
 "Language-Team: LeoMoon Studios <blender@leomoon.com>\n"
@@ -428,6 +428,10 @@ msgid "Weight"
 msgstr "ﻥﺯﻭ"
 
 
+msgid "Grease Pencil"
+msgstr "ﯽﻨﻏﻭﺭ ﺩﺍﺪﻣ"
+
+
 msgid "Particles"
 msgstr "ﺕﺍﺭﺫ"
 
@@ -622,10 +626,6 @@ msgstr "ﮓﻧﺭ"
 
 msgid "Saturation"
 msgstr "ﻉﺎﺒﺷﺍ"
-
-
-msgid "Path"
-msgstr "ﺮﯿﺴﻣ"
 
 
 msgid "Background Image"
@@ -1324,10 +1324,6 @@ msgid "Rotational Difference"
 msgstr "ﯽﺸﺧﺮﭼ ﺕﻭﺎﻔﺗ"
 
 
-msgid "Force"
-msgstr "ﺭﻭﺯ‌ﻪﺑ"
-
-
 msgid "Max Displace"
 msgstr "ﯽﯾﺎﺠﺑﺎﺟ ﻪﻨﯿﺸﯿﺑ"
 
@@ -1386,6 +1382,10 @@ msgstr "ﻥﺪﯿﺘﻠﻏ"
 
 msgid "Bone rotation around head-tail axis"
 msgstr "ﻡﺩ ﻪﺑ ﺮﺳ ﺭﻮﺤﻣ ﻑﺍﺮﻃﺍ ﻥﺍﻮﺨﺘﺳﺍ ﺶﺧﺮﭼ"
+
+
+msgid "Force"
+msgstr "ﺭﻭﺯ‌ﻪﺑ"
 
 
 msgid "Wind"
@@ -1478,10 +1478,6 @@ msgstr "ﻪﻧﺍﺩ"
 
 msgid "Size"
 msgstr "ﻩﺯﺍﺪﻧﺍ"
-
-
-msgid "Grease Pencil"
-msgstr "ﯽﻨﻏﻭﺭ ﺩﺍﺪﻣ"
 
 
 msgid "Save"
@@ -1652,10 +1648,6 @@ msgid "Subtract Color"
 msgstr "ﮓﻧﺭ ﻖﯾﺮﻔﺗ"
 
 
-msgid "Erase"
-msgstr "ﻥﺩﺮﮐ‌ﮎﺎﭘ"
-
-
 msgid "Brush"
 msgstr "ﻮﻣ ﻢﻠﻗ"
 
@@ -1666,14 +1658,6 @@ msgstr "ﮓﻧﺭ ﯽﻨﺤﻨﻣ"
 
 msgid "Sculpt Tool"
 msgstr "ﯼﺭﺎﺠﺣ ﺭﺍﺰﺑﺍ"
-
-
-msgid "Pose"
-msgstr "ﺖﺳﮊ"
-
-
-msgid "Rotate"
-msgstr "ﻥﺍﺭﻭﺩ"
 
 
 msgid "Relax"
@@ -1690,6 +1674,10 @@ msgstr "ﻦﯿﺑﺭﻭﺩ ﻉﺍﻮﻧﺍ"
 
 msgid "Dimensions"
 msgstr "ﺩﺎﻌﺑﺍ"
+
+
+msgid "Path"
+msgstr "ﺮﯿﺴﻣ"
 
 
 msgid "Text on Curve"
@@ -1772,10 +1760,6 @@ msgid "Circle"
 msgstr "ﻩﺮﯾﺍﺩ"
 
 
-msgid "Both"
-msgstr "ﻭﺩ ﺮﻫ"
-
-
 msgid "Lock Location"
 msgstr "ﯽﯾﺎﺤﺑﺎﺟ ﻞﻔﻗ"
 
@@ -1838,6 +1822,10 @@ msgstr "ﺖﮐﺮﺣ ﺮﯿﺴﻣ"
 
 msgid "Parent Vertices"
 msgstr "ﺪﻟﺍﻭ ﺱﻮﺋﺭ"
+
+
+msgid "Pose"
+msgstr "ﺖﺳﮊ"
 
 
 msgid "Euler Rotation"
@@ -2336,6 +2324,10 @@ msgid "Scene Size"
 msgstr "ﻪﻨﺤﺻ ﻩﺯﺍﺪﻧﺍ"
 
 
+msgid "Rotate"
+msgstr "ﻥﺍﺭﻭﺩ"
+
+
 msgid "Separate HSVA"
 msgstr "HSVA ﻥﺩﺮﮐ‌ﺍﺪﺟ"
 
@@ -2803,6 +2795,10 @@ msgid "Mouse location"
 msgstr "ﺱﻭﺎﻣ ﻥﺎﮑﻣ"
 
 
+msgid "Both"
+msgstr "ﻭﺩ ﺮﻫ"
+
+
 msgid "Join"
 msgstr "ﻦﺘﺳﻮﯿﭘ"
 
@@ -3102,10 +3098,6 @@ msgstr "ﺽﺮﻓ ﺶﯿﭘ ﺭﺍﺪﻘﻣ ﻪﺑ ﺩﺪﺠﻣ ﻢﯿﻈﻨﺗ"
 
 msgid "All UVs"
 msgstr "ﺎﻫUV ﻪﻤﻫ"
-
-
-msgid "Pack"
-msgstr "ﻪﺘﺴﺑ"
 
 
 msgctxt "Operator"
@@ -3765,6 +3757,10 @@ msgid "Aspect Ratio"
 msgstr "ﺮﯾﻮﺼﺗ ﺖﺒﺴﻧ"
 
 
+msgid "Pack"
+msgstr "ﻪﺘﺴﺑ"
+
+
 msgid "Text: External"
 msgstr "ﯽﺟﺭﺎﺧ :ﻦﺘﻣ"
 
@@ -4134,10 +4130,6 @@ msgstr "RGBA ﺖﯾﺎﺑ"
 
 msgid " RGB byte"
 msgstr "RGB ﺖﯾﺎﺑ"
-
-
-msgid " + Z"
-msgstr " + Z"
 
 
 msgid "No images have been changed"

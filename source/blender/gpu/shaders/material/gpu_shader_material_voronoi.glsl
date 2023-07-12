@@ -17,6 +17,17 @@
  * as explained in https://www.shadertoy.com/view/llG3zy.
  */
 
+#define SHD_VORONOI_EUCLIDEAN 0
+#define SHD_VORONOI_MANHATTAN 1
+#define SHD_VORONOI_CHEBYCHEV 2
+#define SHD_VORONOI_MINKOWSKI 3
+
+#define SHD_VORONOI_F1 0
+#define SHD_VORONOI_F2 1
+#define SHD_VORONOI_SMOOTH_F1 2
+#define SHD_VORONOI_DISTANCE_TO_EDGE 3
+#define SHD_VORONOI_N_SPHERE_RADIUS 4
+
 struct VoronoiParams {
   float scale;
   float detail;
@@ -46,20 +57,16 @@ float voronoi_distance(float a, float b)
 
 float voronoi_distance(vec2 a, vec2 b, VoronoiParams params)
 {
-  if (params.metric == 0)  // SHD_VORONOI_EUCLIDEAN
-  {
+  if (params.metric == SHD_VORONOI_EUCLIDEAN) {
     return distance(a, b);
   }
-  else if (params.metric == 1)  // SHD_VORONOI_MANHATTAN
-  {
+  else if (params.metric == SHD_VORONOI_MANHATTAN) {
     return abs(a.x - b.x) + abs(a.y - b.y);
   }
-  else if (params.metric == 2)  // SHD_VORONOI_CHEBYCHEV
-  {
+  else if (params.metric == SHD_VORONOI_CHEBYCHEV) {
     return max(abs(a.x - b.x), abs(a.y - b.y));
   }
-  else if (params.metric == 3)  // SHD_VORONOI_MINKOWSKI
-  {
+  else if (params.metric == SHD_VORONOI_MINKOWSKI) {
     return pow(pow(abs(a.x - b.x), params.exponent) + pow(abs(a.y - b.y), params.exponent),
                1.0 / params.exponent);
   }
@@ -70,20 +77,16 @@ float voronoi_distance(vec2 a, vec2 b, VoronoiParams params)
 
 float voronoi_distance(vec3 a, vec3 b, VoronoiParams params)
 {
-  if (params.metric == 0)  // SHD_VORONOI_EUCLIDEAN
-  {
+  if (params.metric == SHD_VORONOI_EUCLIDEAN) {
     return distance(a, b);
   }
-  else if (params.metric == 1)  // SHD_VORONOI_MANHATTAN
-  {
+  else if (params.metric == SHD_VORONOI_MANHATTAN) {
     return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z);
   }
-  else if (params.metric == 2)  // SHD_VORONOI_CHEBYCHEV
-  {
+  else if (params.metric == SHD_VORONOI_CHEBYCHEV) {
     return max(abs(a.x - b.x), max(abs(a.y - b.y), abs(a.z - b.z)));
   }
-  else if (params.metric == 3)  // SHD_VORONOI_MINKOWSKI
-  {
+  else if (params.metric == SHD_VORONOI_MINKOWSKI) {
     return pow(pow(abs(a.x - b.x), params.exponent) + pow(abs(a.y - b.y), params.exponent) +
                    pow(abs(a.z - b.z), params.exponent),
                1.0 / params.exponent);
@@ -95,20 +98,16 @@ float voronoi_distance(vec3 a, vec3 b, VoronoiParams params)
 
 float voronoi_distance(vec4 a, vec4 b, VoronoiParams params)
 {
-  if (params.metric == 0)  // SHD_VORONOI_EUCLIDEAN
-  {
+  if (params.metric == SHD_VORONOI_EUCLIDEAN) {
     return distance(a, b);
   }
-  else if (params.metric == 1)  // SHD_VORONOI_MANHATTAN
-  {
+  else if (params.metric == SHD_VORONOI_MANHATTAN) {
     return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z) + abs(a.w - b.w);
   }
-  else if (params.metric == 2)  // SHD_VORONOI_CHEBYCHEV
-  {
+  else if (params.metric == SHD_VORONOI_CHEBYCHEV) {
     return max(abs(a.x - b.x), max(abs(a.y - b.y), max(abs(a.z - b.z), abs(a.w - b.w))));
   }
-  else if (params.metric == 3)  // SHD_VORONOI_MINKOWSKI
-  {
+  else if (params.metric == SHD_VORONOI_MINKOWSKI) {
     return pow(pow(abs(a.x - b.x), params.exponent) + pow(abs(a.y - b.y), params.exponent) +
                    pow(abs(a.z - b.z), params.exponent) + pow(abs(a.w - b.w), params.exponent),
                1.0 / params.exponent);
@@ -130,7 +129,7 @@ VoronoiOutput voronoi_f1(VoronoiParams params, float coord)
   float cellPosition = floor(coord);
   float localPosition = coord - cellPosition;
 
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   float targetOffset = 0.0;
   float targetPosition = 0.0;
   for (int i = -1; i <= 1; i++) {
@@ -157,16 +156,19 @@ VoronoiOutput voronoi_smooth_f1(VoronoiParams params, float coord)
   float cellPosition = floor(coord);
   float localPosition = coord - cellPosition;
 
-  float smoothDistance = 8.0;
+  float smoothDistance = 0.0;
   float smoothPosition = 0.0;
   vec3 smoothColor = vec3(0.0);
+  float h = -1.0;
   for (int i = -2; i <= 2; i++) {
     float cellOffset = i;
     float pointPosition = cellOffset +
                           hash_float_to_float(cellPosition + cellOffset) * params.randomness;
     float distanceToPoint = voronoi_distance(pointPosition, localPosition);
-    float h = smoothstep(
-        0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
+    h = h == -1.0 ? 1.0 :
+                    smoothstep(0.0,
+                               1.0,
+                               0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
     float correctionFactor = params.smoothness * h * (1.0 - h);
     smoothDistance = mix(smoothDistance, distanceToPoint, h) - correctionFactor;
     correctionFactor /= 1.0 + 3.0 * params.smoothness;
@@ -187,8 +189,8 @@ VoronoiOutput voronoi_f2(VoronoiParams params, float coord)
   float cellPosition = floor(coord);
   float localPosition = coord - cellPosition;
 
-  float distanceF1 = 8.0;
-  float distanceF2 = 8.0;
+  float distanceF1 = FLT_MAX;
+  float distanceF2 = FLT_MAX;
   float offsetF1 = 0.0;
   float positionF1 = 0.0;
   float offsetF2 = 0.0;
@@ -241,7 +243,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, float coord)
 
   float closestPoint = 0.0;
   float closestPointOffset = 0.0;
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   for (int i = -1; i <= 1; i++) {
     float cellOffset = i;
     float pointPosition = cellOffset +
@@ -254,7 +256,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, float coord)
     }
   }
 
-  minDistance = 8.0;
+  minDistance = FLT_MAX;
   float closestPointToClosestPoint = 0.0;
   for (int i = -1; i <= 1; i++) {
     if (i == 0) {
@@ -285,7 +287,7 @@ VoronoiOutput voronoi_f1(VoronoiParams params, vec2 coord)
   vec2 cellPosition = floor(coord);
   vec2 localPosition = coord - cellPosition;
 
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   vec2 targetOffset = vec2(0.0);
   vec2 targetPosition = vec2(0.0);
   for (int j = -1; j <= 1; j++) {
@@ -314,17 +316,20 @@ VoronoiOutput voronoi_smooth_f1(VoronoiParams params, vec2 coord)
   vec2 cellPosition = floor(coord);
   vec2 localPosition = coord - cellPosition;
 
-  float smoothDistance = 8.0;
+  float smoothDistance = 0.0;
   vec3 smoothColor = vec3(0.0);
   vec2 smoothPosition = vec2(0.0);
+  float h = -1.0;
   for (int j = -2; j <= 2; j++) {
     for (int i = -2; i <= 2; i++) {
       vec2 cellOffset = vec2(i, j);
       vec2 pointPosition = cellOffset +
                            hash_vec2_to_vec2(cellPosition + cellOffset) * params.randomness;
       float distanceToPoint = voronoi_distance(pointPosition, localPosition, params);
-      float h = smoothstep(
-          0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
+      h = h == -1.0 ?
+              1.0 :
+              smoothstep(
+                  0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
       float correctionFactor = params.smoothness * h * (1.0 - h);
       smoothDistance = mix(smoothDistance, distanceToPoint, h) - correctionFactor;
       correctionFactor /= 1.0 + 3.0 * params.smoothness;
@@ -346,8 +351,8 @@ VoronoiOutput voronoi_f2(VoronoiParams params, vec2 coord)
   vec2 cellPosition = floor(coord);
   vec2 localPosition = coord - cellPosition;
 
-  float distanceF1 = 8.0;
-  float distanceF2 = 8.0;
+  float distanceF1 = FLT_MAX;
+  float distanceF2 = FLT_MAX;
   vec2 offsetF1 = vec2(0.0);
   vec2 positionF1 = vec2(0.0);
   vec2 offsetF2 = vec2(0.0);
@@ -387,7 +392,7 @@ float voronoi_distance_to_edge(VoronoiParams params, vec2 coord)
   vec2 localPosition = coord - cellPosition;
 
   vec2 vectorToClosest = vec2(0.0);
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   for (int j = -1; j <= 1; j++) {
     for (int i = -1; i <= 1; i++) {
       vec2 cellOffset = vec2(i, j);
@@ -402,7 +407,7 @@ float voronoi_distance_to_edge(VoronoiParams params, vec2 coord)
     }
   }
 
-  minDistance = 8.0;
+  minDistance = FLT_MAX;
   for (int j = -1; j <= 1; j++) {
     for (int i = -1; i <= 1; i++) {
       vec2 cellOffset = vec2(i, j);
@@ -428,7 +433,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, vec2 coord)
 
   vec2 closestPoint = vec2(0.0);
   vec2 closestPointOffset = vec2(0.0);
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   for (int j = -1; j <= 1; j++) {
     for (int i = -1; i <= 1; i++) {
       vec2 cellOffset = vec2(i, j);
@@ -443,7 +448,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, vec2 coord)
     }
   }
 
-  minDistance = 8.0;
+  minDistance = FLT_MAX;
   vec2 closestPointToClosestPoint = vec2(0.0);
   for (int j = -1; j <= 1; j++) {
     for (int i = -1; i <= 1; i++) {
@@ -476,7 +481,7 @@ VoronoiOutput voronoi_f1(VoronoiParams params, vec3 coord)
   vec3 cellPosition = floor(coord);
   vec3 localPosition = coord - cellPosition;
 
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   vec3 targetOffset = vec3(0.0);
   vec3 targetPosition = vec3(0.0);
   for (int k = -1; k <= 1; k++) {
@@ -507,9 +512,10 @@ VoronoiOutput voronoi_smooth_f1(VoronoiParams params, vec3 coord)
   vec3 cellPosition = floor(coord);
   vec3 localPosition = coord - cellPosition;
 
-  float smoothDistance = 8.0;
+  float smoothDistance = 0.0;
   vec3 smoothColor = vec3(0.0);
   vec3 smoothPosition = vec3(0.0);
+  float h = -1.0;
   for (int k = -2; k <= 2; k++) {
     for (int j = -2; j <= 2; j++) {
       for (int i = -2; i <= 2; i++) {
@@ -517,8 +523,10 @@ VoronoiOutput voronoi_smooth_f1(VoronoiParams params, vec3 coord)
         vec3 pointPosition = cellOffset +
                              hash_vec3_to_vec3(cellPosition + cellOffset) * params.randomness;
         float distanceToPoint = voronoi_distance(pointPosition, localPosition, params);
-        float h = smoothstep(
-            0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
+        h = h == -1.0 ?
+                1.0 :
+                smoothstep(
+                    0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
         float correctionFactor = params.smoothness * h * (1.0 - h);
         smoothDistance = mix(smoothDistance, distanceToPoint, h) - correctionFactor;
         correctionFactor /= 1.0 + 3.0 * params.smoothness;
@@ -541,8 +549,8 @@ VoronoiOutput voronoi_f2(VoronoiParams params, vec3 coord)
   vec3 cellPosition = floor(coord);
   vec3 localPosition = coord - cellPosition;
 
-  float distanceF1 = 8.0;
-  float distanceF2 = 8.0;
+  float distanceF1 = FLT_MAX;
+  float distanceF2 = FLT_MAX;
   vec3 offsetF1 = vec3(0.0);
   vec3 positionF1 = vec3(0.0);
   vec3 offsetF2 = vec3(0.0);
@@ -584,7 +592,7 @@ float voronoi_distance_to_edge(VoronoiParams params, vec3 coord)
   vec3 localPosition = coord - cellPosition;
 
   vec3 vectorToClosest = vec3(0.0);
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   for (int k = -1; k <= 1; k++) {
     for (int j = -1; j <= 1; j++) {
       for (int i = -1; i <= 1; i++) {
@@ -601,7 +609,7 @@ float voronoi_distance_to_edge(VoronoiParams params, vec3 coord)
     }
   }
 
-  minDistance = 8.0;
+  minDistance = FLT_MAX;
   for (int k = -1; k <= 1; k++) {
     for (int j = -1; j <= 1; j++) {
       for (int i = -1; i <= 1; i++) {
@@ -629,7 +637,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, vec3 coord)
 
   vec3 closestPoint = vec3(0.0);
   vec3 closestPointOffset = vec3(0.0);
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   for (int k = -1; k <= 1; k++) {
     for (int j = -1; j <= 1; j++) {
       for (int i = -1; i <= 1; i++) {
@@ -646,7 +654,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, vec3 coord)
     }
   }
 
-  minDistance = 8.0;
+  minDistance = FLT_MAX;
   vec3 closestPointToClosestPoint = vec3(0.0);
   for (int k = -1; k <= 1; k++) {
     for (int j = -1; j <= 1; j++) {
@@ -681,7 +689,7 @@ VoronoiOutput voronoi_f1(VoronoiParams params, vec4 coord)
   vec4 cellPosition = floor(coord);
   vec4 localPosition = coord - cellPosition;
 
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   vec4 targetOffset = vec4(0.0);
   vec4 targetPosition = vec4(0.0);
   for (int u = -1; u <= 1; u++) {
@@ -714,9 +722,10 @@ VoronoiOutput voronoi_smooth_f1(VoronoiParams params, vec4 coord)
   vec4 cellPosition = floor(coord);
   vec4 localPosition = coord - cellPosition;
 
-  float smoothDistance = 8.0;
+  float smoothDistance = 0.0;
   vec3 smoothColor = vec3(0.0);
   vec4 smoothPosition = vec4(0.0);
+  float h = -1.0;
   for (int u = -2; u <= 2; u++) {
     for (int k = -2; k <= 2; k++) {
       for (int j = -2; j <= 2; j++) {
@@ -725,8 +734,11 @@ VoronoiOutput voronoi_smooth_f1(VoronoiParams params, vec4 coord)
           vec4 pointPosition = cellOffset +
                                hash_vec4_to_vec4(cellPosition + cellOffset) * params.randomness;
           float distanceToPoint = voronoi_distance(pointPosition, localPosition, params);
-          float h = smoothstep(
-              0.0, 1.0, 0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
+          h = h == -1.0 ?
+                  1.0 :
+                  smoothstep(0.0,
+                             1.0,
+                             0.5 + 0.5 * (smoothDistance - distanceToPoint) / params.smoothness);
           float correctionFactor = params.smoothness * h * (1.0 - h);
           smoothDistance = mix(smoothDistance, distanceToPoint, h) - correctionFactor;
           correctionFactor /= 1.0 + 3.0 * params.smoothness;
@@ -750,8 +762,8 @@ VoronoiOutput voronoi_f2(VoronoiParams params, vec4 coord)
   vec4 cellPosition = floor(coord);
   vec4 localPosition = coord - cellPosition;
 
-  float distanceF1 = 8.0;
-  float distanceF2 = 8.0;
+  float distanceF1 = FLT_MAX;
+  float distanceF2 = FLT_MAX;
   vec4 offsetF1 = vec4(0.0);
   vec4 positionF1 = vec4(0.0);
   vec4 offsetF2 = vec4(0.0);
@@ -795,7 +807,7 @@ float voronoi_distance_to_edge(VoronoiParams params, vec4 coord)
   vec4 localPosition = coord - cellPosition;
 
   vec4 vectorToClosest = vec4(0.0);
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   for (int u = -1; u <= 1; u++) {
     for (int k = -1; k <= 1; k++) {
       for (int j = -1; j <= 1; j++) {
@@ -814,7 +826,7 @@ float voronoi_distance_to_edge(VoronoiParams params, vec4 coord)
     }
   }
 
-  minDistance = 8.0;
+  minDistance = FLT_MAX;
   for (int u = -1; u <= 1; u++) {
     for (int k = -1; k <= 1; k++) {
       for (int j = -1; j <= 1; j++) {
@@ -844,7 +856,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, vec4 coord)
 
   vec4 closestPoint = vec4(0.0);
   vec4 closestPointOffset = vec4(0.0);
-  float minDistance = 8.0;
+  float minDistance = FLT_MAX;
   for (int u = -1; u <= 1; u++) {
     for (int k = -1; k <= 1; k++) {
       for (int j = -1; j <= 1; j++) {
@@ -863,7 +875,7 @@ float voronoi_n_sphere_radius(VoronoiParams params, vec4 coord)
     }
   }
 
-  minDistance = 8.0;
+  minDistance = FLT_MAX;
   vec4 closestPointToClosestPoint = vec4(0.0);
   for (int u = -1; u <= 1; u++) {
     for (int k = -1; k <= 1; k++) {

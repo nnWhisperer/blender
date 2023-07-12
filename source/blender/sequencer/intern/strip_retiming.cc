@@ -88,7 +88,7 @@ int SEQ_retiming_handles_count(const Sequence *seq)
   return seq->retiming_handle_num;
 }
 
-void SEQ_retiming_data_ensure(Sequence *seq)
+void SEQ_retiming_data_ensure(const Scene *scene, Sequence *seq)
 {
   if (!SEQ_retiming_is_allowed(seq)) {
     return;
@@ -104,6 +104,8 @@ void SEQ_retiming_data_ensure(Sequence *seq)
   handle->strip_frame_index = seq->len;
   handle->retiming_factor = 1.0f;
   seq->retiming_handle_num = 2;
+
+  SEQ_retiming_add_handle(scene, seq, SEQ_time_right_handle_frame_get(scene, seq));
 }
 
 void SEQ_retiming_data_clear(Sequence *seq)
@@ -253,7 +255,9 @@ SeqRetimingHandle *SEQ_retiming_add_handle(const Scene *scene,
   float value = seq_retiming_evaluate(seq, frame_index);
 
   const SeqRetimingHandle *start_handle = SEQ_retiming_find_segment_start_handle(seq, frame_index);
-  if (start_handle->strip_frame_index == frame_index) {
+  const SeqRetimingHandle *last_handle = SEQ_retiming_last_handle_get(seq);
+
+  if (ELEM(frame_index, start_handle->strip_frame_index, last_handle->strip_frame_index)) {
     return nullptr; /* Retiming handle already exists. */
   }
 
@@ -305,7 +309,9 @@ static void seq_retiming_offset_linear_handle(const Scene *scene,
    * length.
    * Alternative solution is to find where in arc segment the `y` value is closest to `handle`
    * retiming factor, then trim transition to that point. This would change transition length. */
-  if (SEQ_retiming_handle_is_transition_type(handle - 2)) {
+  if (SEQ_retiming_handle_index_get(seq, handle) > 1 &&
+      SEQ_retiming_handle_is_transition_type(handle - 2))
+  {
     SeqRetimingHandle *transition_handle = handle - 2;
 
     const int transition_offset = transition_handle->strip_frame_index -

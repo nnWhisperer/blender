@@ -3,10 +3,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 set(INC
-  .
+  PUBLIC .
   ../asset_system
   ../blenfont
-  ../blenlib
   ../blenloader
   ../blentranslation
   ../bmesh
@@ -17,7 +16,6 @@ set(INC
   ../gpu
   ../ikplugin
   ../imbuf
-  ../makesdna
   ../makesrna
   ../modifiers
   ../nodes
@@ -27,9 +25,7 @@ set(INC
   ../simulation
   ../../../intern/eigen
   ../../../intern/ghost
-  ../../../intern/guardedalloc
   ../../../intern/iksolver/extern
-  ../../../intern/atomic
   ../../../intern/clog
   ../../../intern/libmv
   ../../../intern/mantaflow/extern
@@ -39,8 +35,6 @@ set(INC
   ../../../extern/curve_fit_nd
   ../../../extern/fmtlib/include
 
-  # dna_type_offsets.h
-  ${CMAKE_CURRENT_BINARY_DIR}/../makesdna/intern
   # RNA_prototypes.h
   ${CMAKE_BINARY_DIR}/source/blender/makesrna
 )
@@ -48,7 +42,7 @@ set(INC
 set(INC_SYS
   ${ZLIB_INCLUDE_DIRS}
 
-  # For `vfontdata_freetype.c`.
+  # For `vfontdata_freetype.cc`.
   ${FREETYPE_INCLUDE_DIRS}
 )
 
@@ -151,8 +145,8 @@ set(SRC
   intern/gpencil_legacy.c
   intern/gpencil_modifier_legacy.c
   intern/gpencil_update_cache_legacy.c
-  intern/grease_pencil_convert_legacy.cc
   intern/grease_pencil.cc
+  intern/grease_pencil_convert_legacy.cc
   intern/icons.cc
   intern/icons_rasterize.c
   intern/idprop.c
@@ -270,7 +264,6 @@ set(SRC
   intern/screen.c
   intern/shader_fx.c
   intern/shrinkwrap.cc
-  intern/simulation.cc
   intern/simulation_state.cc
   intern/simulation_state_serialize.cc
   intern/softbody.c
@@ -307,8 +300,8 @@ set(SRC
   intern/type_conversions.cc
   intern/undo_system.cc
   intern/unit.c
-  intern/vfont.c
-  intern/vfontdata_freetype.c
+  intern/vfont.cc
+  intern/vfontdata_freetype.cc
   intern/viewer_path.cc
   intern/volume.cc
   intern/volume_render.cc
@@ -380,7 +373,7 @@ set(SRC
   BKE_editlattice.h
   BKE_editmesh.h
   BKE_editmesh_bvh.h
-  BKE_editmesh_cache.h
+  BKE_editmesh_cache.hh
   BKE_editmesh_tangent.h
   BKE_effect.h
   BKE_fcurve.h
@@ -464,6 +457,7 @@ set(SRC
   BKE_paint.h
   BKE_particle.h
   BKE_pbvh.h
+  BKE_pbvh_api.hh
   BKE_pbvh_pixels.hh
   BKE_pointcache.h
   BKE_pointcloud.h
@@ -476,7 +470,6 @@ set(SRC
   BKE_sequencer_offscreen.h
   BKE_shader_fx.h
   BKE_shrinkwrap.h
-  BKE_simulation.h
   BKE_simulation_state.hh
   BKE_simulation_state_serialize.hh
   BKE_softbody.h
@@ -503,6 +496,7 @@ set(SRC
   BKE_vfontdata.h
   BKE_viewer_path.h
   BKE_volume.h
+  BKE_volume_openvdb.hh
   BKE_volume_render.h
   BKE_volume_to_mesh.hh
   BKE_workspace.h
@@ -533,11 +527,12 @@ set(SRC
 set(LIB
   bf_asset_system
   bf_blenfont
-  bf_blenlib
+  PRIVATE bf::blenlib
   bf_blenloader
   bf_blentranslation
   bf_bmesh
   bf_depsgraph
+  PRIVATE bf::dna
   bf_draw
   bf_functions
   bf_gpencil_modifiers_legacy
@@ -546,7 +541,7 @@ set(LIB
   bf_imbuf
   bf_intern_clog
   bf_intern_ghost
-  bf_intern_guardedalloc
+  PRIVATE bf::intern::guardedalloc
   bf_intern_libmv  # Uses stub when disabled.
   bf_intern_mikktspace
   bf_intern_opensubdiv  # Uses stub when disabled.
@@ -556,7 +551,7 @@ set(LIB
   bf_shader_fx
   bf_simulation
   extern_fmtlib
-
+  PRIVATE bf::intern::atomic
   # For `vfontdata_freetype.c`.
   ${FREETYPE_LIBRARIES} ${BROTLI_LIBRARIES}
 )
@@ -817,9 +812,8 @@ endif()
 # endif()
 
 blender_add_lib(bf_blenkernel "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
+add_library(bf::blenkernel ALIAS bf_blenkernel)
 
-# Needed so we can use dna_type_offsets.h for defaults initialization.
-add_dependencies(bf_blenkernel bf_dna)
 # RNA_prototypes.h
 add_dependencies(bf_blenkernel bf_rna)
 
@@ -833,6 +827,7 @@ if(WITH_GTESTS)
     intern/cryptomatte_test.cc
     intern/curves_geometry_test.cc
     intern/fcurve_test.cc
+    intern/grease_pencil_test.cc
     intern/idprop_serialize_test.cc
     intern/image_partial_update_test.cc
     intern/image_test.cc
@@ -843,7 +838,6 @@ if(WITH_GTESTS)
     intern/lib_remap_test.cc
     intern/nla_test.cc
     intern/tracking_test.cc
-    intern/grease_pencil_test.cc
   )
   set(TEST_INC
     ../editors/include

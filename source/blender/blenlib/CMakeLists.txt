@@ -7,13 +7,8 @@ if(HAVE_EXECINFO_H)
 endif()
 
 set(INC
-  .
-  ..
-  # ../blenkernel  # don't add this back!
-  ../makesdna
-  ../../../intern/atomic
+  PUBLIC .
   ../../../intern/eigen
-  ../../../intern/guardedalloc
 )
 
 set(INC_SYS
@@ -354,6 +349,7 @@ set(SRC
   BLI_string_ref.hh
   BLI_string_search.h
   BLI_string_utf8.h
+  BLI_string_utf8_symbols.h
   BLI_string_utils.h
   BLI_sub_frame.hh
   BLI_sys_types.h
@@ -390,10 +386,11 @@ set(SRC
 )
 
 set(LIB
+  PUBLIC bf::dna
   bf_intern_eigen
-  bf_intern_guardedalloc
+  PRIVATE bf::intern::guardedalloc
   extern_wcwidth
-
+  PRIVATE bf::intern::atomic
   ${ZLIB_LIBRARIES}
   ${ZSTD_LIBRARIES}
 )
@@ -476,6 +473,7 @@ set_source_files_properties(
 )
 
 blender_add_lib(bf_blenlib "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
+add_library(bf::blenlib ALIAS bf_blenlib)
 
 if(WITH_GTESTS)
   set(TEST_SRC

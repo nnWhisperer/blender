@@ -12,6 +12,7 @@
 #include "BLI_listbase_wrapper.hh"
 #include "BLI_utildefines.h"
 
+#include "BKE_anim_data.h"
 #include "BKE_lib_override.h"
 
 #include "BLT_translation.h"
@@ -28,6 +29,7 @@
 #include "tree_element_id_linestyle.hh"
 #include "tree_element_id_mesh.hh"
 #include "tree_element_id_metaball.hh"
+#include "tree_element_id_object.hh"
 #include "tree_element_id_scene.hh"
 #include "tree_element_id_texture.hh"
 
@@ -64,6 +66,7 @@ std::unique_ptr<TreeElementID> TreeElementID::createFromID(TreeElement &legacy_t
     case ID_AR:
       return std::make_unique<TreeElementIDArmature>(legacy_te, (bArmature &)id);
     case ID_OB:
+      return std::make_unique<TreeElementIDObject>(legacy_te, (Object &)id);
     case ID_MA:
     case ID_LT:
     case ID_LA:
@@ -82,7 +85,6 @@ std::unique_ptr<TreeElementID> TreeElementID::createFromID(TreeElement &legacy_t
     case ID_CV:
     case ID_PT:
     case ID_VO:
-    case ID_SIM:
     case ID_WM:
     case ID_IM:
     case ID_VF:
@@ -120,6 +122,15 @@ bool TreeElementID::expandPoll(const SpaceOutliner &space_outliner) const
 {
   const TreeStoreElem *tsepar = legacy_te_.parent ? TREESTORE(legacy_te_.parent) : nullptr;
   return (tsepar == nullptr || tsepar->type != TSE_ID_BASE || space_outliner.filter_id_type);
+}
+
+void TreeElementID::expand(SpaceOutliner &space_outliner) const
+{
+  /* Not all IDs support animation data. Will be null then. */
+  const AnimData *anim_data = BKE_animdata_from_id(&id_);
+  if (anim_data) {
+    expand_animation_data(space_outliner, anim_data);
+  }
 }
 
 void TreeElementID::expand_animation_data(SpaceOutliner &space_outliner,

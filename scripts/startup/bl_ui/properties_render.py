@@ -145,6 +145,26 @@ class RENDER_PT_eevee_ambient_occlusion(RenderButtonsPanel, Panel):
         col.prop(props, "use_gtao_bounce")
 
 
+class RENDER_PT_eevee_next_ambient_occlusion(RenderButtonsPanel, Panel):
+    bl_label = "Ambient Occlusion"
+    bl_options = {'DEFAULT_CLOSED'}
+    COMPAT_ENGINES = {'BLENDER_EEVEE_NEXT'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.engine in cls.COMPAT_ENGINES)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        scene = context.scene
+        props = scene.eevee
+
+        col = layout.column()
+        col.prop(props, "gtao_distance")
+        col.prop(props, "gtao_quality")
+
+
 class RENDER_PT_eevee_motion_blur(RenderButtonsPanel, Panel):
     bl_label = "Motion Blur"
     bl_options = {'DEFAULT_CLOSED'}
@@ -573,6 +593,28 @@ class RENDER_PT_eevee_indirect_lighting(RenderButtonsPanel, Panel):
         col.prop(props, "gi_filter_quality")
 
 
+class RENDER_PT_eevee_next_indirect_lighting(RenderButtonsPanel, Panel):
+    bl_label = "Indirect Lighting"
+    bl_options = {'DEFAULT_CLOSED'}
+    COMPAT_ENGINES = {'BLENDER_EEVEE_NEXT'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.engine in cls.COMPAT_ENGINES)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False  # No animation.
+
+        scene = context.scene
+        props = scene.eevee
+
+        col = layout.column()
+        col.operator("object.lightprobe_cache_bake", text="Bake Light Caches", icon='RENDER_STILL').subset = "ALL"
+        col.operator("object.lightprobe_cache_free", text="Delete Light Caches").subset = "ALL"
+
+
 class RENDER_PT_eevee_indirect_lighting_display(RenderButtonsPanel, Panel):
     bl_label = "Display"
     bl_parent_id = "RENDER_PT_eevee_indirect_lighting"
@@ -593,6 +635,28 @@ class RENDER_PT_eevee_indirect_lighting_display(RenderButtonsPanel, Panel):
         row = layout.row(align=True)
         row.prop(props, "gi_cubemap_display_size", text="Cubemap Size")
         row.prop(props, "gi_show_cubemaps", text="", toggle=True)
+
+        row = layout.row(align=True)
+        row.prop(props, "gi_irradiance_display_size", text="Irradiance Size")
+        row.prop(props, "gi_show_irradiance", text="", toggle=True)
+
+
+class RENDER_PT_eevee_next_indirect_lighting_display(RenderButtonsPanel, Panel):
+    bl_label = "Display"
+    bl_parent_id = "RENDER_PT_eevee_next_indirect_lighting"
+    COMPAT_ENGINES = {'BLENDER_EEVEE_NEXT'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.engine in cls.COMPAT_ENGINES)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False  # No animation.
+
+        scene = context.scene
+        props = scene.eevee
 
         row = layout.row(align=True)
         row.prop(props, "gi_irradiance_display_size", text="Irradiance Size")
@@ -891,6 +955,7 @@ classes = (
     RENDER_PT_eevee_sampling,
     RENDER_PT_eevee_next_sampling,
     RENDER_PT_eevee_ambient_occlusion,
+    RENDER_PT_eevee_next_ambient_occlusion,
     RENDER_PT_eevee_bloom,
     RENDER_PT_eevee_depth_of_field,
     RENDER_PT_eevee_next_depth_of_field,
@@ -908,6 +973,8 @@ classes = (
     RENDER_PT_eevee_next_shadows,
     RENDER_PT_eevee_indirect_lighting,
     RENDER_PT_eevee_indirect_lighting_display,
+    RENDER_PT_eevee_next_indirect_lighting,
+    RENDER_PT_eevee_next_indirect_lighting_display,
     RENDER_PT_eevee_film,
     RENDER_PT_eevee_next_film,
 

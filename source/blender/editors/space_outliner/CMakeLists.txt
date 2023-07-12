@@ -4,22 +4,16 @@
 
 set(INC
   ../include
-  ../../blenkernel
-  ../../blenlib
   ../../blenloader
   ../../blentranslation
   ../../depsgraph
   ../../gpu
   ../../imbuf
-  ../../makesdna
   ../../makesrna
   ../../sequencer
   ../../windowmanager
   ../../../../intern/clog
-  ../../../../intern/guardedalloc
 
-  # dna_type_offsets.h
-  ${CMAKE_CURRENT_BINARY_DIR}/../../makesdna/intern
   # RNA_prototypes.h
   ${CMAKE_BINARY_DIR}/source/blender/makesrna
 )
@@ -53,8 +47,10 @@ set(SRC
   tree/tree_display_view_layer.cc
   tree/tree_element.cc
   tree/tree_element_anim_data.cc
+  tree/tree_element_bone.cc
   tree/tree_element_collection.cc
   tree/tree_element_driver.cc
+  tree/tree_element_edit_bone.cc
   tree/tree_element_gpencil_layer.cc
   tree/tree_element_id.cc
   tree/tree_element_id_armature.cc
@@ -65,6 +61,7 @@ set(SRC
   tree/tree_element_id_linestyle.cc
   tree/tree_element_id_mesh.cc
   tree/tree_element_id_metaball.cc
+  tree/tree_element_id_object.cc
   tree/tree_element_id_scene.cc
   tree/tree_element_id_texture.cc
   tree/tree_element_label.cc
@@ -81,8 +78,10 @@ set(SRC
   tree/tree_display.hh
   tree/tree_element.hh
   tree/tree_element_anim_data.hh
+  tree/tree_element_bone.hh
   tree/tree_element_collection.hh
   tree/tree_element_driver.hh
+  tree/tree_element_edit_bone.hh
   tree/tree_element_gpencil_layer.hh
   tree/tree_element_id.hh
   tree/tree_element_id_armature.hh
@@ -93,6 +92,7 @@ set(SRC
   tree/tree_element_id_linestyle.hh
   tree/tree_element_id_mesh.hh
   tree/tree_element_id_metaball.hh
+  tree/tree_element_id_object.hh
   tree/tree_element_id_scene.hh
   tree/tree_element_id_texture.hh
   tree/tree_element_label.hh
@@ -106,9 +106,11 @@ set(SRC
 )
 
 set(LIB
-  bf_blenkernel
-  bf_blenlib
+  PRIVATE bf::blenkernel
+  PRIVATE bf::blenlib
+  PRIVATE bf::dna
   bf_editor_undo
+  PRIVATE bf::intern::guardedalloc
 )
 
 
