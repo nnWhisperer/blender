@@ -164,10 +164,10 @@ static void insert_graph_keys(bAnimContext *ac, eGraphKeys_InsertKey_Types mode)
         x = sipo->cursorTime;
       }
       else if (adt) {
-        x = BKE_nla_tweakedit_remap(adt, (float)scene->r.cfra, NLATIME_CONVERT_UNMAP);
+        x = BKE_nla_tweakedit_remap(adt, float(scene->r.cfra), NLATIME_CONVERT_UNMAP);
       }
       else {
-        x = (float)scene->r.cfra;
+        x = float(scene->r.cfra);
       }
 
       /* Normalize units of cursor's value. */
@@ -187,7 +187,7 @@ static void insert_graph_keys(bAnimContext *ac, eGraphKeys_InsertKey_Types mode)
   }
   else {
     const AnimationEvalContext anim_eval_context = BKE_animsys_eval_context_construct(
-        ac->depsgraph, (float)scene->r.cfra);
+        ac->depsgraph, float(scene->r.cfra));
     for (ale = static_cast<bAnimListElem *>(anim_data.first); ale; ale = ale->next) {
       FCurve *fcu = (FCurve *)ale->key_data;
 
@@ -220,12 +220,12 @@ static void insert_graph_keys(bAnimContext *ac, eGraphKeys_InsertKey_Types mode)
         AnimData *adt = ANIM_nla_mapping_get(ac, ale);
 
         /* Adjust current frame for NLA-mapping. */
-        float cfra = (float)scene->r.cfra;
+        float cfra = float(scene->r.cfra);
         if ((sipo) && (sipo->mode == SIPO_MODE_DRIVERS)) {
           cfra = sipo->cursorTime;
         }
         else if (adt) {
-          cfra = BKE_nla_tweakedit_remap(adt, (float)scene->r.cfra, NLATIME_CONVERT_UNMAP);
+          cfra = BKE_nla_tweakedit_remap(adt, float(scene->r.cfra), NLATIME_CONVERT_UNMAP);
         }
 
         const float curval = evaluate_fcurve_only_curve(fcu, cfra);
@@ -1941,15 +1941,15 @@ static bool euler_filter_single_channel(FCurve *fcu)
     const float sign = (prev->vec[1][1] > bezt->vec[1][1]) ? 1.0f : -1.0f;
 
     /* >= 180 degree flip? */
-    if ((sign * (prev->vec[1][1] - bezt->vec[1][1])) < (float)M_PI) {
+    if ((sign * (prev->vec[1][1] - bezt->vec[1][1])) < float(M_PI)) {
       continue;
     }
 
     /* 360 degrees to add/subtract frame value until difference
      * is acceptably small that there's no more flip. */
-    const float fac = sign * 2.0f * (float)M_PI;
+    const float fac = sign * 2.0f * float(M_PI);
 
-    while ((sign * (prev->vec[1][1] - bezt->vec[1][1])) >= (float)M_PI) {
+    while ((sign * (prev->vec[1][1] - bezt->vec[1][1])) >= float(M_PI)) {
       bezt->vec[0][1] += fac;
       bezt->vec[1][1] += fac;
       bezt->vec[2][1] += fac;
@@ -2187,14 +2187,14 @@ static int graphkeys_framejump_exec(bContext *C, wmOperator * /*op*/)
   /* Take the average values, rounding to the nearest int as necessary for int results. */
   if (sipo->mode == SIPO_MODE_DRIVERS) {
     /* Drivers Mode - Affects cursor (float) */
-    sipo->cursorTime = sum_time / (float)num_keyframes;
+    sipo->cursorTime = sum_time / float(num_keyframes);
   }
   else {
     /* Animation Mode - Affects current frame (int) */
     scene->r.cfra = round_fl_to_int(sum_time / num_keyframes);
     scene->r.subframe = 0.0f;
   }
-  sipo->cursorVal = sum_value / (float)num_keyframes;
+  sipo->cursorVal = sum_value / float(num_keyframes);
 
   /* Set notifier that things have changed. */
   WM_event_add_notifier(C, NC_SCENE | ND_FRAME, ac.scene);
@@ -2334,7 +2334,7 @@ static int graphkeys_snap_cursor_value_exec(bContext *C, wmOperator * /*op*/)
   }
 
   SpaceGraph *sipo = (SpaceGraph *)ac.sl;
-  sipo->cursorVal = sum_value / (float)num_keyframes;
+  sipo->cursorVal = sum_value / float(num_keyframes);
   // WM_event_add_notifier(C, NC_SCENE | ND_FRAME, ac.scene);
   ED_region_tag_redraw(CTX_wm_region(C));
 
@@ -2726,7 +2726,7 @@ static void mirror_graph_keys(bAnimContext *ac, short mode)
 
     /* Store marker's time (if available). */
     if (marker) {
-      ked.f1 = (float)marker->frame;
+      ked.f1 = float(marker->frame);
     }
     else {
       return;

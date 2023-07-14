@@ -146,7 +146,7 @@ static void draw_ticks(const float start_factor,
   /* Round initial_tick_factor up to the next tick_increment. */
   int tick_percentage = ceil((start_factor * 100) / tick_increment) * tick_increment;
 
-  while (tick_percentage <= (int)(end_factor * 100)) {
+  while (tick_percentage <= int(end_factor * 100)) {
     float tick_height;
     /* Different ticks have different heights. Multiples of 100% are the tallest, 50% is a bit
      * smaller and the rest is the minimum size. */
@@ -161,7 +161,7 @@ static void draw_ticks(const float start_factor,
     }
 
     const float x = line_start[0] +
-                    (((float)tick_percentage / 100) - start_factor) * SLIDE_PIXEL_DISTANCE;
+                    ((float(tick_percentage) / 100) - start_factor) * SLIDE_PIXEL_DISTANCE;
     rctf tick_rect{};
     tick_rect.xmin = x - (line_width / 2);
     tick_rect.xmax = x + (line_width / 2);

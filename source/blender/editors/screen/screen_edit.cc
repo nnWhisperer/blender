@@ -508,8 +508,8 @@ static ScrArea *screen_area_trim(
   }
 
   /* Measurement with ScrVerts because winx and winy might not be correct at this time. */
-  float fac = abs(size) / (float)(vertical ? ((*area)->v3->vec.x - (*area)->v1->vec.x) :
-                                             ((*area)->v3->vec.y - (*area)->v1->vec.y));
+  float fac = abs(size) / float(vertical ? ((*area)->v3->vec.x - (*area)->v1->vec.x) :
+                                           ((*area)->v3->vec.y - (*area)->v1->vec.y));
   fac = (reverse == vertical) ? 1.0f - fac : fac;
   ScrArea *newsa = area_split(
       CTX_wm_window(C), screen, *area, vertical ? SCREEN_AXIS_V : SCREEN_AXIS_H, fac, true);
@@ -581,7 +581,7 @@ bool screen_area_close(bContext *C, bScreen *screen, ScrArea *area)
       const int ar_length = vertical ? (neighbor->v3->vec.x - neighbor->v1->vec.x) :
                                        (neighbor->v3->vec.y - neighbor->v1->vec.y);
       /* Calculate the ratio of the lengths of the shared edges. */
-      float alignment = MIN2(area_length, ar_length) / (float)MAX2(area_length, ar_length);
+      float alignment = MIN2(area_length, ar_length) / float(MAX2(area_length, ar_length));
       if (alignment > best_alignment) {
         best_alignment = alignment;
         sa2 = neighbor;
@@ -1127,9 +1127,9 @@ static void screen_global_area_refresh(wmWindow *win,
   }
 }
 
-static int screen_global_header_size(void)
+static int screen_global_header_size()
 {
-  return (int)ceilf(ED_area_headersize() / UI_SCALE_FAC);
+  return int(ceilf(ED_area_headersize() / UI_SCALE_FAC));
 }
 
 static void screen_global_topbar_area_refresh(wmWindow *win, bScreen *screen)
@@ -1415,7 +1415,7 @@ void ED_screen_full_restore(bContext *C, ScrArea *area)
   wmWindow *win = CTX_wm_window(C);
   SpaceLink *sl = static_cast<SpaceLink *>(area->spacedata.first);
   bScreen *screen = CTX_wm_screen(C);
-  short state = (screen ? screen->state : SCREENMAXIMIZED);
+  short state = (screen ? screen->state : short(SCREENMAXIMIZED));
 
   /* If full-screen area has a temporary space (such as a file browser or full-screen render
    * overlaid on top of an existing setup) then return to the previous space. */
@@ -1649,7 +1649,7 @@ ScrArea *ED_screen_temp_space_open(bContext *C,
                          y,
                          sizex,
                          sizey,
-                         (int)space_type,
+                         int(space_type),
                          false,
                          dialog,
                          true,
@@ -1668,7 +1668,7 @@ ScrArea *ED_screen_temp_space_open(bContext *C,
         ((SpaceLink *)area->spacedata.first)->link_flag |= SPACE_FLAG_TYPE_TEMPORARY;
       }
       else {
-        area = ED_screen_full_newspace(C, ctx_area, (int)space_type);
+        area = ED_screen_full_newspace(C, ctx_area, int(space_type));
         ((SpaceLink *)area->spacedata.first)->link_flag |= SPACE_FLAG_TYPE_TEMPORARY;
       }
       break;

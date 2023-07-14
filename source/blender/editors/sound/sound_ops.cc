@@ -358,7 +358,7 @@ static int sound_mixdown_exec(bContext *C, wmOperator *op)
 
   BLI_path_abs(filepath, BKE_main_blendfile_path(bmain));
 
-  const double fps = (((double)scene_eval->r.frs_sec) / (double)scene_eval->r.frs_sec_base);
+  const double fps = ((double(scene_eval->r.frs_sec)) / double(scene_eval->r.frs_sec_base));
   const int start_frame = scene_eval->r.sfra;
   const int end_frame = scene_eval->r.efra;
 
@@ -878,7 +878,7 @@ static void SOUND_OT_unpack(wmOperatorType *ot)
 
 /* ******************************************************* */
 
-void ED_operatortypes_sound(void)
+void ED_operatortypes_sound()
 {
   WM_operatortype_append(SOUND_OT_open);
   WM_operatortype_append(SOUND_OT_open_mono);

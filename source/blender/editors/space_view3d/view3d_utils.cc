@@ -493,7 +493,7 @@ bool ED_view3d_persp_ensure(const Depsgraph *depsgraph, View3D *v3d, ARegion *re
     if (rv3d->persp == RV3D_CAMOB) {
       /* If autopersp and previous view was an axis one,
        * switch back to PERSP mode, else reuse previous mode. */
-      char persp = (autopersp && RV3D_VIEW_IS_AXIS(rv3d->lview)) ? RV3D_PERSP : rv3d->lpersp;
+      char persp = (autopersp && RV3D_VIEW_IS_AXIS(rv3d->lview)) ? char(RV3D_PERSP) : rv3d->lpersp;
       ED_view3d_persp_switch_from_camera(depsgraph, v3d, rv3d, persp);
     }
     else if (autopersp && RV3D_VIEW_IS_AXIS(rv3d->view)) {
@@ -636,7 +636,7 @@ bool ED_view3d_camera_autokey(
     const Scene *scene, ID *id_key, bContext *C, const bool do_rotate, const bool do_translate)
 {
   if (autokeyframe_cfra_can_key(scene, id_key)) {
-    const float cfra = (float)scene->r.cfra;
+    const float cfra = float(scene->r.cfra);
     ListBase dsources = {nullptr, nullptr};
 
     /* add data-source override for the camera object */
@@ -1126,8 +1126,8 @@ bool ED_view3d_autodist(Depsgraph *depsgraph,
   } while ((depth_ok == false) && (i < ARRAY_SIZE(margin_arr)));
 
   if (depth_ok) {
-    float centx = (float)mval[0] + 0.5f;
-    float centy = (float)mval[1] + 0.5f;
+    float centx = float(mval[0]) + 0.5f;
+    float centy = float(mval[1]) + 0.5f;
 
     if (ED_view3d_unproject_v3(region, centx, centy, depth_close, mouse_worldloc)) {
       return true;
@@ -1160,8 +1160,8 @@ bool ED_view3d_autodist_simple(ARegion *region,
     return false;
   }
 
-  float centx = (float)mval[0] + 0.5f;
-  float centy = (float)mval[1] + 0.5f;
+  float centx = float(mval[0]) + 0.5f;
+  float centy = float(mval[1]) + 0.5f;
   return ED_view3d_unproject_v3(region, centx, centy, depth, mouse_worldloc);
 }
 
@@ -1772,7 +1772,7 @@ bool ED_view3d_depth_read_cached_normal(const ARegion *region,
 
       float depth_fl = 1.0f;
       ED_view3d_depth_read_cached(depths, mval_ofs, 0, &depth_fl);
-      const double depth = (double)depth_fl;
+      const double depth = double(depth_fl);
       if ((depth > depths->depth_range[0]) && (depth < depths->depth_range[1])) {
         if (ED_view3d_depth_unproject_v3(region, mval_ofs, depth, coords[i])) {
           depths_valid[i] = true;
@@ -1813,8 +1813,8 @@ bool ED_view3d_depth_unproject_v3(const ARegion *region,
                                   const double depth,
                                   float r_location_world[3])
 {
-  float centx = (float)mval[0] + 0.5f;
-  float centy = (float)mval[1] + 0.5f;
+  float centx = float(mval[0]) + 0.5f;
+  float centy = float(mval[1]) + 0.5f;
   return ED_view3d_unproject_v3(region, centx, centy, depth, r_location_world);
 }
 

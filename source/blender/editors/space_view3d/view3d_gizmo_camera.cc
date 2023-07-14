@@ -86,7 +86,7 @@ static void WIDGETGROUP_camera_setup(const bContext *C, wmGizmoGroup *gzgroup)
   const wmGizmoType *gzt_arrow = WM_gizmotype_find("GIZMO_GT_arrow_3d", true);
 
   struct CameraWidgetGroup *cagzgroup = static_cast<CameraWidgetGroup *>(
-      MEM_callocN(sizeof(struct CameraWidgetGroup), __func__));
+      MEM_callocN(sizeof(CameraWidgetGroup), __func__));
   gzgroup->customdata = cagzgroup;
 
   negate_v3_v3(dir, ob->object_to_world[2]);
@@ -161,8 +161,8 @@ static void WIDGETGROUP_camera_refresh(const bContext *C, wmGizmoGroup *gzgroup)
   }
 
   /* TODO: make focal length/ortho ob_scale_inv widget optional. */
-  const float aspx = (float)scene->r.xsch * scene->r.xasp;
-  const float aspy = (float)scene->r.ysch * scene->r.yasp;
+  const float aspx = float(scene->r.xsch) * scene->r.xasp;
+  const float aspy = float(scene->r.ysch) * scene->r.yasp;
   const bool is_ortho = (ca->type == CAM_ORTHO);
   const int sensor_fit = BKE_camera_sensor_fit(ca->sensor_fit, aspx, aspy);
   /* Important to use camera value, not calculated fit since 'AUTO' uses width always. */
@@ -409,7 +409,7 @@ static bool WIDGETGROUP_camera_view_poll(const bContext *C, wmGizmoGroupType * /
 static void WIDGETGROUP_camera_view_setup(const bContext * /*C*/, wmGizmoGroup *gzgroup)
 {
   struct CameraViewWidgetGroup *viewgroup = static_cast<CameraViewWidgetGroup *>(
-      MEM_mallocN(sizeof(struct CameraViewWidgetGroup), __func__));
+      MEM_mallocN(sizeof(CameraViewWidgetGroup), __func__));
 
   viewgroup->border = WM_gizmo_new("GIZMO_GT_cage_2d", gzgroup, nullptr);
 

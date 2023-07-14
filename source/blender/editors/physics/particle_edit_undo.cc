@@ -160,7 +160,7 @@ static void undoptcache_to_editcache(PTCacheUndo *undo, PTCacheEdit *edit)
 
       LOOP_POINTS {
         LOOP_KEYS {
-          if ((int)key->ftime == (int)pm->frame) {
+          if (int(key->ftime) == int(pm->frame)) {
             key->co = static_cast<float *>(cur[BPHYS_DATA_LOCATION]);
             key->vel = static_cast<float *>(cur[BPHYS_DATA_VELOCITY]);
             key->rot = static_cast<float *>(cur[BPHYS_DATA_ROTATION]);
@@ -233,11 +233,8 @@ static bool particle_undosys_step_encode(bContext *C, struct Main * /*bmain*/, U
   return true;
 }
 
-static void particle_undosys_step_decode(bContext *C,
-                                         struct Main * /*bmain*/,
-                                         UndoStep *us_p,
-                                         const eUndoStepDir /*dir*/,
-                                         bool /*is_final*/)
+static void particle_undosys_step_decode(
+    bContext *C, Main * /*bmain*/, UndoStep *us_p, const eUndoStepDir /*dir*/, bool /*is_final*/)
 {
   Depsgraph *depsgraph = CTX_data_depsgraph_pointer(C);
 

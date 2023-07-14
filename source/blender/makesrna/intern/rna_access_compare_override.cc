@@ -806,7 +806,7 @@ bool RNA_struct_override_matches(Main *bmain,
 
 #ifdef DEBUG_OVERRIDE_TIMEIT
     if (!root_path) {
-      const float _delta_time = (float)(PIL_check_seconds_timer() - _timeit_time_diffing);
+      const float _delta_time = float(PIL_check_seconds_timer() - _timeit_time_diffing);
       _delta_time_diffing += _delta_time;
       _num_delta_time_diffing++;
     }
@@ -926,7 +926,7 @@ bool RNA_struct_override_matches(Main *bmain,
 
 #ifdef DEBUG_OVERRIDE_TIMEIT
   if (!root_path) {
-    const float _delta_time = (float)(PIL_check_seconds_timer() - _timeit_time_global);
+    const float _delta_time = float(PIL_check_seconds_timer() - _timeit_time_global);
     _sum_time_global += _delta_time;
     _num_time_global++;
     _sum_time_diffing += _delta_time_diffing;
@@ -937,7 +937,7 @@ bool RNA_struct_override_matches(Main *bmain,
            __func__,
            (_sum_time_global / _num_time_global),
            _sum_time_global,
-           (int)_num_time_global);
+           int(_num_time_global));
     printf("diffing time end      (%s): %.6f (in %d runs)\n",
            __func__,
            _delta_time_diffing,
@@ -946,7 +946,7 @@ bool RNA_struct_override_matches(Main *bmain,
            __func__,
            (_sum_time_diffing / _num_time_diffing),
            _sum_time_diffing,
-           (int)_num_time_diffing);
+           int(_num_time_diffing));
   }
 #endif
 
@@ -1212,7 +1212,7 @@ static void rna_property_override_collection_subitem_lookup(
     CLOG_INFO(&LOG,
               2,
               "Failed to find destination sub-item '%s' (%d) of '%s' in new override data '%s'",
-              opop->subitem_reference_name != NULL ? opop->subitem_reference_name : "",
+              opop->subitem_reference_name != nullptr ? opop->subitem_reference_name : "",
               opop->subitem_reference_index,
               op->rna_path,
               ptr_dst->owner_id->name);
@@ -1224,7 +1224,7 @@ static void rna_property_override_collection_subitem_lookup(
     CLOG_INFO(&LOG,
               2,
               "Failed to find source sub-item '%s' (%d) of '%s' in old override data '%s'",
-              opop->subitem_local_name != NULL ? opop->subitem_local_name : "",
+              opop->subitem_local_name != nullptr ? opop->subitem_local_name : "",
               opop->subitem_local_index,
               op->rna_path,
               ptr_src->owner_id->name);
