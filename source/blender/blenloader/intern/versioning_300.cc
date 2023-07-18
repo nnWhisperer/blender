@@ -1048,6 +1048,26 @@ static void version_geometry_nodes_extrude_smooth_propagation(bNodeTree &ntree)
   }
 }
 
+/* Change the action strip (if a NLA strip is preset) to HOLD instead of HOLD FORWARD to maintain
+ * backwards compatibility.*/
+static void version_nla_action_strip_hold(Main *bmain)
+{
+  ID *id;
+  FOREACH_MAIN_ID_BEGIN (bmain, id) {
+    AnimData *adt = BKE_animdata_from_id(id);
+    if (adt == nullptr) {
+      continue;
+    }
+
+    if (&adt->nla_tracks != nullptr && adt->action != nullptr) {
+      if (adt->act_extendmode == NLASTRIP_EXTEND_HOLD_FORWARD) {
+        adt->act_extendmode = NLASTRIP_EXTEND_HOLD;
+      }
+    }
+    FOREACH_MAIN_ID_END;
+  }
+}
+
 void do_versions_after_linking_300(FileData * /*fd*/, Main *bmain)
 {
   if (MAIN_VERSION_ATLEAST(bmain, 300, 0) && !MAIN_VERSION_ATLEAST(bmain, 300, 1)) {
@@ -1348,6 +1368,7 @@ void do_versions_after_linking_300(FileData * /*fd*/, Main *bmain)
    * \note Keep this message at the bottom of the function.
    */
   {
+    version_nla_action_strip_hold(bmain);
     /* Keep this block, even when empty. */
   }
 }

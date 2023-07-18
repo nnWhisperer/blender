@@ -629,8 +629,7 @@ static int animsys_quaternion_evaluate_fcurves(PathResolvedRNA quat_rna,
 
   int fcurve_offset = 0;
   for (; fcurve_offset < 4 && quat_curve_fcu;
-       ++fcurve_offset, quat_curve_fcu = quat_curve_fcu->next)
-  {
+       ++fcurve_offset, quat_curve_fcu = quat_curve_fcu->next) {
     if (!STREQ(quat_curve_fcu->rna_path, first_fcurve->rna_path)) {
       /* This should never happen when the quaternion is fully keyed. Some
        * people do use half-keyed quaternions, though, so better to check. */
@@ -3266,10 +3265,7 @@ static void animsys_create_action_track_strip(const AnimData *adt,
 
   /* Must set NLASTRIP_FLAG_USR_INFLUENCE, or else the default setting overrides, and influence
    * doesn't work.
-   *
-   * Must set NLASTRIP_FLAG_NO_TIME_MAP, so Action Track fcurve evaluation extends beyond its
-   * keyframe bounds.
-   * */
+   */
   r_action_strip->flag |= NLASTRIP_FLAG_USR_INFLUENCE;
 
   const bool tweaking = (adt->flag & ADT_NLA_EDIT_ON) != 0;
