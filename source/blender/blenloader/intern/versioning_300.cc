@@ -68,6 +68,7 @@
 #include "BKE_mesh.hh"
 #include "BKE_modifier.h"
 #include "BKE_node.hh"
+#include "BKE_nla.h"
 #include "BKE_screen.h"
 #include "BKE_simulation_state_serialize.hh"
 #include "BKE_workspace.h"
@@ -1060,7 +1061,15 @@ static void version_nla_action_strip_hold(Main *bmain)
     }
 
     if (&adt->nla_tracks != nullptr && adt->action != nullptr) {
-      if (adt->act_extendmode == NLASTRIP_EXTEND_HOLD_FORWARD) {
+      bool has_nla_strip = false;
+
+      LISTBASE_FOREACH (NlaTrack *, track, &adt->nla_tracks) {
+        if(BLI_listbase_count(&track->strips) > 0){
+          has_nla_strip = true;
+        }
+      }
+      /* Only update action extend mode if there's a strip present. */
+      if (adt->act_extendmode == NLASTRIP_EXTEND_HOLD_FORWARD && has_nla_strip) {
         adt->act_extendmode = NLASTRIP_EXTEND_HOLD;
       }
     }
