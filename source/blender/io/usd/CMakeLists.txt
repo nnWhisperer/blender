@@ -47,8 +47,6 @@ set(INC
   .
   ../common
   ../../blenloader
-  ../../blentranslation
-  ../../bmesh
   ../../editors/include
   ../../imbuf
   ../../makesrna
@@ -124,6 +122,8 @@ set(SRC
 set(LIB
   PRIVATE bf::blenkernel
   PRIVATE bf::blenlib
+  PRIVATE bf::blentranslation
+  PRIVATE bf::bmesh
   PRIVATE bf::depsgraph
   PRIVATE bf::dna
   bf_imbuf

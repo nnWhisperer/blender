@@ -75,14 +75,14 @@ static void arena_release(CCGAllocatorHDL a)
   BLI_memarena_free(reinterpret_cast<MemArena *>(a));
 }
 
-typedef enum {
+enum CCGFlags {
   CCG_USE_AGING = 1,
   CCG_USE_ARENA = 2,
   CCG_CALC_NORMALS = 4,
   /* add an extra four bytes for a mask layer */
   CCG_ALLOC_MASK = 8,
   CCG_SIMPLE_SUBDIV = 16,
-} CCGFlags;
+};
 ENUM_OPERATORS(CCGFlags, CCG_SIMPLE_SUBDIV);
 
 static CCGSubSurf *_getSubSurf(CCGSubSurf *prevSS, int subdivLevels, int numLayers, CCGFlags flags)
@@ -1875,7 +1875,7 @@ void subsurf_calculate_limit_positions(Mesh *me, float (*r_positions)[3])
   CCGVertIterator vi;
   DerivedMesh *dm = CDDM_from_mesh(me);
 
-  ss_sync_from_derivedmesh(ss, dm, nullptr, 0, 0);
+  ss_sync_from_derivedmesh(ss, dm, nullptr, 0, false);
 
   for (ccgSubSurf_initVertIterator(ss, &vi); !ccgVertIterator_isStopped(&vi);
        ccgVertIterator_next(&vi))

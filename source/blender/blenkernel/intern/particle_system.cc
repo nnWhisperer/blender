@@ -7,11 +7,11 @@
  * \ingroup bke
  */
 
-#include <stddef.h>
+#include <cstddef>
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 
 #include "MEM_guardedalloc.h"
 
@@ -1250,7 +1250,7 @@ static void set_keyed_keys(ParticleSimulationData *sim)
       key->time = -1.0; /* use current time */
 
       const int p_ksim = (ksim.psys->totpart) ? p % ksim.psys->totpart : 0;
-      psys_get_particle_state(&ksim, p_ksim, key, 1);
+      psys_get_particle_state(&ksim, p_ksim, key, true);
 
       if (psys->flag & PSYS_KEYED_TIMING) {
         key->time = pa->time + pt->time;
@@ -2399,7 +2399,10 @@ static void basic_rotate(ParticleSettings *part, ParticleData *pa, float dfra, f
 #define COLLISION_MIN_DISTANCE 0.0001f
 #define COLLISION_ZERO 0.00001f
 #define COLLISION_INIT_STEP 0.00008f
-typedef float (*NRDistanceFunc)(float *p, float radius, ParticleCollisionElement *pce, float *nor);
+using NRDistanceFunc = float (*)(float *p,
+                                 float radius,
+                                 ParticleCollisionElement *pce,
+                                 float *nor);
 static float nr_signed_distance_to_plane(float *p,
                                          float radius,
                                          ParticleCollisionElement *pce,
@@ -3274,7 +3277,7 @@ static void psys_update_path_cache(ParticleSimulationData *sim,
       }
 
       if (!skip) {
-        psys_cache_child_paths(sim, cfra, 0, use_render_params);
+        psys_cache_child_paths(sim, cfra, false, use_render_params);
       }
     }
   }

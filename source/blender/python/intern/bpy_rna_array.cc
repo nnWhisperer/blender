@@ -36,10 +36,10 @@
 
 struct ItemConvertArgData;
 
-typedef void (*ItemConvertFunc)(const ItemConvertArgData *arg, PyObject *, char *);
-typedef int (*ItemTypeCheckFunc)(PyObject *);
-typedef void (*RNA_SetArrayFunc)(PointerRNA *, PropertyRNA *, const char *);
-typedef void (*RNA_SetIndexFunc)(PointerRNA *, PropertyRNA *, int index, void *);
+using ItemConvertFunc = void (*)(const ItemConvertArgData *arg, PyObject *py_data, char *data);
+using ItemTypeCheckFunc = int (*)(PyObject *py_data);
+using RNA_SetArrayFunc = void (*)(PointerRNA *ptr, PropertyRNA *prop, const char *data);
+using RNA_SetIndexFunc = void (*)(PointerRNA *ptr, PropertyRNA *prop, int index, void *data_item);
 
 struct ItemConvertArgData {
   union {
@@ -111,7 +111,7 @@ static int validate_array_type(PyObject *seq,
                      error_prefix,
                      Py_TYPE(seq)->tp_name,
                      i);
-        ok = 0;
+        ok = false;
       }
       else if ((item_seq_size = PySequence_Size(item)) == -1) {
         // BLI_snprintf(error_str, error_str_size, "expected a sequence of %s", item_type_str);
@@ -120,7 +120,7 @@ static int validate_array_type(PyObject *seq,
                      error_prefix,
                      item_type_str,
                      Py_TYPE(item)->tp_name);
-        ok = 0;
+        ok = false;
       }
       /* arr[3][4][5]
        * dimsize[1] = 4
@@ -137,7 +137,7 @@ static int validate_array_type(PyObject *seq,
                      dim + 1,
                      dimsize[dim + 1],
                      item_seq_size);
-        ok = 0;
+        ok = false;
       }
       else if (validate_array_type(item,
                                    dim + 1,
@@ -148,7 +148,7 @@ static int validate_array_type(PyObject *seq,
                                    item_type_str,
                                    error_prefix) == -1)
       {
-        ok = 0;
+        ok = false;
       }
 
       Py_XDECREF(item);
