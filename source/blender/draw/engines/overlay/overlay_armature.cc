@@ -171,24 +171,24 @@ class UnifiedBonePtr {
     return is_editbone_ ? eBone_->parent != nullptr : pchan_->bone->parent != nullptr;
   }
 
-  const float4x4 disp_mat() const
+  using f44 = float[4][4];
+  const f44 &disp_mat() const
   {
-    return float4x4(is_editbone_ ? eBone_->disp_mat : pchan_->disp_mat);
+    return is_editbone_ ? eBone_->disp_mat : pchan_->disp_mat;
+  }
+  f44 &disp_mat()
+  {
+    return is_editbone_ ? eBone_->disp_mat : pchan_->disp_mat;
   }
 
-  float4x4 disp_mat()
+  const f44 &disp_tail_mat() const
   {
-    return float4x4(is_editbone_ ? eBone_->disp_mat : pchan_->disp_mat);
+    return is_editbone_ ? eBone_->disp_tail_mat : pchan_->disp_tail_mat;
   }
 
-  const float4x4 disp_tail_mat() const
+  f44 &disp_tail_mat()
   {
-    return float4x4(is_editbone_ ? eBone_->disp_tail_mat : pchan_->disp_tail_mat);
-  }
-
-  float4x4 disp_tail_mat()
-  {
-    return float4x4(is_editbone_ ? eBone_->disp_tail_mat : pchan_->disp_tail_mat);
+    return is_editbone_ ? eBone_->disp_tail_mat : pchan_->disp_tail_mat;
   }
 
   /* For some, to me unknown, reason, the drawing code passes these around as pointers. This is the
@@ -620,13 +620,13 @@ void OVERLAY_bone_instance_data_set_color(BoneInstanceData *data, const float bo
 
 /* Octahedral */
 static void drw_shgroup_bone_octahedral(ArmatureDrawContext *ctx,
-                                        const float4x4 bone_mat,
+                                        const float (*bone_mat)[4],
                                         const float bone_color[4],
                                         const float hint_color[4],
                                         const float outline_color[4])
 {
   BoneInstanceData inst_data;
-  mul_m4_m4m4(inst_data.mat, ctx->ob->object_to_world, bone_mat.ptr());
+  mul_m4_m4m4(inst_data.mat, ctx->ob->object_to_world, bone_mat);
   if (ctx->solid) {
     OVERLAY_bone_instance_data_set_color(&inst_data, bone_color);
     OVERLAY_bone_instance_data_set_color_hint(&inst_data, hint_color);
@@ -1392,8 +1392,8 @@ static void draw_bone_update_disp_matrix_default(UnifiedBonePtr bone)
   float ebmat[4][4];
   float bone_scale[3];
   float(*bone_mat)[4];
-  float(*disp_mat)[4] = bone.disp_mat().ptr();
-  float(*disp_tail_mat)[4] = bone.disp_tail_mat().ptr();
+  float(*disp_mat)[4] = bone.disp_mat();
+  float(*disp_tail_mat)[4] = bone.disp_tail_mat();
 
   /* TODO: This should be moved to depsgraph or armature refresh
    * and not be tight to the draw pass creation.
@@ -1648,7 +1648,7 @@ static void draw_axes(ArmatureDrawContext *ctx, const UnifiedBonePtr bone, const
   }
   else {
     float disp_mat[4][4];
-    copy_m4_m4(disp_mat, bone.disp_mat().ptr());
+    copy_m4_m4(disp_mat, bone.disp_mat());
     translate_m4(disp_mat, 0.0, arm->axes_position - 1.0, 0.0);
     drw_shgroup_bone_axes(ctx, disp_mat, final_col);
   }
@@ -1704,7 +1704,7 @@ static void draw_points(ArmatureDrawContext *ctx,
 
     if (is_envelope_draw) {
       drw_shgroup_bone_envelope(ctx,
-                                bone.disp_mat().ptr(),
+                                bone.disp_mat(),
                                 col_solid_root,
                                 col_hint_root,
                                 col_wire_root,
@@ -1712,8 +1712,7 @@ static void draw_points(ArmatureDrawContext *ctx,
                                 &envelope_ignore);
     }
     else {
-      drw_shgroup_bone_point(
-          ctx, bone.disp_mat().ptr(), col_solid_root, col_hint_root, col_wire_root);
+      drw_shgroup_bone_point(ctx, bone.disp_mat(), col_solid_root, col_hint_root, col_wire_root);
     }
   }
 
@@ -1724,7 +1723,7 @@ static void draw_points(ArmatureDrawContext *ctx,
 
   if (is_envelope_draw) {
     drw_shgroup_bone_envelope(ctx,
-                              bone.disp_mat().ptr(),
+                              bone.disp_mat(),
                               col_solid_tail,
                               col_hint_tail,
                               col_wire_tail,
@@ -1733,7 +1732,7 @@ static void draw_points(ArmatureDrawContext *ctx,
   }
   else {
     drw_shgroup_bone_point(
-        ctx, bone.disp_tail_mat().ptr(), col_solid_tail, col_hint_tail, col_wire_tail);
+        ctx, bone.disp_tail_mat(), col_solid_tail, col_hint_tail, col_wire_tail);
   }
 
   if (select_id != -1) {
@@ -2085,7 +2084,7 @@ class ArmatureBoneDrawStrategyCustomShape : public ArmatureBoneDrawStrategy {
      * This would refresh armature without invalidating the draw cache. */
     mul_v3_v3fl(bone_scale, pchan->custom_scale_xyz, PCHAN_CUSTOM_BONE_LENGTH(pchan));
     bone_mat = pchan->custom_tx ? pchan->custom_tx->pose_mat : pchan->pose_mat;
-    disp_mat = bone.disp_mat().ptr();
+    disp_mat = bone.disp_mat();
     disp_tail_mat = pchan->disp_tail_mat;
 
     eulO_to_mat3(rot_mat, pchan->custom_rotation_euler, ROT_MODE_XYZ);
@@ -2125,7 +2124,7 @@ class ArmatureBoneDrawStrategyCustomShape : public ArmatureBoneDrawStrategy {
     const float *col_solid = get_bone_solid_color(ctx, bone, boneflag, constflag);
     const float *col_wire = get_bone_wire_color(ctx, bone, boneflag, constflag);
     const float *col_hint = get_bone_hint_color(ctx, bone, boneflag, constflag);
-    const float(*disp_mat)[4] = bone.disp_mat().ptr();
+    const float(*disp_mat)[4] = bone.disp_mat();
 
     if (select_id != -1) {
       DRW_select_load_id(select_id | BONESEL_BONE);
@@ -2272,23 +2271,20 @@ class ArmatureBoneDrawStrategyLine : public ArmatureBoneDrawStrategy {
 
     if (select_id == -1) {
       /* Not in selection mode, draw everything at once. */
-      drw_shgroup_bone_stick(ctx, bone.disp_mat().ptr(), col_wire, col_bone, col_head, col_tail);
+      drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, col_bone, col_head, col_tail);
     }
     else {
       /* In selection mode, draw bone, root and tip separately. */
       DRW_select_load_id(select_id | BONESEL_BONE);
-      drw_shgroup_bone_stick(
-          ctx, bone.disp_mat().ptr(), col_wire, col_bone, no_display, no_display);
+      drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, col_bone, no_display, no_display);
 
       if (col_head[3] > 0.0f) {
         DRW_select_load_id(select_id | BONESEL_ROOT);
-        drw_shgroup_bone_stick(
-            ctx, bone.disp_mat().ptr(), col_wire, no_display, col_head, no_display);
+        drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, no_display, col_head, no_display);
       }
 
       DRW_select_load_id(select_id | BONESEL_TIP);
-      drw_shgroup_bone_stick(
-          ctx, bone.disp_mat().ptr(), col_wire, no_display, no_display, col_tail);
+      drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, no_display, no_display, col_tail);
 
       DRW_select_load_id(-1);
     }
@@ -2437,7 +2433,7 @@ class ArmatureBoneDrawStrategyEnvelope : public ArmatureBoneDrawStrategy {
         ((boneflag & BONE_SELECTED) ||
          (bone.is_editbone() && (boneflag & (BONE_ROOTSEL | BONE_TIPSEL)))))
     {
-      drw_shgroup_bone_envelope_distance(ctx, bone.disp_mat().ptr(), rad_head, rad_tail, distance);
+      drw_shgroup_bone_envelope_distance(ctx, bone.disp_mat(), rad_head, rad_tail, distance);
     }
 
     if (select_id != -1) {
@@ -2445,7 +2441,7 @@ class ArmatureBoneDrawStrategyEnvelope : public ArmatureBoneDrawStrategy {
     }
 
     drw_shgroup_bone_envelope(
-        ctx, bone.disp_mat().ptr(), col_solid, col_hint, col_wire, rad_head, rad_tail);
+        ctx, bone.disp_mat(), col_solid, col_hint, col_wire, rad_head, rad_tail);
 
     if (select_id != -1) {
       DRW_select_load_id(-1);
@@ -2802,6 +2798,7 @@ static void armature_context_setup(ArmatureDrawContext *ctx,
   static const float select_const_color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
   ctx->ob = ob;
+  ctx->draw_mode = draw_mode;
   ctx->extras = &pd->extra_call_buffers[is_xray];
   ctx->dof_lines = cb->dof_lines;
   ctx->dof_sphere = cb->dof_sphere;
