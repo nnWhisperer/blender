@@ -144,9 +144,22 @@ class UnifiedBonePtr {
     return !is_editbone();
   };
 
-  int flag() const
+  eBone_Flag flag() const
   {
-    return is_editbone_ ? eBone_->flag : pchan_->flag;
+    return is_editbone_ ? eBone_->flag : pchan_->bone->flag;
+  }
+
+  bool is_connected_to_parent() const
+  {
+    if (is_editbone_) {
+      return eBone_->parent && (eBone_->flag & BONE_CONNECTED);
+    }
+    return pchan_->bone->parent && (bchan_->bone->flag & BONE_CONNECTED);
+  }
+
+  const float4x4 disp_mat() const
+  {
+    return float4x4(is_editbone_ ? eBone_->disp_mat : pchan_->disp_mat);
   }
 
   float4x4 disp_mat()
@@ -1199,9 +1212,9 @@ static const float *get_bone_solid_color(const ArmatureDrawContext *ctx,
     return G_draw.block.color_bone_solid;
   }
 
-  if (arm->flag & ARM_POSEMODE) {
+  if (bone.is_posebone()) {
     static float disp_color[4];
-    copy_v4_v4(disp_color, pchan->draw_data->solid_color);
+    copy_v4_v4(disp_color, bone.as_posebone()->draw_data->solid_color);
     set_pchan_color(ctx, PCHAN_COLOR_SOLID, boneflag, constflag, disp_color);
 
     if (boneflag & BONE_DRAW_LOCKED_WEIGHT) {
@@ -1215,8 +1228,7 @@ static const float *get_bone_solid_color(const ArmatureDrawContext *ctx,
 }
 
 static const float *get_bone_solid_with_consts_color(const ArmatureDrawContext *ctx,
-                                                     const EditBone *eBone,
-                                                     const bPoseChannel *pchan,
+                                                     const UnifiedBonePtr bone,
                                                      const bArmature *arm,
                                                      const int boneflag,
                                                      const short constflag)
@@ -1225,7 +1237,7 @@ static const float *get_bone_solid_with_consts_color(const ArmatureDrawContext *
     return G_draw.block.color_bone_solid;
   }
 
-  const float *col = get_bone_solid_color(ctx, eBone, pchan, arm, boneflag, constflag);
+  const float *col = get_bone_solid_color(ctx, bone, arm, boneflag, constflag);
 
   static float consts_color[4];
   if ((arm->flag & ARM_POSEMODE) && !(boneflag & BONE_DRAW_LOCKED_WEIGHT) &&
@@ -1352,8 +1364,8 @@ static void draw_bone_update_disp_matrix_default(UnifiedBonePtr bone)
   float ebmat[4][4];
   float bone_scale[3];
   float(*bone_mat)[4];
-  float(*disp_mat)[4] = bone->disp_mat();
-  float(*disp_tail_mat)[4] = bone->disp_tail_mat();
+  float(*disp_mat)[4] = bone.disp_mat().ptr();
+  float(*disp_tail_mat)[4] = bone.disp_tail_mat().ptr();
 
   /* TODO: This should be moved to depsgraph or armature refresh
    * and not be tight to the draw pass creation.
@@ -1593,7 +1605,8 @@ static void draw_axes(ArmatureDrawContext *ctx, const UnifiedBonePtr bone, const
   /* Mix with axes color. */
   final_col[3] = (ctx->const_color) ? 1.0 : (bone.flag() & BONE_SELECTED) ? 0.1 : 0.65;
 
-  if (pchan && pchan->custom && !(arm->flag & ARM_NO_CUSTOM)) {
+  if (bone.is_posebone() && bone.as_posebone()->custom && !(arm->flag & ARM_NO_CUSTOM)) {
+    const bPoseChannel *pchan = bone.as_posebone();
     /* Special case: Custom bones can have different scale than the bone.
      * Recompute display matrix without the custom scaling applied. (#65640). */
     float axis_mat[4][4];
@@ -1607,7 +1620,7 @@ static void draw_axes(ArmatureDrawContext *ctx, const UnifiedBonePtr bone, const
   }
   else {
     float disp_mat[4][4];
-    copy_m4_m4(disp_mat, bone->disp_mat());
+    copy_m4_m4(disp_mat, bone.disp_mat().ptr());
     translate_m4(disp_mat, 0.0, arm->axes_position - 1.0, 0.0);
     drw_shgroup_bone_axes(ctx, disp_mat, final_col);
   }
@@ -1635,7 +1648,7 @@ static void draw_points(ArmatureDrawContext *ctx,
 
   /* Edit bone points can be selected */
   if (bone.is_editbone()) {
-    EditBone *eBone = bone.as_editbone();
+    const EditBone *eBone = bone.as_editbone();
     if (eBone->flag & BONE_ROOTSEL) {
       copy_v3_v3(col_wire_root, G_draw.block.color_vertex_select);
     }
@@ -1702,7 +1715,7 @@ static void draw_points(ArmatureDrawContext *ctx,
   if (is_envelope_draw) {
     const float *rad_tail = eBone ? &eBone->rad_tail : &pchan->bone->rad_tail;
     drw_shgroup_bone_envelope(ctx,
-                              bone->disp_mat(),
+                              bone.disp_mat(),
                               col_solid_tail,
                               col_hint_tail,
                               col_wire_tail,
@@ -2165,7 +2178,7 @@ class ArmatureBoneDrawStrategyOcta : public ArmatureBoneDrawStrategy {
       DRW_select_load_id(select_id | BONESEL_BONE);
     }
 
-    drw_shgroup_bone_octahedral(ctx, bone->disp_mat(), col_solid, col_hint, col_wire);
+    drw_shgroup_bone_octahedral(ctx, bone.disp_mat(), col_solid, col_hint, col_wire);
 
     if (select_id != -1) {
       DRW_select_load_id(-1);
@@ -2248,20 +2261,20 @@ class ArmatureBoneDrawStrategyLine : public ArmatureBoneDrawStrategy {
 
     if (select_id == -1) {
       /* Not in selection mode, draw everything at once. */
-      drw_shgroup_bone_stick(ctx, bone->disp_mat(), col_wire, col_bone, col_head, col_tail);
+      drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, col_bone, col_head, col_tail);
     }
     else {
       /* In selection mode, draw bone, root and tip separately. */
       DRW_select_load_id(select_id | BONESEL_BONE);
-      drw_shgroup_bone_stick(ctx, bone->disp_mat(), col_wire, col_bone, no_display, no_display);
+      drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, col_bone, no_display, no_display);
 
       if (col_head[3] > 0.0f) {
         DRW_select_load_id(select_id | BONESEL_ROOT);
-        drw_shgroup_bone_stick(ctx, bone->disp_mat(), col_wire, no_display, col_head, no_display);
+        drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, no_display, col_head, no_display);
       }
 
       DRW_select_load_id(select_id | BONESEL_TIP);
-      drw_shgroup_bone_stick(ctx, bone->disp_mat(), col_wire, no_display, no_display, col_tail);
+      drw_shgroup_bone_stick(ctx, bone.disp_mat(), col_wire, no_display, no_display, col_tail);
 
       DRW_select_load_id(-1);
     }
@@ -2412,7 +2425,7 @@ class ArmatureBoneDrawStrategyEnvelope : public ArmatureBoneDrawStrategy {
     if ((select_id == -1) && (boneflag & BONE_NO_DEFORM) == 0 &&
         ((boneflag & BONE_SELECTED) || (eBone && (boneflag & (BONE_ROOTSEL | BONE_TIPSEL)))))
     {
-      drw_shgroup_bone_envelope_distance(ctx, bone->disp_mat(), rad_head, rad_tail, distance);
+      drw_shgroup_bone_envelope_distance(ctx, bone.disp_mat(), rad_head, rad_tail, distance);
     }
 
     if (select_id != -1) {
@@ -2420,7 +2433,7 @@ class ArmatureBoneDrawStrategyEnvelope : public ArmatureBoneDrawStrategy {
     }
 
     drw_shgroup_bone_envelope(
-        ctx, bone->disp_mat(), col_solid, col_hint, col_wire, rad_head, rad_tail);
+        ctx, bone.disp_mat(), col_solid, col_hint, col_wire, rad_head, rad_tail);
 
     if (select_id != -1) {
       DRW_select_load_id(-1);
@@ -2704,7 +2717,7 @@ static void draw_armature_pose(ArmatureDrawContext *ctx)
           set_pchan_colorset(ctx, ob, pchan);
         }
 
-        int boneflag = bone->flag;
+        eBone_Flag boneflag = bone->flag;
         if (bone->parent && (bone->parent->flag & (BONE_HIDDEN_P | BONE_HIDDEN_PG))) {
           /* Avoid drawing connection line to hidden parent. */
           boneflag &= ~BONE_CONNECTED;

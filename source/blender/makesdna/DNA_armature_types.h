@@ -265,6 +265,7 @@ typedef enum eBone_Flag {
   /** this bone is associated with a locked vertex group, ONLY USE FOR DRAWING */
   BONE_DRAW_LOCKED_WEIGHT = (1 << 26),
 } eBone_Flag;
+ENUM_OPERATORS(eBone_Flag, BONE_DRAW_LOCKED_WEIGHT);
 
 /* bone->inherit_scale_mode */
 typedef enum eBone_InheritScaleMode {
