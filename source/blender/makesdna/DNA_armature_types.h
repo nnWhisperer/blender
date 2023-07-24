@@ -156,7 +156,7 @@ typedef enum eArmature_Flag {
   ARM_FLAG_UNUSED_1 = (1 << 1), /* cleared */
   ARM_DRAWAXES = (1 << 2),
   ARM_DRAWNAMES = (1 << 3),
-  ARM_POSEMODE = (1 << 4),
+  /* ARM_POSEMODE = (1 << 4), Deprecated. */
   /** Position of the parent-child relation lines on the bone (cleared = drawn
    * from the tail, set = drawn from the head). Only controls the parent side of
    * the line; the child side is always drawn to the head of the bone. */

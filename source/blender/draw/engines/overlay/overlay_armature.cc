@@ -44,8 +44,6 @@
 
 #include "draw_cache_impl.h"
 
-#define BONE_VAR(eBone, pchan, var) ((eBone) ? (eBone->var) : (pchan->var))
-
 #define PT_DEFAULT_RAD 0.05f /* radius of the point batch. */
 
 using namespace blender;
@@ -61,6 +59,7 @@ struct ArmatureDrawContext {
   Object *ob;
   /* bArmature *arm; */ /* TODO */
   eArmatureDrawMode draw_mode;
+  eArmature_Drawtype drawtype;
 
   union {
     struct {
@@ -240,7 +239,6 @@ class ArmatureBoneDrawStrategy {
 
   virtual void draw_bone(ArmatureDrawContext *ctx,
                          const UnifiedBonePtr bone,
-                         const bArmature *arm,
                          const eBone_Flag boneflag,
                          const short constflag,
                          const int select_id) const = 0;
@@ -1245,7 +1243,7 @@ static const float *get_bone_solid_color(const ArmatureDrawContext *ctx,
     return G_draw.block.color_bone_solid;
   }
 
-  if (bone.is_posebone()) {
+  if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
     static float disp_color[4];
     copy_v4_v4(disp_color, bone.as_posebone()->draw_data->solid_color);
     set_pchan_color(ctx, PCHAN_COLOR_SOLID, boneflag, constflag, disp_color);
@@ -1272,7 +1270,7 @@ static const float *get_bone_solid_with_consts_color(const ArmatureDrawContext *
   const float *col = get_bone_solid_color(ctx, bone, boneflag, constflag);
 
   static float consts_color[4];
-  if (bone.is_posebone() && !(boneflag & BONE_DRAW_LOCKED_WEIGHT) &&
+  if (ctx->draw_mode == ARM_DRAW_MODE_POSE && !(boneflag & BONE_DRAW_LOCKED_WEIGHT) &&
       set_pchan_color(ctx, PCHAN_COLOR_CONSTS, boneflag, constflag, consts_color))
   {
     interp_v3_v3v3(consts_color, col, consts_color, 0.5f);
@@ -1305,7 +1303,7 @@ static const float *get_bone_wire_color(const ArmatureDrawContext *ctx,
   if (ctx->const_color) {
     copy_v3_v3(disp_color, ctx->const_color);
   }
-  else if (bone.is_editbone()) {
+  else if (ctx->draw_mode == ARM_DRAW_MODE_EDIT) {
     if (boneflag & BONE_SELECTED) {
       if (boneflag & BONE_DRAW_ACTIVE) {
         copy_v3_v3(disp_color, G_draw.block.color_bone_active);
@@ -1323,7 +1321,7 @@ static const float *get_bone_wire_color(const ArmatureDrawContext *ctx,
       }
     }
   }
-  else if (bone.is_posebone()) {
+  else if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
     const bPoseChannel *pchan = bone.as_posebone();
     copy_v4_v4(disp_color, pchan->draw_data->wire_color);
     set_pchan_color(ctx, PCHAN_COLOR_NORMAL, boneflag, constflag, disp_color);
@@ -1658,7 +1656,6 @@ static void draw_axes(ArmatureDrawContext *ctx, const UnifiedBonePtr bone, const
 
 static void draw_points(ArmatureDrawContext *ctx,
                         const UnifiedBonePtr bone,
-                        const bArmature *arm,
                         const eBone_Flag boneflag,
                         const short constflag,
                         const int select_id)
@@ -1671,13 +1668,13 @@ static void draw_points(ArmatureDrawContext *ctx,
   copy_v4_v4(col_wire_root, (ctx->const_color) ? ctx->const_color : &G_draw.block.color_vertex.x);
   copy_v4_v4(col_wire_tail, (ctx->const_color) ? ctx->const_color : &G_draw.block.color_vertex.x);
 
-  const bool is_envelope_draw = (arm->drawtype == ARM_ENVELOPE);
+  const bool is_envelope_draw = (ctx->drawtype == ARM_ENVELOPE);
   const float envelope_ignore = -1.0f;
 
   col_wire_tail[3] = col_wire_root[3] = get_bone_wire_thickness(ctx, boneflag);
 
   /* Edit bone points can be selected */
-  if (bone.is_editbone()) {
+  if (ctx->draw_mode == ARM_DRAW_MODE_EDIT) {
     const EditBone *eBone = bone.as_editbone();
     if (eBone->flag & BONE_ROOTSEL) {
       copy_v3_v3(col_wire_root, G_draw.block.color_vertex_select);
@@ -1686,7 +1683,7 @@ static void draw_points(ArmatureDrawContext *ctx,
       copy_v3_v3(col_wire_tail, G_draw.block.color_vertex_select);
     }
   }
-  else if (arm->flag & ARM_POSEMODE) {
+  else if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
     const float *solid_color = get_bone_solid_color(ctx, bone, boneflag, constflag);
     const float *wire_color = get_bone_wire_color(ctx, bone, boneflag, constflag);
     copy_v4_v4(col_wire_tail, wire_color);
@@ -1914,7 +1911,7 @@ static void draw_bone_relations(ArmatureDrawContext *ctx,
                                 const eBone_Flag boneflag,
                                 const short constflag)
 {
-  if (bone.is_editbone()) {
+  if (ctx->draw_mode == ARM_DRAW_MODE_EDIT) {
     const EditBone *ebone = bone.as_editbone();
     if (ebone->parent) {
       if (ctx->do_relations && draw_strategy.should_draw_relation_to_parent(bone, boneflag)) {
@@ -1932,7 +1929,7 @@ static void draw_bone_relations(ArmatureDrawContext *ctx,
       }
 
       /* Draw a line to IK root bone if bone is selected. */
-      if (bone.is_posebone()) {
+      if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
         if (constflag & (PCHAN_HAS_IK | PCHAN_HAS_SPLINEIK)) {
           if (boneflag & BONE_SELECTED) {
             pchan_draw_ik_lines(ctx, bone.as_posebone(), !ctx->do_relations, constflag);
@@ -1945,7 +1942,6 @@ static void draw_bone_relations(ArmatureDrawContext *ctx,
 
 static void draw_bone_name(ArmatureDrawContext *ctx,
                            const UnifiedBonePtr bone,
-                           bArmature *arm,
                            const eBone_Flag boneflag)
 {
   DRWTextStore *dt = DRW_text_cache_ensure();
@@ -1958,7 +1954,8 @@ static void draw_bone_name(ArmatureDrawContext *ctx,
   bone.set(&eBone, &pchan);
 
   /* TODO: make this look at `boneflag` only. */
-  bool highlight = (is_pose && (arm->flag & ARM_POSEMODE) && (boneflag & BONE_SELECTED)) ||
+  bool highlight = (is_pose && ctx->draw_mode == ARM_DRAW_MODE_POSE &&
+                    (boneflag & BONE_SELECTED)) ||
                    (!is_pose && (eBone->flag & BONE_SELECTED));
 
   /* Color Management: Exception here as texts are drawn in sRGB space directly. */
@@ -2062,7 +2059,6 @@ class ArmatureBoneDrawStrategyEmpty : public ArmatureBoneDrawStrategy {
 
   void draw_bone(ArmatureDrawContext * /*ctx*/,
                  const UnifiedBonePtr /*bone*/,
-                 const bArmature * /*arm*/,
                  const eBone_Flag /*boneflag*/,
                  const short /*constflag*/,
                  const int /*select_id*/) const override
@@ -2122,7 +2118,6 @@ class ArmatureBoneDrawStrategyCustomShape : public ArmatureBoneDrawStrategy {
 
   void draw_bone(ArmatureDrawContext *ctx,
                  const UnifiedBonePtr bone,
-                 const bArmature *arm,
                  const eBone_Flag boneflag,
                  const short constflag,
                  const int select_id) const override
@@ -2187,7 +2182,6 @@ class ArmatureBoneDrawStrategyOcta : public ArmatureBoneDrawStrategy {
 
   void draw_bone(ArmatureDrawContext *ctx,
                  const UnifiedBonePtr bone,
-                 const bArmature *arm,
                  const eBone_Flag boneflag,
                  const short constflag,
                  const int select_id) const override
@@ -2206,7 +2200,7 @@ class ArmatureBoneDrawStrategyOcta : public ArmatureBoneDrawStrategy {
       DRW_select_load_id(-1);
     }
 
-    draw_points(ctx, bone, arm, boneflag, constflag, select_id);
+    draw_points(ctx, bone, boneflag, constflag, select_id);
   }
 };
 
@@ -2239,7 +2233,6 @@ class ArmatureBoneDrawStrategyLine : public ArmatureBoneDrawStrategy {
 
   void draw_bone(ArmatureDrawContext *ctx,
                  const UnifiedBonePtr bone,
-                 const bArmature *arm,
                  const eBone_Flag boneflag,
                  const short constflag,
                  const int select_id) const override
@@ -2343,7 +2336,6 @@ class ArmatureBoneDrawStrategyBBone : public ArmatureBoneDrawStrategy {
 
   void draw_bone(ArmatureDrawContext *ctx,
                  const UnifiedBonePtr bone,
-                 const bArmature *arm,
                  const eBone_Flag boneflag,
                  const short constflag,
                  const int select_id) const override
@@ -2377,7 +2369,7 @@ class ArmatureBoneDrawStrategyBBone : public ArmatureBoneDrawStrategy {
     }
 
     if (bone.is_editbone()) {
-      draw_points(ctx, bone, arm, boneflag, constflag, select_id);
+      draw_points(ctx, bone, boneflag, constflag, select_id);
     }
   }
 };
@@ -2417,7 +2409,6 @@ class ArmatureBoneDrawStrategyEnvelope : public ArmatureBoneDrawStrategy {
 
   void draw_bone(ArmatureDrawContext *ctx,
                  const UnifiedBonePtr bone,
-                 const bArmature *arm,
                  const eBone_Flag boneflag,
                  const short constflag,
                  const int select_id) const override
@@ -2460,7 +2451,7 @@ class ArmatureBoneDrawStrategyEnvelope : public ArmatureBoneDrawStrategy {
       DRW_select_load_id(-1);
     }
 
-    draw_points(ctx, bone, arm, boneflag, constflag, select_id);
+    draw_points(ctx, bone, boneflag, constflag, select_id);
   }
 };
 
@@ -2491,7 +2482,6 @@ class ArmatureBoneDrawStrategyWire : public ArmatureBoneDrawStrategy {
 
   void draw_bone(ArmatureDrawContext *ctx,
                  const UnifiedBonePtr bone,
-                 const bArmature *arm,
                  const eBone_Flag boneflag,
                  const short constflag,
                  const int select_id) const override
@@ -2523,7 +2513,7 @@ class ArmatureBoneDrawStrategyWire : public ArmatureBoneDrawStrategy {
     }
 
     if (bone.is_editbone()) {
-      draw_points(ctx, bone, arm, boneflag, constflag, select_id);
+      draw_points(ctx, bone, boneflag, constflag, select_id);
     }
   }
 };
@@ -2629,11 +2619,11 @@ static void draw_armature_edit(ArmatureDrawContext *ctx)
     }
 
     draw_strat.update_display_matrix(bone);
-    draw_strat.draw_bone(ctx, bone, arm, boneflag, constflag, select_id);
+    draw_strat.draw_bone(ctx, bone, boneflag, constflag, select_id);
 
     if (!is_select) {
       if (show_text && (arm->flag & ARM_DRAWNAMES)) {
-        draw_bone_name(ctx, bone, arm, boneflag);
+        draw_bone_name(ctx, bone, boneflag);
       }
 
       if (arm->flag & ARM_DRAWAXES) {
@@ -2659,17 +2649,19 @@ static void draw_armature_pose(ArmatureDrawContext *ctx)
     return;
   }
 
+  ctx->draw_mode = ARM_DRAW_MODE_OBJECT; /* Will likely be set to ARM_DRAW_MODE_POSE below. */
+
   bool is_pose_select = false;
   /* Object can be edited in the scene. */
   if ((ob->base_flag & (BASE_FROM_SET | BASE_FROM_DUPLI)) == 0) {
     if ((draw_ctx->object_mode & OB_MODE_POSE) || (ob == draw_ctx->object_pose)) {
-      arm->flag |= ARM_POSEMODE;
+      ctx->draw_mode = ARM_DRAW_MODE_POSE;
     }
     is_pose_select =
         /* If we're in pose-mode or object-mode with the ability to enter pose mode. */
         (
             /* Draw as if in pose mode (when selection is possible). */
-            (arm->flag & ARM_POSEMODE) ||
+            (ctx->draw_mode == ARM_DRAW_MODE_POSE) ||
             /* When we're in object mode, which may select bones. */
             ((ob->mode & OB_MODE_POSE) &&
              (
@@ -2733,7 +2725,8 @@ static void draw_armature_pose(ArmatureDrawContext *ctx)
       continue;
     }
 
-    const bool draw_dofs = !is_pose_select && ctx->show_relations && (arm->flag & ARM_POSEMODE) &&
+    const bool draw_dofs = !is_pose_select && ctx->show_relations &&
+                           (ctx->draw_mode == ARM_DRAW_MODE_POSE) &&
                            (bone->flag & BONE_SELECTED) &&
                            ((ob->base_flag & BASE_FROM_DUPLI) == 0) &&
                            (pchan->ikflag & (BONE_IK_XLIMIT | BONE_IK_ZLIMIT));
@@ -2770,7 +2763,7 @@ static void draw_armature_pose(ArmatureDrawContext *ctx)
 
     draw_strat.update_display_matrix(bone_ptr);
     if (!is_pose_select || draw_strat.culling_test(view, ob, pchan)) {
-      draw_strat.draw_bone(ctx, bone_ptr, arm, boneflag, constflag, select_id);
+      draw_strat.draw_bone(ctx, bone_ptr, boneflag, constflag, select_id);
     }
 
     /* Below this point nothing is used for selection queries. */
@@ -2782,30 +2775,26 @@ static void draw_armature_pose(ArmatureDrawContext *ctx)
       draw_bone_degrees_of_freedom(ctx, pchan);
     }
     if (show_text && (arm->flag & ARM_DRAWNAMES)) {
-      draw_bone_name(ctx, bone_ptr, arm, boneflag);
+      draw_bone_name(ctx, bone_ptr, boneflag);
     }
     if (arm->flag & ARM_DRAWAXES) {
       draw_axes(ctx, bone_ptr, arm);
     }
   }
-
-  arm->flag &= ~ARM_POSEMODE;
 }
 
 static void armature_context_setup(ArmatureDrawContext *ctx,
                                    OVERLAY_PrivateData *pd,
                                    Object *ob,
-                                   const bool do_envelope_dist,
-                                   const bool is_edit_mode,
-                                   const bool is_pose_mode,
+                                   const eArmatureDrawMode draw_mode,
                                    const float *const_color)
 {
-  const bool is_object_mode = !do_envelope_dist;
+  const bool is_edit_or_pose_mode = draw_mode != ARM_DRAW_MODE_OBJECT;
   const bool is_xray = (ob->dtx & OB_DRAW_IN_FRONT) != 0 ||
-                       (pd->armature.do_pose_xray && is_pose_mode);
+                       (pd->armature.do_pose_xray && draw_mode == ARM_DRAW_MODE_POSE);
   const bool draw_as_wire = (ob->dt < OB_SOLID);
-  const bool is_filled = (!pd->armature.transparent && !draw_as_wire) || !is_object_mode;
-  const bool is_transparent = pd->armature.transparent || (draw_as_wire && !is_object_mode);
+  const bool is_filled = (!pd->armature.transparent && !draw_as_wire) || is_edit_or_pose_mode;
+  const bool is_transparent = pd->armature.transparent || (draw_as_wire && is_edit_or_pose_mode);
   bArmature *arm = static_cast<bArmature *>(ob->data);
   OVERLAY_ArmatureCallBuffers *cbo = &pd->armature_call_buffers[is_xray];
   OVERLAY_ArmatureCallBuffersInner *cb = is_transparent ? &cbo->transp : &cbo->solid;
@@ -2824,7 +2813,7 @@ static void armature_context_setup(ArmatureDrawContext *ctx,
   ctx->custom_shapes_ghash = cb->custom_shapes_ghash;
   ctx->show_relations = pd->armature.show_relations;
   ctx->do_relations = !DRW_state_is_select() && pd->armature.show_relations &&
-                      (is_edit_mode | is_pose_mode);
+                      is_edit_or_pose_mode;
   ctx->const_color = DRW_state_is_select() ? select_const_color : const_color;
   ctx->const_wire = ((ob->base_flag & BASE_SELECTED) && (pd->v3d_flag & V3D_SELECT_OUTLINE) ?
                          1.5f :
@@ -2834,15 +2823,16 @@ static void armature_context_setup(ArmatureDrawContext *ctx,
   /* Call the draw strategy after setting the generic context properties, so
    * that they can be overridden. */
   const eArmature_Drawtype drawtype = eArmature_Drawtype(arm->drawtype);
+  ctx->drawtype = drawtype;
   const ArmatureBoneDrawStrategy &draw_strat = strategy_for_armature_drawtype(drawtype);
-  draw_strat.draw_context_setup(ctx, cb, is_filled, do_envelope_dist);
+  draw_strat.draw_context_setup(ctx, cb, is_filled, is_edit_or_pose_mode);
 }
 
 void OVERLAY_edit_armature_cache_populate(OVERLAY_Data *vedata, Object *ob)
 {
   OVERLAY_PrivateData *pd = vedata->stl->pd;
   ArmatureDrawContext arm_ctx;
-  armature_context_setup(&arm_ctx, pd, ob, true, true, false, nullptr);
+  armature_context_setup(&arm_ctx, pd, ob, ARM_DRAW_MODE_EDIT, nullptr);
   draw_armature_edit(&arm_ctx);
 }
 
@@ -2850,7 +2840,7 @@ void OVERLAY_pose_armature_cache_populate(OVERLAY_Data *vedata, Object *ob)
 {
   OVERLAY_PrivateData *pd = vedata->stl->pd;
   ArmatureDrawContext arm_ctx;
-  armature_context_setup(&arm_ctx, pd, ob, true, false, true, nullptr);
+  armature_context_setup(&arm_ctx, pd, ob, ARM_DRAW_MODE_POSE, nullptr);
   draw_armature_pose(&arm_ctx);
 }
 
@@ -2866,7 +2856,7 @@ void OVERLAY_armature_cache_populate(OVERLAY_Data *vedata, Object *ob)
   }
 
   DRW_object_wire_theme_get(ob, draw_ctx->view_layer, &color);
-  armature_context_setup(&arm_ctx, pd, ob, false, false, false, color);
+  armature_context_setup(&arm_ctx, pd, ob, ARM_DRAW_MODE_OBJECT, color);
   draw_armature_pose(&arm_ctx);
 }
 
