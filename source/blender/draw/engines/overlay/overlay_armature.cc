@@ -1073,7 +1073,7 @@ static void drw_shgroup_bone_ik_spline_lines(ArmatureDrawContext *ctx,
  *
  * \{ */
 
-/* values of colCode for set_pchan_color */
+/* values of colCode for get_pchan_color */
 typedef enum eColCode {
   PCHAN_COLOR_NORMAL = 0, /* normal drawing */
   PCHAN_COLOR_SOLID,      /* specific case where "solid" color is needed */
@@ -1140,91 +1140,105 @@ static void cp_shade_color3ub(uchar cp[3], const int offset)
   cp[2] = b;
 }
 
-/* This function sets the gl-color for coloring a certain bone (based on bcolor) */
-static bool set_pchan_color(const ArmatureDrawContext *ctx,
+/**
+ * Returns the gl-color for coloring a certain bone (based on bcolor).
+ *
+ * \return true when r_color was written to, false otherwise.
+ */
+static void get_pchan_color(const ThemeWireColor *bcolor,
                             const UnifiedBonePtr bone,
                             const eColCode colCode,
                             const eBone_Flag boneflag,
                             float r_color[4])
 {
-  float *fcolor = r_color;
-  const ThemeWireColor *bcolor = ctx->bcolor;
+  /* Utility function to use a shaded version of one of the colors in 'bcolor'. */
+  auto use_bone_color = [&](const uint8_t *color_from_theme, const int shade_offset) {
+    uchar cp[4] = {255};
+    copy_v3_v3_uchar(cp, color_from_theme);
+    if (shade_offset != 0) {
+      cp_shade_color3ub(cp, shade_offset);
+    }
+    rgb_uchar_to_float(r_color, cp);
+    /* Meh, hardcoded srgb transform here. */
+    srgb_to_linearrgb_v4(r_color, r_color);
+  };
+
+  /* Very simply utility function to help the code below sit at a consistent abstraction level. To
+   * return a color, it calls either the above function or this one. */
+  auto use_predefined_color = [&](const float4 color) { copy_v4_v4(r_color, color); };
 
   switch (colCode) {
     case PCHAN_COLOR_NORMAL: {
+      const bool draw_active = boneflag & BONE_DRAW_ACTIVE;
+      const bool draw_selected = boneflag & BONE_SELECTED;
+
       if (bcolor) {
-        uchar cp[4] = {255};
-        if (boneflag & BONE_DRAW_ACTIVE) {
-          copy_v3_v3_uchar(cp, bcolor->active);
-          if (!(boneflag & BONE_SELECTED)) {
-            cp_shade_color3ub(cp, -80);
-          }
+        if (draw_active && draw_selected) {
+          use_bone_color(bcolor->active, 0);
         }
-        else if (boneflag & BONE_SELECTED) {
-          copy_v3_v3_uchar(cp, bcolor->select);
+        else if (draw_active) {
+          use_bone_color(bcolor->active, -80);
+        }
+        else if (draw_selected) {
+          use_bone_color(bcolor->select, 0);
         }
         else {
-          /* a bit darker than solid */
-          copy_v3_v3_uchar(cp, bcolor->solid);
-          cp_shade_color3ub(cp, -50);
+          use_bone_color(bcolor->solid, -50);
         }
-        rgb_uchar_to_float(fcolor, cp);
-        /* Meh, hardcoded srgb transform here. */
-        srgb_to_linearrgb_v4(fcolor, fcolor);
       }
       else {
-        if ((boneflag & BONE_DRAW_ACTIVE) && (boneflag & BONE_SELECTED)) {
-          copy_v4_v4(fcolor, G_draw.block.color_bone_pose_active);
+        if (draw_active && draw_selected) {
+          use_predefined_color(G_draw.block.color_bone_pose_active);
         }
-        else if (boneflag & BONE_DRAW_ACTIVE) {
-          copy_v4_v4(fcolor, G_draw.block.color_bone_pose_active_unsel);
+        else if (draw_active) {
+          use_predefined_color(G_draw.block.color_bone_pose_active_unsel);
         }
-        else if (boneflag & BONE_SELECTED) {
-          copy_v4_v4(fcolor, G_draw.block.color_bone_pose);
+        else if (draw_selected) {
+          use_predefined_color(G_draw.block.color_bone_pose);
         }
         else {
-          copy_v4_v4(fcolor, G_draw.block.color_wire);
+          use_predefined_color(G_draw.block.color_wire);
         }
       }
-      return true;
+      break;
     }
     case PCHAN_COLOR_SOLID: {
       if (bcolor) {
-        rgb_uchar_to_float(fcolor, (uchar *)bcolor->solid);
-        fcolor[3] = 1.0f;
-        /* Meh, hardcoded srgb transform here. */
-        srgb_to_linearrgb_v4(fcolor, fcolor);
+        use_bone_color(bcolor->solid, 0);
       }
       else {
-        copy_v4_v4(fcolor, G_draw.block.color_bone_solid);
+        use_predefined_color(G_draw.block.color_bone_solid);
       }
-      return true;
+      break;
     }
     case PCHAN_COLOR_CONSTS: {
-      if ((bcolor == nullptr) || (bcolor->flag & TH_WIRECOLOR_CONSTCOLS)) {
-        const ePchan_ConstFlag constflag = bone.constflag();
-        if (constflag & PCHAN_HAS_TARGET) {
-          copy_v4_v4(fcolor, G_draw.block.color_bone_pose_target);
-        }
-        else if (constflag & PCHAN_HAS_IK) {
-          copy_v4_v4(fcolor, G_draw.block.color_bone_pose_ik);
-        }
-        else if (constflag & PCHAN_HAS_SPLINEIK) {
-          copy_v4_v4(fcolor, G_draw.block.color_bone_pose_spline_ik);
-        }
-        else if (constflag & PCHAN_HAS_CONST) {
-          copy_v4_v4(fcolor, G_draw.block.color_bone_pose_constraint);
-        }
-        else {
-          return false;
-        }
-        return true;
+      const ePchan_ConstFlag constflag = bone.constflag();
+      if (constflag == 0 || (bcolor && (bcolor->flag & TH_WIRECOLOR_CONSTCOLS) == 0)) {
+        get_pchan_color(bcolor, bone, PCHAN_COLOR_SOLID, boneflag, r_color);
+        break;
       }
-      return false;
+
+      /* The constraint color needs to be blended with the solid color. */
+      float solid_color[4];
+      get_pchan_color(bcolor, bone, PCHAN_COLOR_SOLID, boneflag, solid_color);
+
+      float4 constraint_color;
+      if (constflag & PCHAN_HAS_TARGET) {
+        constraint_color = G_draw.block.color_bone_pose_target;
+      }
+      else if (constflag & PCHAN_HAS_IK) {
+        constraint_color = G_draw.block.color_bone_pose_ik;
+      }
+      else if (constflag & PCHAN_HAS_SPLINEIK) {
+        constraint_color = G_draw.block.color_bone_pose_spline_ik;
+      }
+      else if (constflag & PCHAN_HAS_CONST) {
+        constraint_color = G_draw.block.color_bone_pose_constraint;
+      }
+      interp_v3_v3v3(r_color, solid_color, constraint_color, 0.5f);
+      break;
     }
   }
-
-  return false;
 }
 
 /** \} */
@@ -1251,7 +1265,7 @@ static const float *get_bone_solid_color(const ArmatureDrawContext *ctx,
   if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
     static float disp_color[4];
     copy_v4_v4(disp_color, bone.as_posebone()->draw_data->solid_color);
-    set_pchan_color(ctx, bone, PCHAN_COLOR_SOLID, boneflag, disp_color);
+    get_pchan_color(ctx->bcolor, bone, PCHAN_COLOR_SOLID, boneflag, disp_color);
 
     if (boneflag & BONE_DRAW_LOCKED_WEIGHT) {
       bone_locked_color_shade(disp_color);
@@ -1273,15 +1287,12 @@ static const float *get_bone_solid_with_consts_color(const ArmatureDrawContext *
 
   const float *col = get_bone_solid_color(ctx, bone, boneflag);
 
+  if (ctx->draw_mode != ARM_DRAW_MODE_POSE || (boneflag & BONE_DRAW_LOCKED_WEIGHT)) {
+    return col;
+  }
+
   static float consts_color[4];
-  if (ctx->draw_mode == ARM_DRAW_MODE_POSE && !(boneflag & BONE_DRAW_LOCKED_WEIGHT) &&
-      set_pchan_color(ctx, bone, PCHAN_COLOR_CONSTS, boneflag, consts_color))
-  {
-    interp_v3_v3v3(consts_color, col, consts_color, 0.5f);
-  }
-  else {
-    copy_v4_v4(consts_color, col);
-  }
+  get_pchan_color(ctx->bcolor, bone, PCHAN_COLOR_CONSTS, boneflag, consts_color);
   return consts_color;
 }
 
@@ -1327,7 +1338,7 @@ static const float *get_bone_wire_color(const ArmatureDrawContext *ctx,
   else if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
     const bPoseChannel *pchan = bone.as_posebone();
     copy_v4_v4(disp_color, pchan->draw_data->wire_color);
-    set_pchan_color(ctx, bone, PCHAN_COLOR_NORMAL, boneflag, disp_color);
+    get_pchan_color(ctx->bcolor, bone, PCHAN_COLOR_NORMAL, boneflag, disp_color);
 
     if (boneflag & BONE_DRAW_LOCKED_WEIGHT) {
       bone_locked_color_shade(disp_color);
