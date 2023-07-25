@@ -1141,104 +1141,98 @@ static void cp_shade_color3ub(uchar cp[3], const int offset)
 }
 
 /**
- * Returns the gl-color for coloring a certain bone (based on bcolor).
+ * Utility function to use a shaded version of one of the colors in 'bcolor'.
  *
- * \return true when r_color was written to, false otherwise.
+ * The r_color parameter is put first for consistency with copy_v4_v4(dest, src).
  */
-static void get_pchan_color(const ThemeWireColor *bcolor,
-                            const UnifiedBonePtr bone,
-                            const eColCode colCode,
-                            const eBone_Flag boneflag,
-                            float r_color[4])
+static void use_bone_color(float *r_color, const uint8_t *color_from_theme, const int shade_offset)
 {
-  /* Utility function to use a shaded version of one of the colors in 'bcolor'. */
-  auto use_bone_color = [&](const uint8_t *color_from_theme, const int shade_offset) {
-    uchar cp[4] = {255};
-    copy_v3_v3_uchar(cp, color_from_theme);
-    if (shade_offset != 0) {
-      cp_shade_color3ub(cp, shade_offset);
+  uint8_t srgb_color[4];
+  copy_v3_v3_uchar(srgb_color, color_from_theme);
+  if (shade_offset != 0) {
+    cp_shade_color3ub(srgb_color, shade_offset);
+  }
+  rgb_uchar_to_float(r_color, srgb_color);
+  /* Meh, hardcoded srgb transform here. */
+  srgb_to_linearrgb_v4(r_color, r_color);
+};
+
+static void get_pchan_color_wire(const ThemeWireColor *bcolor,
+                                 const eBone_Flag boneflag,
+                                 float r_color[4])
+{
+  const bool draw_active = boneflag & BONE_DRAW_ACTIVE;
+  const bool draw_selected = boneflag & BONE_SELECTED;
+
+  if (bcolor) {
+    if (draw_active && draw_selected) {
+      use_bone_color(r_color, bcolor->active, 0);
     }
-    rgb_uchar_to_float(r_color, cp);
-    /* Meh, hardcoded srgb transform here. */
-    srgb_to_linearrgb_v4(r_color, r_color);
-  };
-
-  /* Very simply utility function to help the code below sit at a consistent abstraction level. To
-   * return a color, it calls either the above function or this one. */
-  auto use_predefined_color = [&](const float4 color) { copy_v4_v4(r_color, color); };
-
-  switch (colCode) {
-    case PCHAN_COLOR_NORMAL: {
-      const bool draw_active = boneflag & BONE_DRAW_ACTIVE;
-      const bool draw_selected = boneflag & BONE_SELECTED;
-
-      if (bcolor) {
-        if (draw_active && draw_selected) {
-          use_bone_color(bcolor->active, 0);
-        }
-        else if (draw_active) {
-          use_bone_color(bcolor->active, -80);
-        }
-        else if (draw_selected) {
-          use_bone_color(bcolor->select, 0);
-        }
-        else {
-          use_bone_color(bcolor->solid, -50);
-        }
-      }
-      else {
-        if (draw_active && draw_selected) {
-          use_predefined_color(G_draw.block.color_bone_pose_active);
-        }
-        else if (draw_active) {
-          use_predefined_color(G_draw.block.color_bone_pose_active_unsel);
-        }
-        else if (draw_selected) {
-          use_predefined_color(G_draw.block.color_bone_pose);
-        }
-        else {
-          use_predefined_color(G_draw.block.color_wire);
-        }
-      }
-      break;
+    else if (draw_active) {
+      use_bone_color(r_color, bcolor->active, -80);
     }
-    case PCHAN_COLOR_SOLID: {
-      if (bcolor) {
-        use_bone_color(bcolor->solid, 0);
-      }
-      else {
-        use_predefined_color(G_draw.block.color_bone_solid);
-      }
-      break;
+    else if (draw_selected) {
+      use_bone_color(r_color, bcolor->select, 0);
     }
-    case PCHAN_COLOR_CONSTS: {
-      const ePchan_ConstFlag constflag = bone.constflag();
-      if (constflag == 0 || (bcolor && (bcolor->flag & TH_WIRECOLOR_CONSTCOLS) == 0)) {
-        get_pchan_color(bcolor, bone, PCHAN_COLOR_SOLID, boneflag, r_color);
-        break;
-      }
-
-      /* The constraint color needs to be blended with the solid color. */
-      float solid_color[4];
-      get_pchan_color(bcolor, bone, PCHAN_COLOR_SOLID, boneflag, solid_color);
-
-      float4 constraint_color;
-      if (constflag & PCHAN_HAS_TARGET) {
-        constraint_color = G_draw.block.color_bone_pose_target;
-      }
-      else if (constflag & PCHAN_HAS_IK) {
-        constraint_color = G_draw.block.color_bone_pose_ik;
-      }
-      else if (constflag & PCHAN_HAS_SPLINEIK) {
-        constraint_color = G_draw.block.color_bone_pose_spline_ik;
-      }
-      else if (constflag & PCHAN_HAS_CONST) {
-        constraint_color = G_draw.block.color_bone_pose_constraint;
-      }
-      interp_v3_v3v3(r_color, solid_color, constraint_color, 0.5f);
-      break;
+    else {
+      use_bone_color(r_color, bcolor->solid, -50);
     }
   }
+  else {
+    if (draw_active && draw_selected) {
+      copy_v4_v4(r_color, G_draw.block.color_bone_pose_active);
+    }
+    else if (draw_active) {
+      copy_v4_v4(r_color, G_draw.block.color_bone_pose_active_unsel);
+    }
+    else if (draw_selected) {
+      copy_v4_v4(r_color, G_draw.block.color_bone_pose);
+    }
+    else {
+      copy_v4_v4(r_color, G_draw.block.color_wire);
+    }
+  }
+}
+
+static void get_pchan_color_solid(const ThemeWireColor *bcolor, float r_color[4])
+{
+
+  if (bcolor) {
+    use_bone_color(r_color, bcolor->solid, 0);
+  }
+  else {
+    copy_v4_v4(r_color, G_draw.block.color_bone_solid);
+  }
+}
+
+static void get_pchan_color_constraint(const ThemeWireColor *bcolor,
+                                       const UnifiedBonePtr bone,
+                                       float r_color[4])
+{
+  const ePchan_ConstFlag constflag = bone.constflag();
+  if (constflag == 0 || (bcolor && (bcolor->flag & TH_WIRECOLOR_CONSTCOLS) == 0)) {
+    get_pchan_color_solid(bcolor, r_color);
+    return;
+  }
+
+  /* The constraint color needs to be blended with the solid color. */
+  float solid_color[4];
+  get_pchan_color_solid(bcolor, solid_color);
+
+  float4 constraint_color;
+  if (constflag & PCHAN_HAS_TARGET) {
+    constraint_color = G_draw.block.color_bone_pose_target;
+  }
+  else if (constflag & PCHAN_HAS_IK) {
+    constraint_color = G_draw.block.color_bone_pose_ik;
+  }
+  else if (constflag & PCHAN_HAS_SPLINEIK) {
+    constraint_color = G_draw.block.color_bone_pose_spline_ik;
+  }
+  else if (constflag & PCHAN_HAS_CONST) {
+    constraint_color = G_draw.block.color_bone_pose_constraint;
+  }
+  interp_v3_v3v3(r_color, solid_color, constraint_color, 0.5f);
 }
 
 /** \} */
@@ -1265,7 +1259,7 @@ static const float *get_bone_solid_color(const ArmatureDrawContext *ctx,
   if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
     static float disp_color[4];
     copy_v4_v4(disp_color, bone.as_posebone()->draw_data->solid_color);
-    get_pchan_color(ctx->bcolor, bone, PCHAN_COLOR_SOLID, boneflag, disp_color);
+    get_pchan_color_solid(ctx->bcolor, disp_color);
 
     if (boneflag & BONE_DRAW_LOCKED_WEIGHT) {
       bone_locked_color_shade(disp_color);
@@ -1292,7 +1286,7 @@ static const float *get_bone_solid_with_consts_color(const ArmatureDrawContext *
   }
 
   static float consts_color[4];
-  get_pchan_color(ctx->bcolor, bone, PCHAN_COLOR_CONSTS, boneflag, consts_color);
+  get_pchan_color_constraint(ctx->bcolor, bone, consts_color);
   return consts_color;
 }
 
@@ -1338,7 +1332,7 @@ static const float *get_bone_wire_color(const ArmatureDrawContext *ctx,
   else if (ctx->draw_mode == ARM_DRAW_MODE_POSE) {
     const bPoseChannel *pchan = bone.as_posebone();
     copy_v4_v4(disp_color, pchan->draw_data->wire_color);
-    get_pchan_color(ctx->bcolor, bone, PCHAN_COLOR_NORMAL, boneflag, disp_color);
+    get_pchan_color_wire(ctx->bcolor, boneflag, disp_color);
 
     if (boneflag & BONE_DRAW_LOCKED_WEIGHT) {
       bone_locked_color_shade(disp_color);
