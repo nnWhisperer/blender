@@ -1074,11 +1074,11 @@ static void drw_shgroup_bone_ik_spline_lines(ArmatureDrawContext *ctx,
  * \{ */
 
 /* values of colCode for set_pchan_color */
-enum {
+typedef enum eColCode {
   PCHAN_COLOR_NORMAL = 0, /* normal drawing */
   PCHAN_COLOR_SOLID,      /* specific case where "solid" color is needed */
   PCHAN_COLOR_CONSTS,     /* "constraint" colors (which may/may-not be suppressed) */
-};
+} eColCode;
 
 /* This function sets the color-set for coloring a certain bone */
 static void set_pchan_colorset(ArmatureDrawContext *ctx, Object *ob, bPoseChannel *pchan)
@@ -1143,7 +1143,7 @@ static void cp_shade_color3ub(uchar cp[3], const int offset)
 /* This function sets the gl-color for coloring a certain bone (based on bcolor) */
 static bool set_pchan_color(const ArmatureDrawContext *ctx,
                             const UnifiedBonePtr bone,
-                            short colCode,
+                            const eColCode colCode,
                             const eBone_Flag boneflag,
                             float r_color[4])
 {
