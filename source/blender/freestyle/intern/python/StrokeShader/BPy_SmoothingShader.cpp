@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -87,7 +87,7 @@ static int SmoothingShader___init__(BPy_SmoothingShader *self, PyObject *args, P
 /*-----------------------BPy_SmoothingShader type definition ------------------------------*/
 
 PyTypeObject SmoothingShader_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "SmoothingShader",
     /*tp_basicsize*/ sizeof(BPy_SmoothingShader),
     /*tp_itemsize*/ 0,

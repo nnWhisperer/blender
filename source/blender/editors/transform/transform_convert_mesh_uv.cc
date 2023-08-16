@@ -12,18 +12,19 @@
 
 #include "BLI_bitmap.h"
 #include "BLI_linklist_stack.h"
-#include "BLI_math.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_vector.h"
 
 #include "BKE_context.h"
 #include "BKE_customdata.h"
 #include "BKE_editmesh.h"
-#include "BKE_mesh_mapping.h"
+#include "BKE_mesh_mapping.hh"
 
-#include "ED_image.h"
-#include "ED_mesh.h"
-#include "ED_uvedit.h"
+#include "ED_image.hh"
+#include "ED_mesh.hh"
+#include "ED_uvedit.hh"
 
-#include "WM_api.h" /* for WM_event_add_notifier to deal with stabilization nodes */
+#include "WM_api.hh" /* for WM_event_add_notifier to deal with stabilization nodes */
 
 #include "transform.hh"
 #include "transform_convert.hh"
@@ -132,7 +133,7 @@ static void uv_set_connectivity_distance(const ToolSettings *ts,
   float *dists_prev = static_cast<float *>(MEM_dupallocN(dists));
 
   do {
-    while ((l = static_cast<BMLoop *>(BLI_LINKSTACK_POP(queue)))) {
+    while ((l = BLI_LINKSTACK_POP(queue))) {
       BLI_assert(dists[BM_elem_index_get(l)] != FLT_MAX);
 
       BMLoop *l_other, *l_connected;
@@ -476,7 +477,7 @@ static void recalcData_uv(TransInfo *t)
 
 TransConvertTypeInfo TransConvertType_MeshUV = {
     /*flags*/ (T_EDIT | T_POINTS | T_2D_EDIT),
-    /*createTransData*/ createTransUVs,
-    /*recalcData*/ recalcData_uv,
+    /*create_trans_data*/ createTransUVs,
+    /*recalc_data*/ recalcData_uv,
     /*special_aftertrans_update*/ nullptr,
 };

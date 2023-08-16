@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "BLI_math_geom.h"
+
 #define MAX_CLIPPLANE_LEN 7
 
 #define SNAP_TO_EDGE_ELEMENTS \
@@ -15,7 +17,7 @@
    SCE_SNAP_TO_EDGE_PERPENDICULAR)
 
 struct SnapObjectContext {
-  struct Scene *scene;
+  Scene *scene;
 
   struct SnapCache {
     virtual ~SnapCache(){};

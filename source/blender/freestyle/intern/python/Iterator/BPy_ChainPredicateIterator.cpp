@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -155,7 +155,7 @@ static void ChainPredicateIterator_dealloc(BPy_ChainPredicateIterator *self)
 /*-----------------------BPy_ChainPredicateIterator type definition ----------------------------*/
 
 PyTypeObject ChainPredicateIterator_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "ChainPredicateIterator",
     /*tp_basicsize*/ sizeof(BPy_ChainPredicateIterator),
     /*tp_itemsize*/ 0,

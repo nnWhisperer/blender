@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -236,7 +236,7 @@ static PyGetSetDef BPy_FEdgeSmooth_getseters[] = {
 /*-----------------------BPy_FEdgeSmooth type definition ------------------------------*/
 
 PyTypeObject FEdgeSmooth_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "FEdgeSmooth",
     /*tp_basicsize*/ sizeof(BPy_FEdgeSmooth),
     /*tp_itemsize*/ 0,

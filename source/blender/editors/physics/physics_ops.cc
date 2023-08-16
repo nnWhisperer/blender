@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2009 Blender Foundation
+/* SPDX-FileCopyrightText: 2009 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -6,11 +6,11 @@
  * \ingroup edphys
  */
 
-#include <stdlib.h>
+#include <cstdlib>
 
-#include "WM_api.h"
+#include "WM_api.hh"
 
-#include "ED_physics.h"
+#include "ED_physics.hh"
 
 #include "physics_intern.h" /* own include */
 

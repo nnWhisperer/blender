@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2015 Blender Foundation
+/* SPDX-FileCopyrightText: 2015 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -18,7 +18,7 @@
 #include "DNA_armature_types.h"
 #include "DNA_object_types.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
 using namespace blender::bke;
 

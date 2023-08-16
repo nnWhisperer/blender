@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2022 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2022 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -370,7 +370,7 @@ static PyGetSetDef BPy_ViewEdge_getseters[] = {
 /*-----------------------BPy_ViewEdge type definition ------------------------------*/
 
 PyTypeObject ViewEdge_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "ViewEdge",
     /*tp_basicsize*/ sizeof(BPy_ViewEdge),
     /*tp_itemsize*/ 0,

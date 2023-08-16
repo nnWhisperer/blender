@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2021 Blender Foundation
+# SPDX-FileCopyrightText: 2021 Blender Authors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -7,9 +7,13 @@
 #  HIP_VERSION, the HIP compiler version
 #  HIP_FOUND, if the HIP toolkit is found.
 
-# If HIP_ROOT_DIR was defined in the environment, use it.
-if(NOT HIP_ROOT_DIR AND NOT $ENV{HIP_ROOT_DIR} STREQUAL "")
+# If `HIP_ROOT_DIR` was defined in the environment, use it.
+if(DEFINED HIP_ROOT_DIR)
+  # Pass.
+elseif(DEFINED ENV{HIP_ROOT_DIR})
   set(HIP_ROOT_DIR $ENV{HIP_ROOT_DIR})
+else()
+  set(HIP_ROOT_DIR "")
 endif()
 
 set(_hip_SEARCH_DIRS

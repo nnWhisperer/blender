@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -165,7 +165,7 @@ void blo_write_id_struct(BlendWriter *writer,
  * Required for writing properly embedded IDs currently.
  *
  * \note Once there is a better generic handling of embedded IDs,
- * this may go back to private code in `writefile.c`.
+ * this may go back to private code in `writefile.cc`.
  */
 typedef struct BLO_Write_IDBuffer BLO_Write_IDBuffer;
 

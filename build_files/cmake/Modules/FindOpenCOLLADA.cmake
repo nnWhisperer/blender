@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2011 Blender Foundation
+# SPDX-FileCopyrightText: 2011 Blender Authors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -20,9 +20,13 @@
 # Where '/opt/opencollada' is the base dir:
 # /opt/opencollada/COLLADABaseUtils/include/COLLADABUPlatform.h
 
-# If OPENCOLLADA_ROOT_DIR was defined in the environment, use it.
-IF(NOT OPENCOLLADA_ROOT_DIR AND NOT $ENV{OPENCOLLADA_ROOT_DIR} STREQUAL "")
+# If `OPENCOLLADA_ROOT_DIR` was defined in the environment, use it.
+IF(DEFINED OPENCOLLADA_ROOT_DIR)
+  # Pass.
+ELSEIF(DEFINED ENV{OPENCOLLADA_ROOT_DIR})
   SET(OPENCOLLADA_ROOT_DIR $ENV{OPENCOLLADA_ROOT_DIR})
+ELSE()
+  SET(OPENCOLLADA_ROOT_DIR "")
 ENDIF()
 
 SET(_opencollada_FIND_INCLUDES

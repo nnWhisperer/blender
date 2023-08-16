@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Blender Foundation
+# SPDX-FileCopyrightText: 2023 Blender Authors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -13,9 +13,13 @@
 #  SHADERC_FOUND, If false, do not try to use ShaderC.
 #
 
-# If SHADERC_ROOT_DIR was defined in the environment, use it.
-IF(NOT SHADERC_ROOT_DIR AND NOT $ENV{SHADERC_ROOT_DIR} STREQUAL "")
+# If `SHADERC_ROOT_DIR` was defined in the environment, use it.
+IF(DEFINED SHADERC_ROOT_DIR)
+  # Pass.
+ELSEIF(DEFINED ENV{SHADERC_ROOT_DIR})
   SET(SHADERC_ROOT_DIR $ENV{SHADERC_ROOT_DIR})
+ELSE()
+  SET(SHADERC_ROOT_DIR "")
 ENDIF()
 
 SET(_shaderc_SEARCH_DIRS

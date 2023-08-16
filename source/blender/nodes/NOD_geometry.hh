@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -8,6 +8,7 @@
 
 extern bNodeTreeType *ntreeType_Geometry;
 
+void register_node_tree_type_geo();
 void register_node_type_geo_custom_group(bNodeType *ntype);
 
 /* -------------------------------------------------------------------- */

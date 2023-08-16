@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2011 Blender Foundation
+# SPDX-FileCopyrightText: 2011 Blender Authors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -15,9 +15,13 @@
 # also defined, but not for general use are
 #  JEMALLOC_LIBRARY, where to find the JeMalloc library.
 
-# If JEMALLOC_ROOT_DIR was defined in the environment, use it.
-IF(NOT JEMALLOC_ROOT_DIR AND NOT $ENV{JEMALLOC_ROOT_DIR} STREQUAL "")
+# If `JEMALLOC_ROOT_DIR` was defined in the environment, use it.
+IF(DEFINED JEMALLOC_ROOT_DIR)
+  # Pass.
+ELSEIF(DEFINED ENV{JEMALLOC_ROOT_DIR})
   SET(JEMALLOC_ROOT_DIR $ENV{JEMALLOC_ROOT_DIR})
+ELSE()
+  SET(JEMALLOC_ROOT_DIR "")
 ENDIF()
 
 SET(_jemalloc_SEARCH_DIRS

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2010-2022 Blender Foundation
+/* SPDX-FileCopyrightText: 2010-2022 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -11,6 +11,7 @@
 #include "collada_utils.h"
 
 #include "BLI_linklist.h"
+#include "BLI_math_matrix.h"
 
 #include "BKE_armature.h"
 

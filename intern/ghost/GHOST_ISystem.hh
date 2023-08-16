@@ -6,7 +6,7 @@
  * \ingroup GHOST
  * %Main interface file for C++ Api with declaration of GHOST_ISystem interface
  * class.
- * Contains the doxygen documentation main page.
+ * Contains the DOXYGEN documentation main page.
  */
 
 #pragma once
@@ -61,7 +61,7 @@ class GHOST_IEventConsumer;
  * - Windows.
  * - X11.
  * - SDL2 (experimental).
- * - NULL (headless mode).
+ * - null (headless mode).
  *
  * \section Building GHOST
  *
@@ -189,7 +189,7 @@ class GHOST_ISystem {
   virtual GHOST_ITimerTask *installTimer(uint64_t delay,
                                          uint64_t interval,
                                          GHOST_TimerProcPtr timerProc,
-                                         GHOST_TUserDataPtr userData = NULL) = 0;
+                                         GHOST_TUserDataPtr userData = nullptr) = 0;
 
   /**
    * Removes a timer.
@@ -246,7 +246,7 @@ class GHOST_ISystem {
                                       GHOST_GPUSettings gpuSettings,
                                       const bool exclusive = false,
                                       const bool is_dialog = false,
-                                      const GHOST_IWindow *parentWindow = NULL) = 0;
+                                      const GHOST_IWindow *parentWindow = nullptr) = 0;
 
   /**
    * Dispose a window.
@@ -440,6 +440,13 @@ class GHOST_ISystem {
    * \param api: Enum indicating which API to use.
    */
   virtual void setTabletAPI(GHOST_TTabletAPI api) = 0;
+
+  /**
+   * Get the color of the pixel at the current mouse cursor location
+   * \param r_color: returned sRGB float colors
+   * \return Success value (true == successful and supported by platform)
+   */
+  virtual GHOST_TSuccess getPixelAtCursor(float r_color[3]) const = 0;
 
 #ifdef WITH_INPUT_NDOF
   /**

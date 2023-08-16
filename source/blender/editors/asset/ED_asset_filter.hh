@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -17,12 +17,14 @@
 #include "AS_asset_catalog_tree.hh"
 
 struct AssetFilterSettings;
+struct AssetHandle;
 struct AssetLibraryReference;
 struct bContext;
 
 namespace blender::asset_system {
+class AssetLibrary;
 class AssetRepresentation;
-}
+}  // namespace blender::asset_system
 
 /**
  * Compare \a asset against the settings of \a filter.
@@ -47,6 +49,10 @@ struct AssetItemTree {
       assets_per_path;
 };
 
+asset_system::AssetCatalogTree build_filtered_catalog_tree(
+    const asset_system::AssetLibrary &library,
+    const AssetLibraryReference &library_ref,
+    blender::FunctionRef<bool(const AssetHandle &)> is_asset_visible_fn);
 AssetItemTree build_filtered_all_catalog_tree(
     const AssetLibraryReference &library_ref,
     const bContext &C,

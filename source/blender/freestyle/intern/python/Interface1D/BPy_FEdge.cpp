@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -339,7 +339,7 @@ static PyGetSetDef BPy_FEdge_getseters[] = {
 /*-----------------------BPy_FEdge type definition ------------------------------*/
 
 PyTypeObject FEdge_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "FEdge",
     /*tp_basicsize*/ sizeof(BPy_FEdge),
     /*tp_itemsize*/ 0,

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -21,6 +21,8 @@ extern "C" {
  *   `-Wc++20-compat` & `-Wc99-compat` warnings under CLANG.
  */
 
+/** u00B0: `°`. */
+#define BLI_STR_UTF8_DEGREE_SIGN "\xc2\xb0"
 /** u00D7: `×`. */
 #define BLI_STR_UTF8_MULTIPLICATION_SIGN "\xc3\x97"
 /** u2014: `—` */

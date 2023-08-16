@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2008 Blender Foundation
+/* SPDX-FileCopyrightText: 2008 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -15,7 +15,10 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_blenlib.h"
-#include "BLI_math.h"
+#include "BLI_math_geom.h"
+#include "BLI_math_matrix.h"
+#include "BLI_math_rotation.h"
+#include "BLI_math_vector.h"
 
 #include "BKE_action.h"
 #include "BKE_armature.h"
@@ -29,15 +32,15 @@
 
 #include "DEG_depsgraph_query.h"
 
-#include "WM_api.h"
-#include "WM_message.h"
+#include "WM_api.hh"
+#include "WM_message.hh"
 
-#include "RNA_access.h"
-#include "RNA_define.h"
+#include "RNA_access.hh"
+#include "RNA_define.hh"
 
-#include "ED_screen.h"
-#include "ED_transform.h"
-#include "ED_transform_snap_object_context.h"
+#include "ED_screen.hh"
+#include "ED_transform.hh"
+#include "ED_transform_snap_object_context.hh"
 
 #include "view3d_intern.h" /* own include */
 
@@ -50,11 +53,11 @@ static bool view3d_camera_user_poll(bContext *C)
   if (ED_view3d_context_user_region(C, &v3d, &region)) {
     RegionView3D *rv3d = static_cast<RegionView3D *>(region->regiondata);
     if ((rv3d->persp == RV3D_CAMOB) && !(RV3D_LOCK_FLAGS(rv3d) & RV3D_LOCK_ANY_TRANSFORM)) {
-      return 1;
+      return true;
     }
   }
 
-  return 0;
+  return false;
 }
 
 static bool view3d_lock_poll(bContext *C)
@@ -1048,8 +1051,8 @@ void ED_view3d_cursor3d_update(bContext *C,
   }
 
   {
-    struct wmMsgBus *mbus = CTX_wm_message_bus(C);
-    wmMsgParams_RNA msg_key_params = {{0}};
+    wmMsgBus *mbus = CTX_wm_message_bus(C);
+    wmMsgParams_RNA msg_key_params = {{nullptr}};
     RNA_pointer_create(&scene->id, &RNA_View3DCursor, &scene->cursor, &msg_key_params.ptr);
     WM_msg_publish_rna_params(mbus, &msg_key_params);
   }

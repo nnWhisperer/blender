@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2021 Blender Foundation
+/* SPDX-FileCopyrightText: 2021 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -123,8 +123,18 @@ void ShadingView::render()
   /* TODO(fclem): Move it after the first prepass (and hiz update) once pipeline is stabilized. */
   inst_.lights.set_view(render_view_new_, extent_);
 
+  inst_.volume.draw_compute(render_view_new_);
+
+  /* TODO: cleanup. */
+  View main_view_new("MainView", main_view_);
   /* TODO(Miguel Pozo): Deferred and forward prepass should happen before the GBuffer pass. */
-  inst_.pipelines.deferred.render(render_view_new_, prepass_fb_, combined_fb_, extent_);
+  inst_.pipelines.deferred.render(main_view_new,
+                                  render_view_new_,
+                                  prepass_fb_,
+                                  combined_fb_,
+                                  extent_,
+                                  rt_buffer_opaque_,
+                                  rt_buffer_refract_);
 
   // inst_.lookdev.render_overlay(view_fb_);
 
@@ -206,24 +216,31 @@ void CaptureView::render_world()
   View view = {"Capture.View"};
   GPU_debug_group_begin("World.Capture");
 
-  for (int face : IndexRange(6)) {
-    float4x4 view_m4 = cubeface_mat(face);
-    float4x4 win_m4 = math::projection::perspective(-update_info->clipping_distances.x,
-                                                    update_info->clipping_distances.x,
-                                                    -update_info->clipping_distances.x,
-                                                    update_info->clipping_distances.x,
-                                                    update_info->clipping_distances.x,
-                                                    update_info->clipping_distances.y);
-    view.sync(view_m4, win_m4);
+  if (update_info->do_render) {
+    for (int face : IndexRange(6)) {
+      float4x4 view_m4 = cubeface_mat(face);
+      float4x4 win_m4 = math::projection::perspective(-update_info->clipping_distances.x,
+                                                      update_info->clipping_distances.x,
+                                                      -update_info->clipping_distances.x,
+                                                      update_info->clipping_distances.x,
+                                                      update_info->clipping_distances.x,
+                                                      update_info->clipping_distances.y);
+      view.sync(view_m4, win_m4);
 
-    capture_fb_.ensure(GPU_ATTACHMENT_NONE,
-                       GPU_ATTACHMENT_TEXTURE_CUBEFACE(inst_.reflection_probes.cubemap_tx_, face));
-    GPU_framebuffer_bind(capture_fb_);
-    inst_.pipelines.world.render(view);
+      capture_fb_.ensure(
+          GPU_ATTACHMENT_NONE,
+          GPU_ATTACHMENT_TEXTURE_CUBEFACE(inst_.reflection_probes.cubemap_tx_, face));
+      GPU_framebuffer_bind(capture_fb_);
+      inst_.pipelines.world.render(view);
+    }
+
+    inst_.reflection_probes.remap_to_octahedral_projection(update_info->object_key);
+    inst_.reflection_probes.update_probes_texture_mipmaps();
   }
 
-  inst_.reflection_probes.remap_to_octahedral_projection(update_info->object_key);
-  inst_.reflection_probes.update_probes_texture_mipmaps();
+  if (update_info->do_world_irradiance_update) {
+    inst_.reflection_probes.update_world_irradiance();
+  }
 
   GPU_debug_group_end();
 }

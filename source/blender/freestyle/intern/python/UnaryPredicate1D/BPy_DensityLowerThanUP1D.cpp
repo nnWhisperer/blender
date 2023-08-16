@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2022 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2022 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -61,7 +61,7 @@ static int DensityLowerThanUP1D___init__(BPy_DensityLowerThanUP1D *self,
 /*-----------------------BPy_DensityLowerThanUP1D type definition ------------------------------*/
 
 PyTypeObject DensityLowerThanUP1D_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "DensityLowerThanUP1D",
     /*tp_basicsize*/ sizeof(BPy_DensityLowerThanUP1D),
     /*tp_itemsize*/ 0,

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2008 Blender Foundation
+/* SPDX-FileCopyrightText: 2008 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -158,7 +158,7 @@ void _bli_array_grow_func(void **arr_p,
 #define BLI_array_trim(arr) \
   { \
     if (_bli_array_totalsize_dynamic(arr) != _##arr##_len) { \
-      arr = MEM_reallocN(arr, sizeof(*arr) * _##arr##_len); \
+      *(void **)&arr = MEM_reallocN(arr, sizeof(*arr) * _##arr##_len); \
     } \
   } \
   ((void)0)

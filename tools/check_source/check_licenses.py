@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2022-2023 Blender Foundation
+# SPDX-FileCopyrightText: 2022-2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -84,11 +84,20 @@ def filename_is_c_compat(filename: str) -> bool:
             ".hh",
             ".hxx",
             ".hpp",
+            ".inl",
             # Objective-C/C++
             ".m",
             ".mm",
             # OPENCL.
             ".cl",
+            # CUDA.
+            ".cu",
+            # Metal.
+            ".metal",
+            # Open Shading Language.
+            ".osl",
+            # Cycles uses this extension.
+            ".tables",
         )
     )
 
@@ -485,6 +494,7 @@ def main() -> None:
                 # Directories:
                 "./extern",
                 "./scripts/addons_contrib",
+                "./scripts/templates_osl",
                 "./tools",
                 # Needs manual handling as it mixes two licenses.
                 "./intern/atomic",

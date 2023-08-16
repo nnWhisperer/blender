@@ -1,5 +1,5 @@
 /* SPDX-FileCopyrightText: 2021 Tangent Animation. All rights reserved.
- * SPDX-FileCopyrightText: 2023 Blender Foundation
+ * SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  *
@@ -168,7 +168,7 @@ void USDNurbsReader::read_curve_sample(Curve *cu, const double motionSampleTime)
   }
 }
 
-Mesh *USDNurbsReader::read_mesh(struct Mesh * /* existing_mesh */,
+Mesh *USDNurbsReader::read_mesh(Mesh * /* existing_mesh */,
                                 const USDMeshReadParams params,
                                 const char ** /* err_str */)
 {

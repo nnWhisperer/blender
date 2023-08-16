@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2005 Blender Foundation
+/* SPDX-FileCopyrightText: 2005 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -22,9 +22,13 @@
  * over other previous ones.
  */
 
+#include "BKE_node_runtime.hh"
+
 #include "NOD_add_node_search.hh"
+#include "NOD_texture.h"
 
 #include "node_texture_util.hh"
+#include "node_util.hh"
 
 bool tex_node_poll_default(const bNodeType * /*ntype*/,
                            const bNodeTree *ntree,
@@ -139,8 +143,7 @@ void tex_output(bNode *node,
 
 void ntreeTexCheckCyclics(bNodeTree *ntree)
 {
-  bNode *node;
-  for (node = static_cast<bNode *>(ntree->nodes.first); node; node = node->next) {
+  LISTBASE_FOREACH (bNode *, node, &ntree->nodes) {
 
     if (node->type == TEX_NODE_TEXTURE && node->id) {
       /* custom2 stops the node from rendering */

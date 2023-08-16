@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -23,19 +23,11 @@ struct PHash;
 using ParamKey = uintptr_t; /* Key (hash) for identifying verts and faces. */
 #define PARAM_KEY_MAX UINTPTR_MAX
 
-enum PHandleState {
-  PHANDLE_STATE_ALLOCATED,
-  PHANDLE_STATE_CONSTRUCTED,
-  PHANDLE_STATE_LSCM,
-  PHANDLE_STATE_STRETCH,
-};
-
 class ParamHandle {
  public:
   ParamHandle();
   ~ParamHandle();
 
-  PHandleState state;
   MemArena *arena;
   MemArena *polyfill_arena;
   Heap *polyfill_heap;
@@ -122,7 +114,6 @@ void uv_parametrizer_lscm_end(ParamHandle *handle);
 void uv_parametrizer_stretch_begin(ParamHandle *handle);
 void uv_parametrizer_stretch_blend(ParamHandle *handle, float blend);
 void uv_parametrizer_stretch_iter(ParamHandle *handle);
-void uv_parametrizer_stretch_end(ParamHandle *handle);
 
 /** \} */
 

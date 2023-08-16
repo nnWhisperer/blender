@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -154,7 +154,7 @@ static PyGetSetDef BPy_UnaryPredicate0D_getseters[] = {
 /*-----------------------BPy_UnaryPredicate0D type definition ------------------------------*/
 
 PyTypeObject UnaryPredicate0D_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "UnaryPredicate0D",
     /*tp_basicsize*/ sizeof(BPy_UnaryPredicate0D),
     /*tp_itemsize*/ 0,

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Blender Foundation
+# SPDX-FileCopyrightText: 2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -71,6 +71,8 @@ endif()
 blender_add_lib(bf_functions "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
 
 if(WITH_GTESTS)
+  set(TEST_INC
+  )
   set(TEST_SRC
     tests/FN_field_test.cc
     tests/FN_lazy_function_test.cc

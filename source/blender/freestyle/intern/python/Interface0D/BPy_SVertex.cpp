@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -445,7 +445,8 @@ static PyGetSetDef BPy_SVertex_getseters[] = {
 /*-----------------------BPy_SVertex type definition ------------------------------*/
 
 PyTypeObject SVertex_Type = {
-    /*tp_name*/ PyVarObject_HEAD_INIT(nullptr, 0) "SVertex",
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
+    /*tp_name*/ "SVertex",
     /*tp_basicsize*/ sizeof(BPy_SVertex),
     /*tp_itemsize*/ 0,
     /*tp_dealloc*/ nullptr,
@@ -481,7 +482,7 @@ PyTypeObject SVertex_Type = {
     /*tp_dictoffset*/ 0,
     /*tp_init*/ (initproc)SVertex_init,
     /*tp_alloc*/ nullptr,
-    nullptr, /*tp_new*/
+    /*tp_new*/ nullptr,
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////

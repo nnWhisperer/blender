@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2011-2023 Blender Foundation
+# SPDX-FileCopyrightText: 2011-2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -59,6 +59,7 @@ Static Source Code Checking
 
    * check_cppcheck:        Run blender source through cppcheck (C & C++).
    * check_clang_array:     Run blender source through clang array checking script (C & C++).
+   * check_struct_comments: Check struct member comments are correct (C & C++).
    * check_deprecated:      Check if there is any deprecated code to remove.
    * check_descriptions:    Check for duplicate/invalid descriptions.
    * check_licenses:        Check license headers follow the SPDX license specification,
@@ -94,6 +95,9 @@ Spell Checkers
 
 Utilities
    Not associated with building Blender.
+
+   * authors:
+     Update the AUTHORS file using GIT history.
 
    * icons:
      Updates PNG icons from SVG files.
@@ -468,6 +472,13 @@ check_cppcheck: .FORCE
 	    "$(BLENDER_DIR)/check_cppcheck.txt"
 	@echo "written: check_cppcheck.txt"
 
+check_struct_comments: .FORCE
+	@$(CMAKE_CONFIG)
+	@cd "$(BUILD_DIR)" ; \
+	$(PYTHON) \
+	    "$(BLENDER_DIR)/build_files/cmake/cmake_static_check_clang.py" \
+	    --checks=struct_comments --match=".*" --jobs=$(NPROCS)
+
 check_clang_array: .FORCE
 	@$(CMAKE_CONFIG)
 	@cd "$(BUILD_DIR)" ; \
@@ -539,6 +550,8 @@ source_archive_complete: .FORCE
 # This assumes CMake is still using a default `PACKAGE_DIR` variable:
 	@$(PYTHON) ./build_files/utils/make_source_archive.py --include-packages "$(BUILD_DIR)/source_archive/packages"
 
+authors: .FORCE
+	@$(PYTHON) ./tools/utils/authors_git_gen.py
 
 INKSCAPE_BIN?="inkscape"
 icons: .FORCE

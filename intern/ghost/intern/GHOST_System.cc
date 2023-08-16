@@ -30,8 +30,9 @@ GHOST_System::GHOST_System()
       m_windowManager(nullptr),
       m_eventManager(nullptr),
 #ifdef WITH_INPUT_NDOF
-      m_ndofManager(0),
+      m_ndofManager(nullptr),
 #endif
+      m_preFullScreenSetting{0},
       m_multitouchGestures(true),
       m_tabletAPI(GHOST_kTabletAutomatic),
       m_is_debug_enabled(false)
@@ -338,6 +339,11 @@ void GHOST_System::setTabletAPI(GHOST_TTabletAPI api)
 GHOST_TTabletAPI GHOST_System::getTabletAPI()
 {
   return m_tabletAPI;
+}
+
+GHOST_TSuccess GHOST_System::getPixelAtCursor(float[3] /* r_color */) const
+{
+  return GHOST_kFailure;
 }
 
 #ifdef WITH_INPUT_NDOF

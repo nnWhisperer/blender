@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2002-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2002-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -48,6 +48,8 @@ size_t (*MEM_get_memory_in_use)(void) = MEM_lockfree_get_memory_in_use;
 uint (*MEM_get_memory_blocks_in_use)(void) = MEM_lockfree_get_memory_blocks_in_use;
 void (*MEM_reset_peak_memory)(void) = MEM_lockfree_reset_peak_memory;
 size_t (*MEM_get_peak_memory)(void) = MEM_lockfree_get_peak_memory;
+
+void (*mem_clearmemlist)(void) = mem_lockfree_clearmemlist;
 
 #ifndef NDEBUG
 const char *(*MEM_name_ptr)(void *vmemh) = MEM_lockfree_name_ptr;
@@ -129,6 +131,8 @@ void MEM_use_lockfree_allocator(void)
   MEM_reset_peak_memory = MEM_lockfree_reset_peak_memory;
   MEM_get_peak_memory = MEM_lockfree_get_peak_memory;
 
+  mem_clearmemlist = mem_lockfree_clearmemlist;
+
 #ifndef NDEBUG
   MEM_name_ptr = MEM_lockfree_name_ptr;
   MEM_name_ptr_set = MEM_lockfree_name_ptr_set;
@@ -160,6 +164,8 @@ void MEM_use_guarded_allocator(void)
   MEM_get_memory_blocks_in_use = MEM_guarded_get_memory_blocks_in_use;
   MEM_reset_peak_memory = MEM_guarded_reset_peak_memory;
   MEM_get_peak_memory = MEM_guarded_get_peak_memory;
+
+  mem_clearmemlist = mem_guarded_clearmemlist;
 
 #ifndef NDEBUG
   MEM_name_ptr = MEM_guarded_name_ptr;

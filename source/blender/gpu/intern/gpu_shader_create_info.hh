@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2021 Blender Foundation
+/* SPDX-FileCopyrightText: 2021 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -178,6 +178,11 @@ enum class BuiltinBits {
   VERTEX_ID = (1 << 14),
   WORK_GROUP_ID = (1 << 15),
   WORK_GROUP_SIZE = (1 << 16),
+  /**
+   * Allow setting the target viewport when using multi viewport feature.
+   * \note Emulated through geometry shader on older hardware.
+   */
+  VIEWPORT_INDEX = (1 << 17),
 
   /* Not a builtin but a flag we use to tag shaders that use the debug features. */
   USE_DEBUG_DRAW = (1 << 29),

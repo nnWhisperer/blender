@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2008 Blender Foundation
+/* SPDX-FileCopyrightText: 2008 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -17,9 +17,9 @@
 #include "BKE_main.h"
 #include "BKE_screen.h"
 
-#include "ED_image.h"
-#include "ED_screen.h"
-#include "ED_space_api.h"
+#include "ED_image.hh"
+#include "ED_screen.hh"
+#include "ED_space_api.hh"
 
 #include "GPU_immediate.h"
 #include "GPU_state.h"
@@ -31,21 +31,21 @@
 #include "SEQ_render.h"
 #include "SEQ_sequencer.h"
 
-#include "UI_view2d.h"
+#include "UI_view2d.hh"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
 #include "sequencer_intern.h"
 
 /* Own define. */
-#include "ED_util_imbuf.h"
+#include "ED_util_imbuf.hh"
 
 /* -------------------------------------------------------------------- */
 /** \name Image Pixel Sample Struct (Operator Custom Data)
  * \{ */
 
-typedef struct ImageSampleInfo {
+struct ImageSampleInfo {
   ARegionType *art;
   void *draw_handle;
   int x, y;
@@ -68,7 +68,7 @@ typedef struct ImageSampleInfo {
   bool draw;
   bool color_manage;
   int use_default_view;
-} ImageSampleInfo;
+};
 
 /** \} */
 
@@ -263,7 +263,7 @@ static void image_sample_apply(bContext *C, wmOperator *op, const wmEvent *event
 #endif
   }
   else {
-    info->draw = 0;
+    info->draw = false;
   }
 
   ED_space_image_release_buffer(sima, ibuf, lock);
@@ -273,7 +273,7 @@ static void image_sample_apply(bContext *C, wmOperator *op, const wmEvent *event
 static void sequencer_sample_apply(bContext *C, wmOperator *op, const wmEvent *event)
 {
   Main *bmain = CTX_data_main(C);
-  struct Depsgraph *depsgraph = CTX_data_ensure_evaluated_depsgraph(C);
+  Depsgraph *depsgraph = CTX_data_ensure_evaluated_depsgraph(C);
   Scene *scene = CTX_data_scene(C);
   SpaceSeq *sseq = (SpaceSeq *)CTX_wm_space_data(C);
   ARegion *region = CTX_wm_region(C);
@@ -283,7 +283,7 @@ static void sequencer_sample_apply(bContext *C, wmOperator *op, const wmEvent *e
   float fx, fy;
 
   if (ibuf == nullptr) {
-    info->draw = 0;
+    info->draw = false;
     return;
   }
 
@@ -303,7 +303,7 @@ static void sequencer_sample_apply(bContext *C, wmOperator *op, const wmEvent *e
 
     info->x = x;
     info->y = y;
-    info->draw = 1;
+    info->draw = true;
     info->channels = ibuf->channels;
 
     info->colp = nullptr;
@@ -347,7 +347,7 @@ static void sequencer_sample_apply(bContext *C, wmOperator *op, const wmEvent *e
     }
   }
   else {
-    info->draw = 0;
+    info->draw = false;
   }
 
   IMB_freeImBuf(ibuf);

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -92,7 +92,7 @@ void IDP_FreeString(struct IDProperty *prop) ATTR_NONNULL();
 
 /*-------- ID Type -------*/
 
-typedef void (*IDPWalkFunc)(void *userData, struct IDProperty *idp);
+typedef void (*IDPWalkFunc)(void *user_data, struct IDProperty *idp);
 
 void IDP_AssignID(struct IDProperty *prop, struct ID *id, int flag);
 

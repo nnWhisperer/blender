@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -25,7 +25,6 @@
 
 #include "BLI_blenlib.h"
 #include "BLI_map.hh"
-#include "BLI_math.h"
 #include "BLI_threads.h"
 #include "BLI_utildefines.h"
 
@@ -40,17 +39,17 @@
 
 #include "BKE_context.h"
 #include "BKE_image.h"
-#include "BKE_paint.h"
+#include "BKE_paint.hh"
 #include "BKE_undo_system.h"
 
 #include "DEG_depsgraph.h"
 
-#include "ED_object.h"
-#include "ED_paint.h"
-#include "ED_undo.h"
-#include "ED_util.h"
+#include "ED_object.hh"
+#include "ED_paint.hh"
+#include "ED_undo.hh"
+#include "ED_util.hh"
 
-#include "WM_api.h"
+#include "WM_api.hh"
 
 static CLG_LogRef LOG = {"ed.image.undo"};
 

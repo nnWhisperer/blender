@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2009-2023 Blender Foundation
+# SPDX-FileCopyrightText: 2009-2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -299,6 +299,8 @@ class GRAPH_MT_key_blending(Menu):
         layout.operator("graph.blend_to_neighbor", text="Blend to Neighbor")
         layout.operator("graph.blend_to_default", text="Blend to Default Value")
         layout.operator("graph.ease", text="Ease")
+        layout.operator("graph.blend_offset", text="Blend Offset")
+        layout.operator("graph.blend_to_ease", text="Blend to Ease")
 
 
 class GRAPH_MT_key_smoothing(Menu):

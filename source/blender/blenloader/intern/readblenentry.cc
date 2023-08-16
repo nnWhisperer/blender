@@ -45,7 +45,7 @@
 /* local prototypes --------------------- */
 void BLO_blendhandle_print_sizes(BlendHandle *bh, void *fp);
 
-/* Access routines used by filesel. */
+/* Access routines used by file-selector. */
 
 void BLO_datablock_info_free(BLODataBlockInfo *datablock_info)
 {
@@ -501,4 +501,9 @@ void BLO_blendfiledata_free(BlendFileData *bfd)
   }
 
   MEM_freeN(bfd);
+}
+
+void BLO_read_do_version_after_setup(struct Main *new_bmain, struct BlendFileReadReport *reports)
+{
+  do_versions_after_setup(new_bmain, reports);
 }

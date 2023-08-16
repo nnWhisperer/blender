@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Blender Foundation
+# SPDX-FileCopyrightText: 2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -66,14 +66,14 @@ class TEXT_OT_jump_to_file_at_point(Operator):
 
         try:
             args.extend([Template(arg).substitute(**template_vars) for arg in shlex.split(text_editor_args)])
-        except Exception as ex:
+        except BaseException as ex:
             self.report({'ERROR'}, "Exception parsing template: %r" % ex)
             return {'CANCELLED'}
 
         try:
             # With `check=True` if `process.returncode != 0` an exception will be raised.
             subprocess.run(args, check=True)
-        except Exception as ex:
+        except BaseException as ex:
             self.report({'ERROR'}, "Exception running external editor: %r" % ex)
             return {'CANCELLED'}
 

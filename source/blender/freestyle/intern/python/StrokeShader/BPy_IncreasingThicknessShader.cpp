@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2022 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2022 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -62,7 +62,7 @@ static int IncreasingThicknessShader___init__(BPy_IncreasingThicknessShader *sel
 /*-----------------------BPy_IncreasingThicknessShader type definition --------------------------*/
 
 PyTypeObject IncreasingThicknessShader_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "IncreasingThicknessShader",
     /*tp_basicsize*/ sizeof(BPy_IncreasingThicknessShader),
     /*tp_itemsize*/ 0,

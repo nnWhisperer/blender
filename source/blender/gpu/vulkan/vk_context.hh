@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022 Blender Foundation
+/* SPDX-FileCopyrightText: 2022 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -58,7 +58,7 @@ class VKContext : public Context, NonCopyable {
                               const VKVertexAttributeObject &vertex_attribute_object);
   void sync_backbuffer();
 
-  static VKContext *get(void)
+  static VKContext *get()
   {
     return static_cast<VKContext *>(Context::get());
   }

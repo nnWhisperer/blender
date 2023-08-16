@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2005 Blender Foundation
+/* SPDX-FileCopyrightText: 2005 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -8,17 +8,28 @@
 
 #include <algorithm>
 
-#include "BLI_math_quaternion.hh"
+#include "BKE_material.h"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "BLI_math_quaternion.hh"
+#include "BLI_math_vector.h"
+#include "BLI_string_utf8.h"
+
+#include "DNA_material_types.h"
+
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
 #include "node_shader_util.hh"
+#include "node_util.hh"
+
+#include "FN_multi_function_builder.hh"
 
 #include "NOD_add_node_search.hh"
+#include "NOD_multi_function.hh"
 #include "NOD_socket_search_link.hh"
 
-#include "RNA_enum_types.h"
+#include "RNA_access.hh"
+#include "RNA_enum_types.hh"
 
 namespace blender::nodes::node_sh_mix_cc {
 
@@ -78,23 +89,23 @@ static void sh_node_mix_declare(NodeDeclarationBuilder &b)
 static void sh_node_mix_layout(uiLayout *layout, bContext * /*C*/, PointerRNA *ptr)
 {
   const NodeShaderMix &data = node_storage(*static_cast<const bNode *>(ptr->data));
-  uiItemR(layout, ptr, "data_type", 0, "", ICON_NONE);
+  uiItemR(layout, ptr, "data_type", UI_ITEM_NONE, "", ICON_NONE);
   switch (data.data_type) {
     case SOCK_FLOAT:
       break;
     case SOCK_VECTOR:
-      uiItemR(layout, ptr, "factor_mode", 0, "", ICON_NONE);
+      uiItemR(layout, ptr, "factor_mode", UI_ITEM_NONE, "", ICON_NONE);
       break;
     case SOCK_RGBA:
-      uiItemR(layout, ptr, "blend_type", 0, "", ICON_NONE);
-      uiItemR(layout, ptr, "clamp_result", 0, nullptr, ICON_NONE);
+      uiItemR(layout, ptr, "blend_type", UI_ITEM_NONE, "", ICON_NONE);
+      uiItemR(layout, ptr, "clamp_result", UI_ITEM_NONE, nullptr, ICON_NONE);
       break;
     case SOCK_ROTATION:
       break;
     default:
       BLI_assert_unreachable();
   }
-  uiItemR(layout, ptr, "clamp_factor", 0, nullptr, ICON_NONE);
+  uiItemR(layout, ptr, "clamp_factor", UI_ITEM_NONE, nullptr, ICON_NONE);
 }
 
 static void sh_node_mix_label(const bNodeTree * /*ntree*/,

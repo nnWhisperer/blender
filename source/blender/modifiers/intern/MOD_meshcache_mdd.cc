@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -13,7 +13,7 @@
 #include "BLI_utildefines.h"
 
 #include "BLI_fileops.h"
-#include "BLI_math.h"
+#include "BLI_math_base.h"
 #ifdef __LITTLE_ENDIAN__
 #  include "BLI_endian_switch.h"
 #endif

@@ -768,6 +768,12 @@ void GHOST_SetTabletAPI(GHOST_SystemHandle systemhandle, GHOST_TTabletAPI api)
   system->setTabletAPI(api);
 }
 
+GHOST_TSuccess GHOST_GetPixelAtCursor(float r_color[3])
+{
+  GHOST_ISystem *system = GHOST_ISystem::getSystem();
+  return system->getPixelAtCursor(r_color);
+}
+
 int32_t GHOST_GetWidthRectangle(GHOST_RectangleHandle rectanglehandle)
 {
   return ((GHOST_Rect *)rectanglehandle)->getWidth();
@@ -1148,7 +1154,7 @@ void *GHOST_XrGetActionSetCustomdata(GHOST_XrContextHandle xr_contexthandle,
   GHOST_IXrContext *xr_context = (GHOST_IXrContext *)xr_contexthandle;
   GHOST_XrSession *xr_session = xr_context->getSession();
   GHOST_XR_CAPI_CALL_RET(xr_session->getActionSetCustomdata(action_set_name), xr_context);
-  return 0;
+  return nullptr;
 }
 
 void *GHOST_XrGetActionCustomdata(GHOST_XrContextHandle xr_contexthandle,
@@ -1159,7 +1165,7 @@ void *GHOST_XrGetActionCustomdata(GHOST_XrContextHandle xr_contexthandle,
   GHOST_XrSession *xr_session = xr_context->getSession();
   GHOST_XR_CAPI_CALL_RET(xr_session->getActionCustomdata(action_set_name, action_name),
                          xr_context);
-  return 0;
+  return nullptr;
 }
 
 uint GHOST_XrGetActionCount(GHOST_XrContextHandle xr_contexthandle, const char *action_set_name)

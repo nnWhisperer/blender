@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2005 Blender Foundation
+/* SPDX-FileCopyrightText: 2005 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -180,6 +180,11 @@ bool GPU_shader_image_load_store_support()
 bool GPU_shader_draw_parameters_support()
 {
   return GCaps.shader_draw_parameters_support;
+}
+
+bool GPU_hdr_support()
+{
+  return GCaps.hdr_viewport_support;
 }
 
 int GPU_max_shader_storage_buffer_bindings()

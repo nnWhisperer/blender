@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -300,6 +300,13 @@ void AssetLibrary::on_blend_save_post(Main *main,
 AssetIdentifier AssetLibrary::asset_identifier_from_library(StringRef relative_asset_path)
 {
   return AssetIdentifier(root_path_, relative_asset_path);
+}
+
+std::string AssetLibrary::resolve_asset_weak_reference_to_full_path(
+    const AssetWeakReference &asset_reference)
+{
+  AssetLibraryService *service = AssetLibraryService::get();
+  return service->resolve_asset_weak_reference_to_full_path(asset_reference);
 }
 
 void AssetLibrary::refresh_catalog_simplename(AssetMetaData *asset_data)

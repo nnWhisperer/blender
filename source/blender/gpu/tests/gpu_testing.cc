@@ -1,10 +1,12 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: Apache-2.0 */
 
 #include "testing/testing.h"
 
 #include "CLG_log.h"
+
+#include "BLI_math_color.h"
 
 #include "GPU_context.h"
 #include "GPU_debug.h"

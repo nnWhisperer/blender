@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2011 Blender Foundation
+# SPDX-FileCopyrightText: 2011 Blender Authors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -15,9 +15,13 @@
 # also defined, but not for general use are
 #  SPACENAV_LIBRARY, where to find the Spacenav library.
 
-# If SPACENAV_ROOT_DIR was defined in the environment, use it.
-IF(NOT SPACENAV_ROOT_DIR AND NOT $ENV{SPACENAV_ROOT_DIR} STREQUAL "")
+# If `SPACENAV_ROOT_DIR` was defined in the environment, use it.
+IF(DEFINED SPACENAV_ROOT_DIR)
+  # Pass.
+ELSEIF(DEFINED ENV{SPACENAV_ROOT_DIR})
   SET(SPACENAV_ROOT_DIR $ENV{SPACENAV_ROOT_DIR})
+ELSE()
+  SET(SPACENAV_ROOT_DIR "")
 ENDIF()
 
 SET(_spacenav_SEARCH_DIRS

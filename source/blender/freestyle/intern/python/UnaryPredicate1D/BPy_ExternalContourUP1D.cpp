@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2022 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2022 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -49,7 +49,7 @@ static int ExternalContourUP1D___init__(BPy_ExternalContourUP1D *self,
 /*-----------------------BPy_ExternalContourUP1D type definition ------------------------------*/
 
 PyTypeObject ExternalContourUP1D_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "ExternalContourUP1D",
     /*tp_basicsize*/ sizeof(BPy_ExternalContourUP1D),
     /*tp_itemsize*/ 0,

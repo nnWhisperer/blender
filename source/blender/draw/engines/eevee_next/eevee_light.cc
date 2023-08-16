@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2021 Blender Foundation
+/* SPDX-FileCopyrightText: 2021 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -13,6 +13,8 @@
 #include "eevee_instance.hh"
 
 #include "eevee_light.hh"
+
+#include "BLI_math_rotation.h"
 
 namespace blender::eevee {
 

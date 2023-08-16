@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2021 Blender Foundation
+/* SPDX-FileCopyrightText: 2021 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -55,13 +55,18 @@ class World {
 
   /* Used when the scene doesn't have a world. */
   ::World *default_world_ = nullptr;
+
   ::World *default_world_get();
+
+  void world_and_ntree_get(::World *&world, bNodeTree *&ntree);
 
  public:
   World(Instance &inst) : inst_(inst){};
   ~World();
 
   void sync();
+
+  bool has_volume();
 };
 
 /** \} */

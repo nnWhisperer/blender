@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2011 Blender Foundation
+# SPDX-FileCopyrightText: 2011 Blender Authors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -15,9 +15,13 @@
 # also defined, but not for general use are
 #  GMP_LIBRARY, where to find the GMP library.
 
-# If GMP_ROOT_DIR was defined in the environment, use it.
-IF(NOT GMP_ROOT_DIR AND NOT $ENV{GMP_ROOT_DIR} STREQUAL "")
+# If `GMP_ROOT_DIR` was defined in the environment, use it.
+IF(DEFINED GMP_ROOT_DIR)
+  # Pass.
+ELSEIF(DEFINED ENV{GMP_ROOT_DIR})
   SET(GMP_ROOT_DIR $ENV{GMP_ROOT_DIR})
+ELSE()
+  SET(GMP_ROOT_DIR "")
 ENDIF()
 
 SET(_gmp_SEARCH_DIRS

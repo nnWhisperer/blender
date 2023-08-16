@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -79,7 +79,7 @@ static int GetCompleteViewMapDensityF1D___init__(BPy_GetCompleteViewMapDensityF1
 /*-----------------------BPy_GetCompleteViewMapDensityF1D type definition -----------------------*/
 
 PyTypeObject GetCompleteViewMapDensityF1D_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "GetCompleteViewMapDensityF1D",
     /*tp_basicsize*/ sizeof(BPy_GetCompleteViewMapDensityF1D),
     /*tp_itemsize*/ 0,

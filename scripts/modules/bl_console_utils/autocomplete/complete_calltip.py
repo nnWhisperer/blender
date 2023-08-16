@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2009-2023 Blender Foundation
+# SPDX-FileCopyrightText: 2009-2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -158,7 +158,7 @@ def complete(line, cursor, namespace):
         func_word = match.group(2)
         try:
             func = eval(func_word, namespace)
-        except Exception:
+        except BaseException:
             func = None
 
         if func:

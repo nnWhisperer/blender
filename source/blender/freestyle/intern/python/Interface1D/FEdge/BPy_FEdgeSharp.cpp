@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -387,7 +387,7 @@ static PyGetSetDef BPy_FEdgeSharp_getseters[] = {
 /*-----------------------BPy_FEdgeSharp type definition ------------------------------*/
 
 PyTypeObject FEdgeSharp_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "FEdgeSharp",
     /*tp_basicsize*/ sizeof(BPy_FEdgeSharp),
     /*tp_itemsize*/ 0,

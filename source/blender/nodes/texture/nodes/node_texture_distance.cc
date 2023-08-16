@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2005 Blender Foundation
+/* SPDX-FileCopyrightText: 2005 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -6,9 +6,10 @@
  * \ingroup texnodes
  */
 
+#include "BLI_math_vector.h"
 #include "NOD_texture.h"
 #include "node_texture_util.hh"
-#include <math.h>
+#include <cmath>
 
 static bNodeSocketTemplate inputs[] = {
     {SOCK_VECTOR, N_("Coordinate 1"), 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, PROP_NONE},

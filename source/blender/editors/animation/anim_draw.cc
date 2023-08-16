@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2008 Blender Foundation
+/* SPDX-FileCopyrightText: 2008 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -18,7 +18,7 @@
 #include "DNA_userdef_types.h"
 
 #include "BLI_dlrbTree.h"
-#include "BLI_math.h"
+#include "BLI_math_rotation.h"
 #include "BLI_rect.h"
 #include "BLI_timecode.h"
 #include "BLI_utildefines.h"
@@ -30,17 +30,17 @@
 #include "BKE_mask.h"
 #include "BKE_nla.h"
 
-#include "ED_anim_api.h"
-#include "ED_keyframes_draw.h"
-#include "ED_keyframes_edit.h"
-#include "ED_keyframes_keylist.h"
+#include "ED_anim_api.hh"
+#include "ED_keyframes_draw.hh"
+#include "ED_keyframes_edit.hh"
+#include "ED_keyframes_keylist.hh"
 
-#include "RNA_access.h"
-#include "RNA_path.h"
+#include "RNA_access.hh"
+#include "RNA_path.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
-#include "UI_view2d.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
+#include "UI_view2d.hh"
 
 #include "GPU_immediate.h"
 #include "GPU_matrix.h"
@@ -75,7 +75,7 @@ void ANIM_draw_cfra(const bContext *C, View2D *v2d, short flag)
 
 /* *************************************************** */
 /* PREVIEW RANGE 'CURTAINS' */
-/* NOTE: 'Preview Range' tools are defined in `anim_ops.c`. */
+/* NOTE: 'Preview Range' tools are defined in `anim_ops.cc`. */
 
 void ANIM_draw_previewrange(const bContext *C, View2D *v2d, int end_frame_width)
 {
@@ -293,6 +293,9 @@ static short bezt_nlamapping_apply(KeyframeEditData *ked, BezTriple *bezt)
 
 void ANIM_nla_mapping_apply_fcurve(AnimData *adt, FCurve *fcu, bool restore, bool only_keys)
 {
+  if (adt == nullptr || BLI_listbase_is_empty(&adt->nla_tracks)) {
+    return;
+  }
   KeyframeEditData ked = {{nullptr}};
   KeyframeEditFunc map_cb;
 
@@ -501,14 +504,18 @@ static float normalization_factor_get(Scene *scene, FCurve *fcu, short flag, flo
   float min_coord = FLT_MAX;
   fcurve_scene_coord_range_get(scene, fcu, &min_coord, &max_coord);
 
-  if (max_coord > min_coord) {
+  /* We use an ULPS-based floating point comparison here, with the
+   * rationale that if there are too few possible values between
+   * `min_coord` and `max_coord`, then after display normalization it
+   * will certainly be a weird quantized experience for the user anyway. */
+  if (min_coord < max_coord && ulp_diff_ff(min_coord, max_coord) > 256) {
+    /* Normalize. */
     const float range = max_coord - min_coord;
-    if (range > FLT_EPSILON) {
-      factor = 2.0f / range;
-    }
+    factor = 2.0f / range;
     offset = -min_coord - range / 2.0f;
   }
-  else if (max_coord == min_coord) {
+  else {
+    /* Skip normalization. */
     factor = 1.0f;
     offset = -min_coord;
   }
@@ -566,7 +573,7 @@ static bool find_prev_next_keyframes(bContext *C, int *r_nextfra, int *r_prevfra
   Object *ob = CTX_data_active_object(C);
   Mask *mask = CTX_data_edit_mask(C);
   bDopeSheet ads = {nullptr};
-  struct AnimKeylist *keylist = ED_keylist_create();
+  AnimKeylist *keylist = ED_keylist_create();
   const ActKeyColumn *aknext, *akprev;
   float cfranext, cfraprev;
   bool donenext = false, doneprev = false;

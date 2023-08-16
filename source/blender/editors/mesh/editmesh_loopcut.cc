@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2007 Blender Foundation
+/* SPDX-FileCopyrightText: 2007 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -10,7 +10,7 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLI_math.h"
+#include "BLI_math_vector.h"
 #include "BLI_string.h"
 
 #include "BLT_translation.h"
@@ -24,20 +24,20 @@
 #include "BKE_report.h"
 #include "BKE_unit.h"
 
-#include "UI_interface.h"
+#include "UI_interface.hh"
 
-#include "ED_mesh.h"
-#include "ED_numinput.h"
-#include "ED_screen.h"
-#include "ED_space_api.h"
-#include "ED_view3d.h"
+#include "ED_mesh.hh"
+#include "ED_numinput.hh"
+#include "ED_screen.hh"
+#include "ED_space_api.hh"
+#include "ED_view3d.hh"
 
-#include "RNA_access.h"
-#include "RNA_define.h"
-#include "RNA_enum_types.h"
+#include "RNA_access.hh"
+#include "RNA_define.hh"
+#include "RNA_enum_types.hh"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
 #include "DEG_depsgraph.h"
 #include "DEG_depsgraph_query.h"
@@ -59,7 +59,7 @@ struct RingSelOpData {
   ARegion *region;   /* region that ringsel was activated in */
   void *draw_handle; /* for drawing preview loop */
 
-  struct EditMesh_PreSelEdgeRing *presel_edgering;
+  EditMesh_PreSelEdgeRing *presel_edgering;
 
   ViewContext vc;
 
@@ -68,7 +68,7 @@ struct RingSelOpData {
   Base **bases;
   uint bases_len;
 
-  struct MeshCoordsCache *geom_cache;
+  MeshCoordsCache *geom_cache;
 
   /* These values switch objects based on the object under the cursor. */
   uint base_index;
@@ -132,7 +132,7 @@ static void edgering_select(RingSelOpData *lcd)
 static void ringsel_find_edge(RingSelOpData *lcd, const int previewlines)
 {
   if (lcd->eed) {
-    struct MeshCoordsCache *gcache = &lcd->geom_cache[lcd->base_index];
+    MeshCoordsCache *gcache = &lcd->geom_cache[lcd->base_index];
     if (gcache->is_init == false) {
       Scene *scene_eval = (Scene *)DEG_get_evaluated_id(lcd->vc.depsgraph, &lcd->vc.scene->id);
       Object *ob_eval = DEG_get_evaluated_object(lcd->vc.depsgraph, lcd->ob);
@@ -256,7 +256,7 @@ static void ringsel_exit(bContext * /*C*/, wmOperator *op)
   EDBM_preselect_edgering_destroy(lcd->presel_edgering);
 
   for (uint i = 0; i < lcd->bases_len; i++) {
-    struct MeshCoordsCache *gcache = &lcd->geom_cache[i];
+    MeshCoordsCache *gcache = &lcd->geom_cache[i];
     if (gcache->is_alloc) {
       MEM_freeN((void *)gcache->coords);
     }

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -109,7 +109,7 @@ typedef struct {
   PointerRNA ptr;
 } BPy_DummyPointerRNA;
 
-typedef struct {
+typedef struct BPy_StructRNA {
   PyObject_HEAD /* Required Python macro. */
 #ifdef USE_WEAKREFS
   PyObject *in_weakreflist;

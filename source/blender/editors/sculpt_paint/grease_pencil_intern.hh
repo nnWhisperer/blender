@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -26,6 +26,7 @@ class GreasePencilStrokeOperation {
 namespace greasepencil {
 
 std::unique_ptr<GreasePencilStrokeOperation> new_paint_operation();
+std::unique_ptr<GreasePencilStrokeOperation> new_erase_operation();
 
 }  // namespace greasepencil
 

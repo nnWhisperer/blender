@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2019 Blender Foundation
+/* SPDX-FileCopyrightText: 2019 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -15,7 +15,7 @@
 
 #include "DNA_object_types.h"
 
-#include "ED_mesh.h"
+#include "ED_mesh.hh"
 
 #include "tools/bmesh_intersect_edges.h"
 

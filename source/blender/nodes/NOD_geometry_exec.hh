@@ -1,9 +1,10 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma once
 
+#include "BLI_color.hh"
 #include "BLI_math_quaternion_types.hh"
 
 #include "FN_field.hh"
@@ -206,6 +207,9 @@ class GeoNodeExecParams {
     if (const auto *data = this->user_data()) {
       if (data->modifier_data) {
         return data->modifier_data->self_object;
+      }
+      if (data->operator_data) {
+        return data->operator_data->self_object;
       }
     }
     return nullptr;

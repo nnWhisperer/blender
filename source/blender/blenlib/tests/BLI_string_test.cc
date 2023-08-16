@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: Apache-2.0 */
 
@@ -850,7 +850,7 @@ TEST(string, StringNLen)
   EXPECT_EQ(1, BLI_strnlen("x", 1));
   EXPECT_EQ(1, BLI_strnlen("x", 100));
 
-  // ü is \xc3\xbc
+  /* `ü` is `\xc3\xbc`. */
   EXPECT_EQ(2, BLI_strnlen("ü", 100));
 
   EXPECT_EQ(0, BLI_strnlen("this is a longer string", 0));

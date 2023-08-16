@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -6,14 +6,13 @@
  * \ingroup RNA
  */
 
-#include <stdlib.h>
+#include <cstdlib>
 
-#include "BLI_math.h"
 #include "BLI_utildefines.h"
 
-#include "RNA_access.h"
-#include "RNA_define.h"
-#include "RNA_enum_types.h"
+#include "RNA_access.hh"
+#include "RNA_define.hh"
+#include "RNA_enum_types.hh"
 
 #include "rna_internal.h"
 
@@ -24,15 +23,15 @@
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
 
-#include "BKE_brush.h"
+#include "BKE_brush.hh"
 #include "BKE_layer.h"
 #include "BKE_material.h"
-#include "BKE_paint.h"
+#include "BKE_paint.hh"
 
-#include "ED_image.h"
+#include "ED_image.hh"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
 const EnumPropertyItem rna_enum_particle_edit_hair_brush_items[] = {
     {PE_BRUSH_COMB, "COMB", 0, "Comb", "Comb hairs"},
@@ -117,9 +116,9 @@ const EnumPropertyItem rna_enum_symmetrize_direction_items[] = {
 
 #  include "DEG_depsgraph.h"
 
-#  include "ED_gpencil_legacy.h"
-#  include "ED_paint.h"
-#  include "ED_particle.h"
+#  include "ED_gpencil_legacy.hh"
+#  include "ED_paint.hh"
+#  include "ED_particle.hh"
 
 static void rna_GPencil_update(Main * /*bmain*/, Scene *scene, PointerRNA * /*ptr*/)
 {
@@ -389,11 +388,6 @@ static void rna_Sculpt_update(bContext *C, PointerRNA * /*ptr*/)
   if (ob) {
     DEG_id_tag_update(&ob->id, ID_RECALC_GEOMETRY);
     WM_main_add_notifier(NC_OBJECT | ND_MODIFIER, ob);
-
-    if (ob->sculpt) {
-      BKE_object_sculpt_dyntopo_smooth_shading_set(
-          ob, ((scene->toolsettings->sculpt->flags & SCULPT_DYNTOPO_SMOOTH_SHADING) != 0));
-    }
   }
 }
 
@@ -864,15 +858,6 @@ static void rna_def_sculpt(BlenderRNA *brna)
                            "of Blender unit - higher value means smaller edge length)");
   RNA_def_property_update(prop, NC_SCENE | ND_TOOLSETTINGS, nullptr);
 
-  prop = RNA_def_property(srna, "use_smooth_shading", PROP_BOOLEAN, PROP_NONE);
-  RNA_def_property_boolean_sdna(prop, nullptr, "flags", SCULPT_DYNTOPO_SMOOTH_SHADING);
-  RNA_def_property_ui_text(prop,
-                           "Smooth Shading",
-                           "Show faces in dynamic-topology mode with smooth "
-                           "shading rather than flat shaded");
-  RNA_def_property_flag(prop, PROP_CONTEXT_UPDATE);
-  RNA_def_property_update(prop, NC_OBJECT | ND_DRAW, "rna_Sculpt_update");
-
   const EnumPropertyItem *entry = rna_enum_brush_automasking_flag_items;
   do {
     prop = RNA_def_property(srna, entry->identifier, PROP_BOOLEAN, PROP_NONE);
@@ -1151,7 +1136,7 @@ static void rna_def_image_paint(BlenderRNA *brna)
   RNA_def_function_ui_description(func, "Check if required texpaint data exist");
 
   /* return type */
-  RNA_def_function_return(func, RNA_def_boolean(func, "ok", 1, "", ""));
+  RNA_def_function_return(func, RNA_def_boolean(func, "ok", true, "", ""));
 
   /* booleans */
   prop = RNA_def_property(srna, "use_occlude", PROP_BOOLEAN, PROP_NONE);

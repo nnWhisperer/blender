@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2011 Blender Foundation
+# SPDX-FileCopyrightText: 2011 Blender Authors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -22,9 +22,13 @@
 # also defined, but not for general use are
 #  OPENEXR_LIBRARY, where to find the OpenEXR library.
 
-# If OPENEXR_ROOT_DIR was defined in the environment, use it.
-IF(NOT OPENEXR_ROOT_DIR AND NOT $ENV{OPENEXR_ROOT_DIR} STREQUAL "")
+# If `OPENEXR_ROOT_DIR` was defined in the environment, use it.
+IF(DEFINED OPENEXR_ROOT_DIR)
+  # Pass.
+ELSEIF(DEFINED ENV{OPENEXR_ROOT_DIR})
   SET(OPENEXR_ROOT_DIR $ENV{OPENEXR_ROOT_DIR})
+ELSE()
+  SET(OPENEXR_ROOT_DIR "")
 ENDIF()
 
 # Old versions (before 2.0?) do not have any version string,

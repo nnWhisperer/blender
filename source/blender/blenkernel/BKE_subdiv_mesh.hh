@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2018 Blender Foundation
+/* SPDX-FileCopyrightText: 2018 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -17,10 +17,10 @@ struct Subdiv;
 
 struct SubdivToMeshSettings {
   /**
-   * Resolution at which regular PTEX (created for quad polygon) are being
+   * Resolution at which regular PTEX (created for quad face) are being
    * evaluated. This defines how many vertices final mesh will have: every
    * regular PTEX has resolution^2 vertices. Special (irregular, or PTEX
-   * created for a corner of non-quad polygon) will have resolution of
+   * created for a corner of non-quad face) will have resolution of
    * `resolution - 1`.
    */
   int resolution;

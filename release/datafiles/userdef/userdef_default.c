@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2019-2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2019-2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -79,6 +79,7 @@ const UserDef U_default = {
 
     .scrollback = 256,
     .node_margin = 80,
+    .node_preview_res = 120,
     .transopts = USER_TR_TOOLTIPS,
     .menuthreshold1 = 5,
     .menuthreshold2 = 2,

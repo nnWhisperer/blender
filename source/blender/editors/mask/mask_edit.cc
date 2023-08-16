@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2012 Blender Foundation
+/* SPDX-FileCopyrightText: 2012 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -11,15 +11,15 @@
 
 #include "DNA_scene_types.h"
 
-#include "WM_api.h"
-#include "WM_types.h"
+#include "WM_api.hh"
+#include "WM_types.hh"
 
-#include "ED_clip.h"
-#include "ED_image.h"
-#include "ED_mask.h" /* own include */
-#include "ED_sequencer.h"
+#include "ED_clip.hh"
+#include "ED_image.hh"
+#include "ED_mask.hh" /* own include */
+#include "ED_sequencer.hh"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
 #include "mask_intern.h" /* own include */
 

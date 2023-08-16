@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2013-2023 Blender Foundation
+# SPDX-FileCopyrightText: 2013-2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -194,7 +194,7 @@ shader_node_categories = [
         NodeItem("ShaderNodeBsdfRefraction", poll=object_eevee_cycles_shader_nodes_poll),
         NodeItem("ShaderNodeBsdfGlass", poll=object_eevee_cycles_shader_nodes_poll),
         NodeItem("ShaderNodeBsdfTranslucent", poll=object_eevee_cycles_shader_nodes_poll),
-        NodeItem("ShaderNodeBsdfVelvet", poll=object_cycles_shader_nodes_poll),
+        NodeItem("ShaderNodeBsdfSheen", poll=object_cycles_shader_nodes_poll),
         NodeItem("ShaderNodeBsdfToon", poll=object_cycles_shader_nodes_poll),
         NodeItem("ShaderNodeSubsurfaceScattering", poll=object_eevee_cycles_shader_nodes_poll),
         NodeItem("ShaderNodeEmission", poll=eevee_cycles_shader_nodes_poll),

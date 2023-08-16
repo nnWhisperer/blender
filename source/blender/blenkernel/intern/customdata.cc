@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2006 Blender Foundation
+/* SPDX-FileCopyrightText: 2006 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -18,11 +18,11 @@
 #include "DNA_customdata_types.h"
 #include "DNA_meshdata_types.h"
 
+#include "BLI_bit_vector.hh"
 #include "BLI_bitmap.h"
 #include "BLI_color.hh"
 #include "BLI_endian_switch.h"
 #include "BLI_index_range.hh"
-#include "BLI_math.h"
 #include "BLI_math_color_blend.h"
 #include "BLI_math_quaternion_types.hh"
 #include "BLI_math_vector.hh"
@@ -47,10 +47,10 @@
 #include "BKE_customdata_file.h"
 #include "BKE_deform.h"
 #include "BKE_main.h"
-#include "BKE_mesh_mapping.h"
-#include "BKE_mesh_remap.h"
-#include "BKE_multires.h"
-#include "BKE_subsurf.h"
+#include "BKE_mesh_mapping.hh"
+#include "BKE_mesh_remap.hh"
+#include "BKE_multires.hh"
+#include "BKE_subsurf.hh"
 
 #include "BLO_read_write.h"
 
@@ -61,6 +61,7 @@
 /* only for customdata_data_transfer_interp_normal_normals */
 #include "data_transfer_intern.h"
 
+using blender::BitVector;
 using blender::float2;
 using blender::ImplicitSharingInfo;
 using blender::IndexRange;
@@ -2587,8 +2588,8 @@ int CustomData_get_layer_index_n(const CustomData *data, const eCustomDataType t
   int i = CustomData_get_layer_index(data, type);
 
   if (i != -1) {
-    BLI_assert(i + n < data->totlayer);
-    i = (data->layers[i + n].type == type) ? (i + n) : (-1);
+    /* If the value of n goes past the block of layers of the correct type, return -1. */
+    i = (i + n < data->totlayer && data->layers[i + n].type == type) ? (i + n) : (-1);
   }
 
   return i;
@@ -3503,33 +3504,6 @@ void CustomData_swap_corners(CustomData *data, const int index, const int *corne
   }
 }
 
-void CustomData_swap(CustomData *data, const int index_a, const int index_b)
-{
-  char buff_static[256];
-
-  if (index_a == index_b) {
-    return;
-  }
-
-  for (int i = 0; i < data->totlayer; i++) {
-    const LayerTypeInfo *typeInfo = layerType_getInfo(eCustomDataType(data->layers[i].type));
-    const size_t size = typeInfo->size;
-    const size_t offset_a = size * index_a;
-    const size_t offset_b = size * index_b;
-
-    void *buff = size <= sizeof(buff_static) ? buff_static : MEM_mallocN(size, __func__);
-    memcpy(buff, POINTER_OFFSET(data->layers[i].data, offset_a), size);
-    memcpy(POINTER_OFFSET(data->layers[i].data, offset_a),
-           POINTER_OFFSET(data->layers[i].data, offset_b),
-           size);
-    memcpy(POINTER_OFFSET(data->layers[i].data, offset_b), buff, size);
-
-    if (buff != buff_static) {
-      MEM_freeN(buff);
-    }
-  }
-}
-
 void *CustomData_get_for_write(CustomData *data,
                                const int index,
                                const eCustomDataType type,
@@ -3909,16 +3883,17 @@ void CustomData_bmesh_set_default(CustomData *data, void **block)
   }
 }
 
+static bool customdata_layer_copy_check(const CustomDataLayer &source, const CustomDataLayer &dest)
+{
+  return source.type == dest.type && STREQ(source.name, dest.name);
+}
+
 void CustomData_bmesh_copy_data_exclude_by_type(const CustomData *source,
                                                 CustomData *dest,
                                                 void *src_block,
                                                 void **dest_block,
                                                 const eCustomDataMask mask_exclude)
 {
-  /* Note that having a version of this function without a 'mask_exclude'
-   * would cause too much duplicate code, so add a check instead. */
-  const bool no_mask = (mask_exclude == 0);
-
   if (*dest_block == nullptr) {
     CustomData_bmesh_alloc_block(dest, dest_block);
     if (*dest_block) {
@@ -3926,51 +3901,41 @@ void CustomData_bmesh_copy_data_exclude_by_type(const CustomData *source,
     }
   }
 
-  /* copies a layer at a time */
-  int dest_i = 0;
-  for (int src_i = 0; src_i < source->totlayer; src_i++) {
+  BitVector<> copied_layers(dest->totlayer);
 
-    /* find the first dest layer with type >= the source type
-     * (this should work because layers are ordered by type)
-     */
-    while (dest_i < dest->totlayer && dest->layers[dest_i].type < source->layers[src_i].type) {
-      CustomData_bmesh_set_default_n(dest, dest_block, dest_i);
-      dest_i++;
+  for (int layer_src_i : IndexRange(source->totlayer)) {
+    const CustomDataLayer &layer_src = source->layers[layer_src_i];
+
+    if (CD_TYPE_AS_MASK(layer_src.type) & mask_exclude) {
+      continue;
     }
 
-    /* if there are no more dest layers, we're done */
-    if (dest_i >= dest->totlayer) {
-      return;
-    }
+    for (int layer_dst_i : IndexRange(dest->totlayer)) {
+      CustomDataLayer &layer_dst = dest->layers[layer_dst_i];
 
-    /* if we found a matching layer, copy the data */
-    if (dest->layers[dest_i].type == source->layers[src_i].type &&
-        STREQ(dest->layers[dest_i].name, source->layers[src_i].name))
-    {
-      if (no_mask || ((CD_TYPE_AS_MASK(dest->layers[dest_i].type) & mask_exclude) == 0)) {
-        const void *src_data = POINTER_OFFSET(src_block, source->layers[src_i].offset);
-        void *dest_data = POINTER_OFFSET(*dest_block, dest->layers[dest_i].offset);
-        const LayerTypeInfo *typeInfo = layerType_getInfo(
-            eCustomDataType(source->layers[src_i].type));
-        if (typeInfo->copy) {
-          typeInfo->copy(src_data, dest_data, 1);
-        }
-        else {
-          memcpy(dest_data, src_data, typeInfo->size);
-        }
+      if (!customdata_layer_copy_check(layer_src, layer_dst)) {
+        continue;
       }
 
-      /* if there are multiple source & dest layers of the same type,
-       * we don't want to copy all source layers to the same dest, so
-       * increment dest_i
-       */
-      dest_i++;
+      copied_layers[layer_dst_i].set(true);
+
+      const void *src_data = POINTER_OFFSET(src_block, layer_src.offset);
+      void *dest_data = POINTER_OFFSET(*dest_block, layer_dst.offset);
+      const LayerTypeInfo *typeInfo = layerType_getInfo(eCustomDataType(layer_src.type));
+      if (typeInfo->copy) {
+        typeInfo->copy(src_data, dest_data, 1);
+      }
+      else {
+        memcpy(dest_data, src_data, typeInfo->size);
+      }
     }
   }
 
-  while (dest_i < dest->totlayer) {
-    CustomData_bmesh_set_default_n(dest, dest_block, dest_i);
-    dest_i++;
+  /* Initialize dest layers that weren't in source. */
+  for (int layer_dst_i : IndexRange(dest->totlayer)) {
+    if (!copied_layers[layer_dst_i]) {
+      CustomData_bmesh_set_default_n(dest, dest_block, layer_dst_i);
+    }
   }
 }
 
@@ -4292,11 +4257,10 @@ void CustomData_blend_write_prepare(CustomData &data,
   data.totlayer = layers_to_write.size();
   data.maxlayer = data.totlayer;
 
-  /* Note: data->layers may be null, this happens when adding
-   * a legacy MPoly struct to a mesh with no other face attributes.
+  /* NOTE: `data->layers` may be null, this happens when adding
+   * a legacy #MPoly struct to a mesh with no other face attributes.
    * This leaves us with no unique ID for DNA to identify the old
-   * data with when loading the file.
-   */
+   * data with when loading the file. */
   if (!data.layers && layers_to_write.size() > 0) {
     /* We just need an address that's unique. */
     data.layers = reinterpret_cast<CustomDataLayer *>(&data.layers);
@@ -5221,14 +5185,14 @@ static void blend_read_mdisps(BlendDataReader *reader,
         /* this calculation is only correct for loop mdisps;
          * if loading pre-BMesh face mdisps this will be
          * overwritten with the correct value in
-         * bm_corners_to_loops() */
+         * #bm_corners_to_loops() */
         float gridsize = sqrtf(mdisps[i].totdisp);
         mdisps[i].level = int(logf(gridsize - 1.0f) / float(M_LN2)) + 1;
       }
 
       if (BLO_read_requires_endian_switch(reader) && (mdisps[i].disps)) {
-        /* DNA_struct_switch_endian doesn't do endian swap for (*disps)[] */
-        /* this does swap for data written at write_mdisps() - readfile.c */
+        /* #DNA_struct_switch_endian doesn't do endian swap for `(*disps)[]` */
+        /* this does swap for data written at #write_mdisps() - `readfile.cc`. */
         BLI_endian_switch_float_array(*mdisps[i].disps, mdisps[i].totdisp * 3);
       }
       if (!external && !mdisps[i].disps) {

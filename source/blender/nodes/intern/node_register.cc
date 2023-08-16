@@ -1,7 +1,8 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
+#include "NOD_geometry.hh"
 #include "NOD_register.hh"
 #include "NOD_socket.hh"
 
@@ -11,7 +12,7 @@
 
 #include "BLT_translation.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 
 static bool node_undefined_poll(const bNodeType * /*ntype*/,
                                 const bNodeTree * /*nodetree*/,
@@ -33,7 +34,8 @@ static void register_undefined_types()
   STRNCPY(blender::bke::NodeTreeTypeUndefined.ui_name, N_("Undefined"));
   STRNCPY(blender::bke::NodeTreeTypeUndefined.ui_description, N_("Undefined Node Tree Type"));
 
-  node_type_base_custom(&blender::bke::NodeTypeUndefined, "NodeUndefined", "Undefined", 0);
+  node_type_base_custom(
+      &blender::bke::NodeTypeUndefined, "NodeUndefined", "Undefined", "UNDEFINED", 0);
   blender::bke::NodeTypeUndefined.poll = node_undefined_poll;
 
   STRNCPY(blender::bke::NodeSocketTypeUndefined.idname, "NodeSocketUndefined");
@@ -51,6 +53,8 @@ void register_nodes()
   register_undefined_types();
 
   register_standard_node_socket_types();
+
+  register_node_tree_type_geo();
 
   register_node_type_frame();
   register_node_type_reroute();

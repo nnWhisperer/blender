@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -165,7 +165,7 @@ class Interface0DIteratorNested : public Iterator {
  */
 class Interface0DIterator : public Iterator {
  public:
-  Interface0DIterator(Interface0DIteratorNested *it = NULL)
+  Interface0DIterator(Interface0DIteratorNested *it = nullptr)
   {
     _iterator = it;
   }

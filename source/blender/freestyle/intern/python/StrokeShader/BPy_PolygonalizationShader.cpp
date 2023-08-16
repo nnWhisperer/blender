@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2004-2022 Blender Foundation
+/* SPDX-FileCopyrightText: 2004-2022 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -63,7 +63,7 @@ static int PolygonalizationShader___init__(BPy_PolygonalizationShader *self,
 /*-----------------------BPy_PolygonalizationShader type definition -----------------------------*/
 
 PyTypeObject PolygonalizationShader_Type = {
-    PyVarObject_HEAD_INIT(nullptr, 0)
+    /*ob_base*/ PyVarObject_HEAD_INIT(nullptr, 0)
     /*tp_name*/ "PolygonalizationShader",
     /*tp_basicsize*/ sizeof(BPy_PolygonalizationShader),
     /*tp_itemsize*/ 0,

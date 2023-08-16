@@ -1,14 +1,15 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "workbench_private.hh"
 
 #include "BLI_hash.h"
+#include "BLI_math_color.h"
 /* get_image */
 #include "BKE_node.hh"
 #include "DNA_node_types.h"
-#include "ED_uvedit.h"
+#include "ED_uvedit.hh"
 /* get_image */
 
 namespace blender::workbench {

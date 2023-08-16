@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: 2006 Blender Foundation
+# SPDX-FileCopyrightText: 2006 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 set(INC
   .
+  ../blenkernel
   ../blenloader
   ../gpu
   ../makesrna
@@ -73,7 +74,7 @@ set(SRC
 )
 
 set(LIB
-  PRIVATE bf::blenkernel
+  bf_blenkernel
   PRIVATE bf::blenlib
   bf_blenloader
   PRIVATE bf::dna

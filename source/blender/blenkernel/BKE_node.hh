@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Blender Foundation
+/* SPDX-FileCopyrightText: 2023 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -19,7 +19,7 @@
 /* for FOREACH_NODETREE_BEGIN */
 #include "DNA_node_types.h"
 
-#include "RNA_types.h"
+#include "RNA_types.hh"
 
 #include "BLI_map.hh"
 #include "BLI_string_ref.hh"

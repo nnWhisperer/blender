@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2009 Blender Foundation
+/* SPDX-FileCopyrightText: 2009 Blender Authors
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
@@ -6,8 +6,8 @@
  * \ingroup spbuttons
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 #include "MEM_guardedalloc.h"
 
@@ -35,21 +35,21 @@
 #include "BKE_material.h"
 #include "BKE_modifier.h"
 #include "BKE_object.h"
-#include "BKE_paint.h"
+#include "BKE_paint.hh"
 #include "BKE_particle.h"
 #include "BKE_screen.h"
 
-#include "RNA_access.h"
+#include "RNA_access.hh"
 #include "RNA_prototypes.h"
 
-#include "ED_buttons.h"
-#include "ED_physics.h"
-#include "ED_screen.h"
+#include "ED_buttons.hh"
+#include "ED_physics.hh"
+#include "ED_screen.hh"
 
-#include "UI_interface.h"
-#include "UI_resources.h"
+#include "UI_interface.hh"
+#include "UI_resources.hh"
 
-#include "WM_api.h"
+#include "WM_api.hh"
 
 #include "buttons_intern.h" /* own include */
 
@@ -1288,7 +1288,7 @@ ID *buttons_context_id_path(const bContext *C)
   for (int i = path->len - 1; i >= 0; i--) {
     PointerRNA *ptr = &path->ptr[i];
 
-    /* Pin particle settings instead of system, since only settings are an idblock. */
+    /* Pin particle settings instead of system, since only settings are an ID-block. */
     if (sbuts->mainb == BCONTEXT_PARTICLE && sbuts->flag & SB_PIN_CONTEXT) {
       if (ptr->type == &RNA_ParticleSystem && ptr->data) {
         ParticleSystem *psys = static_cast<ParticleSystem *>(ptr->data);

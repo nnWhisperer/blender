@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2009-2023 Blender Foundation
+# SPDX-FileCopyrightText: 2009-2023 Blender Authors
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -79,7 +79,7 @@ SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 USE_ONLY_BUILTIN_RNA_TYPES = True
 
 # Write a page for each static enum defined in:
-# `source/blender/makesrna/RNA_enum_items.h` so the enums can be linked to instead of being expanded everywhere.
+# `source/blender/makesrna/RNA_enum_items.hh` so the enums can be linked to instead of being expanded everywhere.
 USE_SHARED_RNA_ENUM_ITEMS_STATIC = True
 
 if USE_SHARED_RNA_ENUM_ITEMS_STATIC:
@@ -1896,7 +1896,7 @@ def write_sphinx_conf_py(basepath):
     fw("intersphinx_mapping = {'blender_manual': ('https://docs.blender.org/manual/en/dev/', None)}\n\n")
     fw("project = 'Blender %s Python API'\n" % BLENDER_VERSION_STRING)
     fw("root_doc = 'index'\n")
-    fw("copyright = 'Blender Foundation'\n")
+    fw("copyright = 'Blender Authors'\n")
     fw("version = '%s'\n" % BLENDER_VERSION_DOTS)
     fw("release = '%s'\n" % BLENDER_VERSION_DOTS)
 
