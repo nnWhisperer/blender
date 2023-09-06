@@ -38,7 +38,7 @@
 #include "BKE_node_tree_update.h"
 #include "BKE_texture.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 static void linestyle_init_data(ID *id)
 {
@@ -147,27 +147,21 @@ static void linestyle_foreach_id(ID *id, LibraryForeachIDData *data)
     if (lsm->type == LS_MODIFIER_DISTANCE_FROM_OBJECT) {
       LineStyleColorModifier_DistanceFromObject *p = (LineStyleColorModifier_DistanceFromObject *)
           lsm;
-      if (p->target) {
-        BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, p->target, IDWALK_CB_NOP);
-      }
+      BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, p->target, IDWALK_CB_NOP);
     }
   }
   LISTBASE_FOREACH (LineStyleModifier *, lsm, &linestyle->alpha_modifiers) {
     if (lsm->type == LS_MODIFIER_DISTANCE_FROM_OBJECT) {
       LineStyleAlphaModifier_DistanceFromObject *p = (LineStyleAlphaModifier_DistanceFromObject *)
           lsm;
-      if (p->target) {
-        BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, p->target, IDWALK_CB_NOP);
-      }
+      BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, p->target, IDWALK_CB_NOP);
     }
   }
   LISTBASE_FOREACH (LineStyleModifier *, lsm, &linestyle->thickness_modifiers) {
     if (lsm->type == LS_MODIFIER_DISTANCE_FROM_OBJECT) {
       LineStyleThicknessModifier_DistanceFromObject *p =
           (LineStyleThicknessModifier_DistanceFromObject *)lsm;
-      if (p->target) {
-        BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, p->target, IDWALK_CB_NOP);
-      }
+      BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, p->target, IDWALK_CB_NOP);
     }
   }
 }
@@ -647,77 +641,6 @@ static void linestyle_blend_read_data(BlendDataReader *reader, ID *id)
   }
 }
 
-static void linestyle_blend_read_lib(BlendLibReader *reader, ID *id)
-{
-  FreestyleLineStyle *linestyle = (FreestyleLineStyle *)id;
-
-  LISTBASE_FOREACH (LineStyleModifier *, m, &linestyle->color_modifiers) {
-    switch (m->type) {
-      case LS_MODIFIER_DISTANCE_FROM_OBJECT: {
-        LineStyleColorModifier_DistanceFromObject *cm =
-            (LineStyleColorModifier_DistanceFromObject *)m;
-        BLO_read_id_address(reader, id, &cm->target);
-        break;
-      }
-    }
-  }
-  LISTBASE_FOREACH (LineStyleModifier *, m, &linestyle->alpha_modifiers) {
-    switch (m->type) {
-      case LS_MODIFIER_DISTANCE_FROM_OBJECT: {
-        LineStyleAlphaModifier_DistanceFromObject *am =
-            (LineStyleAlphaModifier_DistanceFromObject *)m;
-        BLO_read_id_address(reader, id, &am->target);
-        break;
-      }
-    }
-  }
-  LISTBASE_FOREACH (LineStyleModifier *, m, &linestyle->thickness_modifiers) {
-    switch (m->type) {
-      case LS_MODIFIER_DISTANCE_FROM_OBJECT: {
-        LineStyleThicknessModifier_DistanceFromObject *tm =
-            (LineStyleThicknessModifier_DistanceFromObject *)m;
-        BLO_read_id_address(reader, id, &tm->target);
-        break;
-      }
-    }
-  }
-  for (int a = 0; a < MAX_MTEX; a++) {
-    MTex *mtex = linestyle->mtex[a];
-    if (mtex) {
-      BLO_read_id_address(reader, id, &mtex->tex);
-      BLO_read_id_address(reader, id, &mtex->object);
-    }
-  }
-}
-
-static void linestyle_blend_read_expand(BlendExpander *expander, ID *id)
-{
-  FreestyleLineStyle *linestyle = (FreestyleLineStyle *)id;
-
-  for (int a = 0; a < MAX_MTEX; a++) {
-    if (linestyle->mtex[a]) {
-      BLO_expand(expander, linestyle->mtex[a]->tex);
-      BLO_expand(expander, linestyle->mtex[a]->object);
-    }
-  }
-
-  LISTBASE_FOREACH (LineStyleModifier *, m, &linestyle->color_modifiers) {
-    if (m->type == LS_MODIFIER_DISTANCE_FROM_OBJECT) {
-      BLO_expand(expander, ((LineStyleColorModifier_DistanceFromObject *)m)->target);
-    }
-  }
-  LISTBASE_FOREACH (LineStyleModifier *, m, &linestyle->alpha_modifiers) {
-    if (m->type == LS_MODIFIER_DISTANCE_FROM_OBJECT) {
-      BLO_expand(expander, ((LineStyleAlphaModifier_DistanceFromObject *)m)->target);
-    }
-  }
-  LISTBASE_FOREACH (LineStyleModifier *, m, &linestyle->thickness_modifiers) {
-    if (m->type == LS_MODIFIER_DISTANCE_FROM_OBJECT) {
-      BLO_expand(expander, ((LineStyleThicknessModifier_DistanceFromObject *)m)->target);
-    }
-  }
-}
-
 IDTypeInfo IDType_ID_LS = {
     /*id_code*/ ID_LS,
     /*id_filter*/ FILTER_ID_LS,
@@ -740,8 +663,7 @@ IDTypeInfo IDType_ID_LS = {
 
     /*blend_write*/ linestyle_blend_write,
     /*blend_read_data*/ linestyle_blend_read_data,
-    /*blend_read_lib*/ linestyle_blend_read_lib,
-    /*blend_read_expand*/ linestyle_blend_read_expand,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 
@@ -789,7 +711,7 @@ static LineStyleModifier *new_modifier(const char *name, int type, size_t size)
   }
   m = (LineStyleModifier *)MEM_callocN(size, "line style modifier");
   m->type = type;
-  STRNCPY(m->name, name);
+  STRNCPY(m->name, DATA_(name));
   m->influence = 1.0f;
   m->flags = LS_MODIFIER_ENABLED | LS_MODIFIER_EXPANDED;
 

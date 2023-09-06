@@ -78,6 +78,9 @@ static void library_blend_read_data(BlendDataReader * /*reader*/, ID *id)
 {
   Library *lib = (Library *)id;
   lib->runtime.name_map = nullptr;
+  /* This is runtime data. */
+  lib->parent = nullptr;
+  lib->tag = 0;
 }
 
 IDTypeInfo IDType_ID_LI = {
@@ -102,8 +105,7 @@ IDTypeInfo IDType_ID_LI = {
 
     /*blend_write*/ nullptr,
     /*blend_read_data*/ library_blend_read_data,
-    /*blend_read_lib*/ nullptr,
-    /*blend_read_expand*/ nullptr,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 

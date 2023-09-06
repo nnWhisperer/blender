@@ -139,7 +139,8 @@ set(SRC_KERNEL_CLOSURE_HEADERS
   closure/bssrdf.h
   closure/emissive.h
   closure/volume.h
-  closure/bsdf_hair_principled.h
+  closure/bsdf_principled_hair_chiang.h
+  closure/bsdf_principled_hair_huang.h
 )
 
 set(SRC_KERNEL_SVM_HEADERS
@@ -856,8 +857,13 @@ if(WITH_CYCLES_DEVICE_ONEAPI)
     -fsycl-max-parallel-link-jobs=${SYCL_OFFLINE_COMPILER_PARALLEL_JOBS}
     -shared
     -DWITH_ONEAPI
-    -ffast-math
     -O2
+    -fno-fast-math
+    -ffp-contract=fast
+    -fassociative-math
+    -freciprocal-math
+    -fno-signed-zeros
+    -ffinite-math-only
     -D__KERNEL_LOCAL_ATOMIC_SORT__
     -o"${cycles_kernel_oneapi_lib}"
     -I"${CMAKE_CURRENT_SOURCE_DIR}/.."

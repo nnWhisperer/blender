@@ -41,17 +41,17 @@
 #include "BLT_translation.h"
 
 #include "BKE_gpencil_legacy.h"
-#include "BKE_icons.h"
 #include "BKE_idprop.h"
 #include "BKE_idtype.h"
 #include "BKE_lib_id.h"
 #include "BKE_lib_query.h"
 #include "BKE_node.h"
+#include "BKE_preview_image.hh"
 #include "BKE_screen.h"
 #include "BKE_viewer_path.h"
 #include "BKE_workspace.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 /* TODO(@JulianEisel): For asset shelf region reading/writing. Region read/write should be done via
  * a #ARegionType callback. */
@@ -96,13 +96,17 @@ void BKE_screen_foreach_id_screen_area(LibraryForeachIDData *data, ScrArea *area
 
 static void screen_foreach_id(ID *id, LibraryForeachIDData *data)
 {
-  if ((BKE_lib_query_foreachid_process_flags_get(data) & IDWALK_INCLUDE_UI) == 0) {
-    return;
-  }
-  bScreen *screen = (bScreen *)id;
+  bScreen *screen = reinterpret_cast<bScreen *>(id);
+  const int flag = BKE_lib_query_foreachid_process_flags_get(data);
 
-  LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-    BKE_LIB_FOREACHID_PROCESS_FUNCTION_CALL(data, BKE_screen_foreach_id_screen_area(data, area));
+  if (flag & IDWALK_DO_DEPRECATED_POINTERS) {
+    BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, screen->scene, IDWALK_CB_NOP);
+  }
+
+  if (flag & IDWALK_INCLUDE_UI) {
+    LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
+      BKE_LIB_FOREACHID_PROCESS_FUNCTION_CALL(data, BKE_screen_foreach_id_screen_area(data, area));
+    }
   }
 }
 
@@ -145,14 +149,12 @@ bool BKE_screen_blend_read_data(BlendDataReader *reader, bScreen *screen)
 
 /* NOTE: file read without screens option G_FILE_NO_UI;
  * check lib pointers in call below */
-static void screen_blend_read_lib(BlendLibReader *reader, ID *id)
+static void screen_blend_read_after_liblink(BlendLibReader *reader, ID *id)
 {
-  bScreen *screen = (bScreen *)id;
-  /* deprecated, but needed for versioning (will be nullptr'ed then) */
-  BLO_read_id_address(reader, id, &screen->scene);
+  bScreen *screen = reinterpret_cast<bScreen *>(id);
 
   LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
-    BKE_screen_area_blend_read_lib(reader, &screen->id, area);
+    BKE_screen_area_blend_read_after_liblink(reader, &screen->id, area);
   }
 }
 
@@ -180,8 +182,7 @@ IDTypeInfo IDType_ID_SCR = {
     /*blend_write*/ screen_blend_write,
     /* Cannot be used yet, because #direct_link_screen has a return value. */
     /*blend_read_data*/ nullptr,
-    /*blend_read_lib*/ screen_blend_read_lib,
-    /*blend_read_expand*/ nullptr,
+    /*blend_read_after_liblink*/ screen_blend_read_after_liblink,
 
     /*blend_read_undo_preserve*/ nullptr,
 
@@ -241,19 +242,6 @@ SpaceType *BKE_spacetype_from_id(int spaceid)
     }
   }
   return nullptr;
-}
-
-ARegionType *BKE_regiontype_from_id_or_first(const SpaceType *st, int regionid)
-{
-  LISTBASE_FOREACH (ARegionType *, art, &st->regiontypes) {
-    if (art->regionid == regionid) {
-      return art;
-    }
-  }
-
-  printf(
-      "Error, region type %d missing in - name:\"%s\", id:%d\n", regionid, st->name, st->spaceid);
-  return static_cast<ARegionType *>(st->regiontypes.first);
 }
 
 ARegionType *BKE_regiontype_from_id(const SpaceType *st, int regionid)
@@ -1275,15 +1263,49 @@ bool BKE_screen_area_map_blend_read_data(BlendDataReader *reader, ScrAreaMap *ar
   return true;
 }
 
-void BKE_screen_area_blend_read_lib(BlendLibReader *reader, ID *parent_id, ScrArea *area)
+/**
+ * Removes all regions whose type cannot be reconstructed. For example files from new versions may
+ * be stored with a newly introduced region type that this version cannot handle.
+ */
+static void regions_remove_invalid(SpaceType *space_type, ListBase *regionbase)
 {
-  BLO_read_id_address(reader, parent_id, &area->full);
+  LISTBASE_FOREACH_MUTABLE (ARegion *, region, regionbase) {
+    if (BKE_regiontype_from_id(space_type, region->regiontype) != nullptr) {
+      continue;
+    }
 
+    printf("Warning: region type %d missing in space type \"%s\" (id: %d) - removing region\n",
+           region->regiontype,
+           space_type->name,
+           space_type->spaceid);
+
+    BKE_area_region_free(space_type, region);
+    BLI_freelinkN(regionbase, region);
+  }
+}
+
+void BKE_screen_area_blend_read_after_liblink(BlendLibReader *reader, ID *parent_id, ScrArea *area)
+{
   LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
     SpaceType *space_type = BKE_spacetype_from_id(sl->spacetype);
+    ListBase *regionbase = (sl == area->spacedata.first) ? &area->regionbase : &sl->regionbase;
 
-    if (space_type && space_type->blend_read_lib) {
-      space_type->blend_read_lib(reader, parent_id, sl);
+    /* We cannot restore the region type without a valid space type. So delete all regions to make
+     * sure no data is kept around that can't be restored safely (like the type dependent
+     * #ARegion.regiondata). */
+    if (!space_type) {
+      LISTBASE_FOREACH_MUTABLE (ARegion *, region, regionbase) {
+        BKE_area_region_free(nullptr, region);
+        BLI_freelinkN(regionbase, region);
+      }
+
+      continue;
     }
+
+    if (space_type->blend_read_after_liblink) {
+      space_type->blend_read_after_liblink(reader, parent_id, sl);
+    }
+
+    regions_remove_invalid(space_type, regionbase);
   }
 }

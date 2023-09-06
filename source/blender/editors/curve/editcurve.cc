@@ -3530,13 +3530,11 @@ static void subdividenurb(Object *obedit, View3D *v3d, int number_cuts)
     else if (nu->pntsv == 1) {
       BPoint *nextbp;
 
-      /*
-       * All flat lines (ie. co-planar), except flat Nurbs. Flat NURB curves
+      /* NOTE(@nzc): All flat lines (ie. co-planar), except flat Nurbs. Flat NURB curves
        * are handled together with the regular NURB plane division, as it
-       * should be. I split it off just now, let's see if it is
-       * stable... nzc 30-5-'00
-       */
-      /* count */
+       * should be. I split it off just now, let's see if it is stable. */
+
+      /* Count. */
       a = nu->pntsu;
       bp = nu->bp;
       while (a--) {
@@ -3596,7 +3594,7 @@ static void subdividenurb(Object *obedit, View3D *v3d, int number_cuts)
     else if (nu->type == CU_NURBS) {
       /* This is a very strange test ... */
       /**
-       * Subdivide NURB surfaces - nzc 30-5-'00 -
+       * NOTE(@nzc): Subdivide NURB surfaces
        *
        * Subdivision of a NURB curve can be effected by adding a
        * control point (insertion of a knot), or by raising the
@@ -3976,6 +3974,9 @@ static int set_handle_type_exec(bContext *C, wmOperator *op)
   ViewLayer *view_layer = CTX_data_view_layer(C);
   View3D *v3d = CTX_wm_view3d(C);
   const int handle_type = RNA_enum_get(op->ptr, "type");
+  const bool hide_handles = (v3d && (v3d->overlay.handle_display == CURVE_HANDLE_NONE));
+  const eNurbHandleTest_Mode handle_mode = hide_handles ? NURB_HANDLE_TEST_KNOT_ONLY :
+                                                          NURB_HANDLE_TEST_KNOT_OR_EACH;
 
   uint objects_len;
   Object **objects = BKE_view_layer_array_from_objects_in_edit_mode_unique_data(
@@ -3989,7 +3990,7 @@ static int set_handle_type_exec(bContext *C, wmOperator *op)
     }
 
     ListBase *editnurb = object_editcurve_get(obedit);
-    BKE_nurbList_handles_set(editnurb, handle_type);
+    BKE_nurbList_handles_set(editnurb, handle_mode, handle_type);
 
     WM_event_add_notifier(C, NC_GEOM | ND_DATA, obedit->data);
     DEG_id_tag_update(static_cast<ID *>(obedit->data), 0);
@@ -5798,7 +5799,7 @@ void CURVE_OT_extrude(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   /* to give to transform */
-  RNA_def_enum(ot->srna, "mode", rna_enum_transform_mode_types, TFM_TRANSLATION, "Mode", "");
+  RNA_def_enum(ot->srna, "mode", rna_enum_transform_mode_type_items, TFM_TRANSLATION, "Mode", "");
 }
 
 /** \} */

@@ -78,10 +78,10 @@ void ANIM_list_elem_update(Main *bmain, Scene *scene, bAnimListElem *ale)
     /* If we have an fcurve, call the update for the property we
      * are editing, this is then expected to do the proper redraws
      * and depsgraph updates. */
-    PointerRNA id_ptr, ptr;
+    PointerRNA ptr;
     PropertyRNA *prop;
 
-    RNA_id_pointer_create(id, &id_ptr);
+    PointerRNA id_ptr = RNA_id_pointer_create(id);
 
     if (RNA_path_resolve_property(&id_ptr, fcu->rna_path, &ptr, &prop)) {
       RNA_property_update_main(bmain, scene, &ptr, prop);
@@ -140,8 +140,6 @@ static void animchan_sync_group(bAnimContext *ac, bAnimListElem *ale, bActionGro
       bArmature *arm = static_cast<bArmature *>(ob->data);
 
       if (pchan) {
-        bActionGroup *bgrp;
-
         /* if one matches, sync the selection status */
         if ((pchan->bone) && (pchan->bone->flag & BONE_SELECTED)) {
           agrp->flag |= AGRP_SELECTED;
@@ -167,12 +165,8 @@ static void animchan_sync_group(bAnimContext *ac, bAnimListElem *ale, bActionGro
           agrp->flag &= ~AGRP_ACTIVE;
         }
 
-        /* sync group colors */
-        bgrp = (bActionGroup *)BLI_findlink(&ob->pose->agroups, (pchan->agrp_index - 1));
-        if (bgrp) {
-          agrp->customCol = bgrp->customCol;
-          action_group_colors_sync(agrp, bgrp);
-        }
+        /* sync bone color */
+        action_group_colors_set_from_posebone(agrp, pchan);
       }
     }
   }

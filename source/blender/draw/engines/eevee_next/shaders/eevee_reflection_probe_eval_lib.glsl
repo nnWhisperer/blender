@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma BLENDER_REQUIRE(gpu_shader_math_base_lib.glsl)
 #pragma BLENDER_REQUIRE(gpu_shader_codegen_lib.glsl)
@@ -57,7 +60,7 @@ vec4 reflection_probe_eval(ClosureReflection reflection,
 
   if (NL > 0.0) {
     /* Coarse Approximation of the mapping distortion
-     * Unit Sphere -> Cubemap Face */
+     * Unit Sphere -> Cube-map Face. */
     const float dist = 4.0 * M_PI / 6.0;
 
     /* http://http.developer.nvidia.com/GPUGems3/gpugems3_ch20.html : Equation 13 */
@@ -66,7 +69,7 @@ vec4 reflection_probe_eval(ClosureReflection reflection,
 
     /* Clamped brightness. */
     /* For artistic freedom this should be read from the scene/reflection probe.
-     * Note: Eevee-legacy read the firefly_factor from gi_glossy_clamp.
+     * Note: EEVEE-legacy read the firefly_factor from gi_glossy_clamp.
      * Note: Firefly removal should be moved to a different shader and also take SSR into
      * account.*/
     float luma = max(1e-8, max_v3(l_col));

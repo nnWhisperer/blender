@@ -207,7 +207,7 @@ class AbstractTreeViewItem : public AbstractViewItem, public TreeViewItemContain
   /** See AbstractViewItem::get_rename_string(). */
   /* virtual */ StringRef get_rename_string() const override;
   /** See AbstractViewItem::rename(). */
-  /* virtual */ bool rename(StringRefNull new_name) override;
+  /* virtual */ bool rename(const bContext &C, StringRefNull new_name) override;
 
   /**
    * Return whether the item can be collapsed. Used to disable collapsing for items with children.
@@ -292,9 +292,8 @@ class BasicTreeViewItem : public AbstractTreeViewItem {
 
  protected:
   /**
-   * Optionally passed to the #BasicTreeViewItem constructor. Called when activating this tree
-   * view item. This way users don't have to sub-class #BasicTreeViewItem, just to implement
-   * custom activation behavior (a common thing to do).
+   * Called when activating this tree view item. This way users don't have to sub-class
+   * #BasicTreeViewItem, just to implement custom activation behavior (a common thing to do).
    */
   ActivateFn activate_fn_;
 

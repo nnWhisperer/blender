@@ -38,7 +38,7 @@
 #include "UI_resources.hh"
 #include "UI_view2d.hh"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 #include "nla_intern.hh" /* own include */
 
@@ -57,7 +57,6 @@ static SpaceLink *nla_create(const ScrArea *area, const Scene *scene)
   snla->ads->source = (ID *)(scene);
 
   /* set auto-snapping settings */
-  snla->autosnap = SACTSNAP_FRAME;
   snla->flag = SNLA_SHOW_MARKERS;
 
   /* header */
@@ -406,12 +405,7 @@ static void nla_main_region_message_subscribe(const wmRegionMessageSubscribePara
 {
   wmMsgBus *mbus = params->message_bus;
   Scene *scene = params->scene;
-  bScreen *screen = params->screen;
-  ScrArea *area = params->area;
   ARegion *region = params->region;
-
-  PointerRNA ptr;
-  RNA_pointer_create(&screen->id, &RNA_SpaceNLA, area->spacedata.first, &ptr);
 
   wmMsgSubscribeValue msg_sub_value_region_tag_redraw = {};
   msg_sub_value_region_tag_redraw.owner = region;
@@ -428,8 +422,7 @@ static void nla_main_region_message_subscribe(const wmRegionMessageSubscribePara
         &rna_Scene_frame_current,
     };
 
-    PointerRNA idptr;
-    RNA_id_pointer_create(&scene->id, &idptr);
+    PointerRNA idptr = RNA_id_pointer_create(&scene->id);
 
     for (int i = 0; i < ARRAY_SIZE(props); i++) {
       WM_msg_subscribe_rna(mbus, &idptr, props[i], &msg_sub_value_region_tag_redraw, __func__);
@@ -488,12 +481,7 @@ static void nla_channel_region_listener(const wmRegionListenerParams *params)
 static void nla_channel_region_message_subscribe(const wmRegionMessageSubscribeParams *params)
 {
   wmMsgBus *mbus = params->message_bus;
-  bScreen *screen = params->screen;
-  ScrArea *area = params->area;
   ARegion *region = params->region;
-
-  PointerRNA ptr;
-  RNA_pointer_create(&screen->id, &RNA_SpaceNLA, area->spacedata.first, &ptr);
 
   wmMsgSubscribeValue msg_sub_value_region_tag_redraw = {};
   msg_sub_value_region_tag_redraw.owner = region;
@@ -590,17 +578,6 @@ static void nla_space_blend_read_data(BlendDataReader *reader, SpaceLink *sl)
   BLO_read_data_address(reader, &snla->ads);
 }
 
-static void nla_space_blend_read_lib(BlendLibReader *reader, ID *parent_id, SpaceLink *sl)
-{
-  SpaceNla *snla = reinterpret_cast<SpaceNla *>(sl);
-  bDopeSheet *ads = snla->ads;
-
-  if (ads) {
-    BLO_read_id_address(reader, parent_id, &ads->source);
-    BLO_read_id_address(reader, parent_id, &ads->filter_grp);
-  }
-}
-
 static void nla_space_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
   SpaceNla *snla = reinterpret_cast<SpaceNla *>(sl);
@@ -629,7 +606,7 @@ void ED_spacetype_nla()
   st->id_remap = nla_id_remap;
   st->foreach_id = nla_foreach_id;
   st->blend_read_data = nla_space_blend_read_data;
-  st->blend_read_lib = nla_space_blend_read_lib;
+  st->blend_read_after_liblink = nullptr;
   st->blend_write = nla_space_blend_write;
 
   /* regions: main window */

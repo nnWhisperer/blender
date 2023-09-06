@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * Use screen space tracing against depth buffer to find intersection with the scene.
@@ -55,7 +58,7 @@ void main()
   bool hit = false;
   float hit_time = 0.0;
 
-  /* Transform the ray into viewspace. */
+  /* Transform the ray into view-space. */
   Ray ray_view;
   ray_view.origin = transform_point(drw_view.viewmat, ray.origin);
   ray_view.direction = transform_direction(drw_view.viewmat, ray.direction);
@@ -75,7 +78,7 @@ void main()
                         ray_view);
 
   if (hit) {
-    /* Evaluate radiance at hitpoint. */
+    /* Evaluate radiance at hit-point. */
     // vec2 hit_uv = get_uvs_from_view(ray.origin + ray.direction);
 
     // radiance = textureLod(radiance_tx, hit_uv, 0.0).rgb;
@@ -90,7 +93,7 @@ void main()
     hit_time = length(ray_view.direction);
   }
   else {
-    /* Fallback to nearest lightprobe. */
+    /* Fallback to nearest light-probe. */
     int closest_probe_id = reflection_probes_find_closest(P);
     ReflectionProbeData probe = reflection_probe_buf[closest_probe_id];
     radiance = reflection_probes_sample(ray.direction, 0.0, probe).rgb;

@@ -212,10 +212,10 @@ static void headerTranslation(TransInfo *t, const float vec[3], char str[UI_MAX_
       /* WORKAROUND:
        * Special case where snapping is done in #recalData.
        * Update the header based on the #center_local. */
-      const short autosnap = getAnimEdit_SnapMode(t);
+      eSnapMode autosnap = t->tsnap.mode;
       float ival = TRANS_DATA_CONTAINER_FIRST_OK(t)->center_local[0];
       float val = ival + dvec[0];
-      snapFrameTransform(t, eAnimEdit_AutoSnap(autosnap), ival, val, &val);
+      snapFrameTransform(t, autosnap, ival, val, &val);
       dvec[0] = val - ival;
     }
 
@@ -299,7 +299,7 @@ static void headerTranslation(TransInfo *t, const float vec[3], char str[UI_MAX_
   else {
     if (t->spacetype == SPACE_NODE) {
       SpaceNode *snode = (SpaceNode *)t->area->spacedata.first;
-      if ((snode->flag & SNODE_SKIP_INSOFFSET) == 0) {
+      if (U.uiflag & USER_NODE_AUTO_OFFSET) {
         const char *str_dir = (snode->insert_ofs_dir == SNODE_INSERTOFS_DIR_RIGHT) ?
                                   TIP_("right") :
                                   TIP_("left");
@@ -316,8 +316,11 @@ static void headerTranslation(TransInfo *t, const float vec[3], char str[UI_MAX_
       char str_attach_km[64];
       WM_modalkeymap_items_to_string(
           t->keymap, TFM_MODAL_NODE_ATTACH_OFF, true, str_attach_km, sizeof(str_attach_km));
-      ofs += BLI_snprintf_rlen(
-          str + ofs, UI_MAX_DRAW_STR - ofs, TIP_(", %s: Toggle auto-attach"), str_attach_km);
+      ofs += BLI_snprintf_rlen(str + ofs,
+                               UI_MAX_DRAW_STR - ofs,
+                               TIP_(", %s: Toggle auto-attach (%s)"),
+                               str_attach_km,
+                               WM_bool_as_string((t->modifiers & MOD_NODE_ATTACH) != 0));
     }
     else {
       if (t->flag & T_2D_EDIT) {
@@ -642,10 +645,7 @@ static void applyTranslation(TransInfo *t)
   if (t->flag & T_CLIP_UV && clip_uv_transform_translation(t, global_dir)) {
     applyTranslationValue(t, global_dir);
 
-    /* In proportional edit it can happen that */
-    /* vertices in the radius of the brush end */
-    /* outside the clipping area               */
-    /* XXX HACK - dg */
+    /* Not ideal, see #clipUVData code-comment. */
     if (t->flag & T_PROP_EDIT) {
       clipUVData(t);
     }

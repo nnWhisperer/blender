@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
 /* Directive for resetting the line numbering so the failing tests lines can be printed.
  * This conflict with the shader compiler error logging scheme.
  * Comment out for correct compilation error line. */
@@ -108,7 +112,7 @@ void main()
     EXPECT_EQ(coords.tile_coord, ivec2(SHADOW_TILEMAP_RES - 1));
     EXPECT_NEAR(coords.uv, vec2(SHADOW_TILEMAP_RES), 1e-3);
 
-    /* Test clipmap level selection. */
+    /* Test clip-map level selection. */
 
     camera_lP = vec3(2.0, 2.0, 0.0);
     /* Follows ShadowDirectional::end_sync(). */
@@ -139,7 +143,7 @@ void main()
     EXPECT_EQ(coords.tile_coord, ivec2(0));
     EXPECT_NEAR(coords.uv, vec2(0), 1e-3);
 
-    /* Test clipmap offset. */
+    /* Test clip-map offset. */
 
     light.clipmap_base_offset = ivec2(31, 1);
     lP = vec3(2.0001, 0.0001, 0.0);
@@ -156,7 +160,7 @@ void main()
     coords = shadow_directional_coordinates(light, lP);
     EXPECT_EQ(coords.tile_coord, ivec2(SHADOW_TILEMAP_RES / 2) + ivec2(1, 0));
 
-    /* Test clipmap negative offsets. */
+    /* Test clip-map negative offsets. */
 
     light.clipmap_base_offset = ivec2(-31, -1);
     lP = vec3(-2.0001, -0.0001, 0.0);
@@ -181,7 +185,7 @@ void main()
     LightData light;
     light.type = LIGHT_SUN_ORTHO;
     light.clipmap_lod_min = 0; /* Range [-0.5..0.5]. */
-    light.clipmap_lod_max = 2; /* 3 tilemaps. */
+    light.clipmap_lod_max = 2; /* 3 tile-maps. */
     light.tilemap_index = 1;
     light._position = vec3(0.0);
     light._clipmap_lod_bias = light.clipmap_lod_min - 1;
@@ -232,7 +236,7 @@ void main()
     // EXPECT_EQ(coords.tile_coord, ivec2(SHADOW_TILEMAP_RES - 1));
     // EXPECT_NEAR(coords.uv, vec2(SHADOW_TILEMAP_RES), 1e-3);
 
-    /* Test clipmap level selection. */
+    /* Test clip-map level selection. */
 
     // camera_lP = vec3(2.0, 2.0, 0.0);
     /* Follows ShadowDirectional::end_sync(). */
@@ -263,7 +267,7 @@ void main()
     // EXPECT_EQ(coords.tile_coord, ivec2(0));
     // EXPECT_NEAR(coords.uv, vec2(0), 1e-3);
 
-    /* Test clipmap offset. */
+    /* Test clip-map offset. */
 
     // light.clipmap_base_offset = ivec2(31, 1);
     // lP = vec3(2.0001, 0.0001, 0.0);
@@ -280,7 +284,7 @@ void main()
     // coords = shadow_directional_coordinates(light, lP);
     // EXPECT_EQ(coords.tile_coord, ivec2(SHADOW_TILEMAP_RES / 2) + ivec2(1, 0));
 
-    /* Test clipmap negative offsets. */
+    /* Test clip-map negative offsets. */
 
     // light.clipmap_base_offset = ivec2(-31, -1);
     // lP = vec3(-2.0001, -0.0001, 0.0);
@@ -309,7 +313,7 @@ void main()
     light._clipmap_origin_x = 0.0;
     light._clipmap_origin_y = 0.0;
 
-    /* Position has no effect for directionnal. */
+    /* Position has no effect for directional. */
     vec3 lP = vec3(0.0);
     vec2 atlas_size = vec2(SHADOW_TILEMAP_RES);
     {
@@ -366,7 +370,7 @@ void main()
 
     vec2 atlas_size = vec2(SHADOW_TILEMAP_RES);
     {
-      /* Simulate a "2D" plane crossing the frustum diagonaly. */
+      /* Simulate a "2D" plane crossing the frustum diagonally. */
       vec3 lP0 = vec3(-1.0, 0.0, -1.0);
       vec3 lP1 = vec3(0.5, 0.0, -0.5);
       vec3 lTg = normalize(lP1 - lP0);
@@ -380,7 +384,7 @@ void main()
           shadow_slope_bias_get(atlas_size, light, lNg, lP0, vec2(0.0), 2), expect * 4.0, 1e-4);
     }
     {
-      /* Simulate a "2D" plane crossing the near plane at the center diagonaly. */
+      /* Simulate a "2D" plane crossing the near plane at the center diagonally. */
       vec3 lP0 = vec3(-1.0, 0.0, -1.0);
       vec3 lP1 = vec3(0.0, 0.0, -0.5);
       vec3 lTg = normalize(lP1 - lP0);

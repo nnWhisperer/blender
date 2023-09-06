@@ -39,6 +39,7 @@
 #include "bpy_library.h"
 
 #include "../generic/py_capi_utils.h"
+#include "../generic/python_compat.h"
 #include "../generic/python_utildefines.h"
 
 /* nifty feature. swap out strings for RNA data */
@@ -202,6 +203,7 @@ static PyObject *bpy_lib_load(BPy_PropertyRNA *self, PyObject *args, PyObject *k
       nullptr,
   };
   static _PyArg_Parser _parser = {
+      PY_ARG_PARSER_HEAD_COMPAT()
       "O&" /* `filepath` */
       /* Optional keyword only arguments. */
       "|$"
@@ -434,13 +436,11 @@ static bool bpy_lib_exit_lapp_context_items_cb(BlendfileLinkAppendContext *lapp_
 
   PyObject *py_item;
   if (liboverride_id != nullptr) {
-    PointerRNA newid_ptr;
-    RNA_id_pointer_create(liboverride_id, &newid_ptr);
+    PointerRNA newid_ptr = RNA_id_pointer_create(liboverride_id);
     py_item = pyrna_struct_CreatePyObject(&newid_ptr);
   }
   else if (new_id != nullptr) {
-    PointerRNA newid_ptr;
-    RNA_id_pointer_create(new_id, &newid_ptr);
+    PointerRNA newid_ptr = RNA_id_pointer_create(new_id);
     py_item = pyrna_struct_CreatePyObject(&newid_ptr);
   }
   else {

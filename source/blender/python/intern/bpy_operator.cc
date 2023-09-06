@@ -22,7 +22,9 @@
 
 #include "../generic/py_capi_rna.h"
 #include "../generic/py_capi_utils.h"
+#include "../generic/python_compat.h"
 #include "../generic/python_utildefines.h"
+
 #include "BPY_extern.h"
 #include "bpy_capi_utils.h"
 #include "bpy_operator.h"
@@ -83,6 +85,7 @@ static PyObject *pyop_poll(PyObject * /*self*/, PyObject *args)
   /* All arguments are positional. */
   static const char *_keywords[] = {"", "", nullptr};
   static _PyArg_Parser _parser = {
+      PY_ARG_PARSER_HEAD_COMPAT()
       "s" /* `opname` */
       "|" /* Optional arguments. */
       "s" /* `context_str` */
@@ -153,6 +156,7 @@ static PyObject *pyop_call(PyObject * /*self*/, PyObject *args)
   /* All arguments are positional. */
   static const char *_keywords[] = {"", "", "", "", nullptr};
   static _PyArg_Parser _parser = {
+      PY_ARG_PARSER_HEAD_COMPAT()
       "s"  /* `opname` */
       "|"  /* Optional arguments. */
       "O!" /* `kw` */
@@ -301,7 +305,6 @@ static PyObject *pyop_call(PyObject * /*self*/, PyObject *args)
 static PyObject *pyop_as_string(PyObject * /*self*/, PyObject *args)
 {
   wmOperatorType *ot;
-  PointerRNA ptr;
 
   const char *opname;
   PyObject *kw = nullptr; /* optional args */
@@ -323,6 +326,7 @@ static PyObject *pyop_as_string(PyObject * /*self*/, PyObject *args)
   /* All arguments are positional. */
   static const char *_keywords[] = {"", "", "", "", nullptr};
   static _PyArg_Parser _parser = {
+      PY_ARG_PARSER_HEAD_COMPAT()
       "s"  /* `opname` */
       "|"  /* Optional arguments. */
       "O!" /* `kw` */
@@ -358,7 +362,7 @@ static PyObject *pyop_as_string(PyObject * /*self*/, PyObject *args)
 
   // WM_operator_properties_create(&ptr, opname);
   /* Save another lookup */
-  RNA_pointer_create(nullptr, ot->srna, nullptr, &ptr);
+  PointerRNA ptr = RNA_pointer_create(nullptr, ot->srna, nullptr);
 
   if (kw && PyDict_Size(kw)) {
     error_val = pyrna_pydict_to_props(
@@ -410,8 +414,7 @@ static PyObject *pyop_getrna_type(PyObject * /*self*/, PyObject *value)
     return nullptr;
   }
 
-  PointerRNA ptr;
-  RNA_pointer_create(nullptr, &RNA_Struct, ot->srna, &ptr);
+  PointerRNA ptr = RNA_pointer_create(nullptr, &RNA_Struct, ot->srna);
   BPy_StructRNA *pyrna = (BPy_StructRNA *)pyrna_struct_CreatePyObject(&ptr);
   return (PyObject *)pyrna;
 }

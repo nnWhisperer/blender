@@ -73,16 +73,19 @@ void normals_calc_faces(Span<float3> vert_positions,
                         MutableSpan<float3> face_normals);
 
 /**
- * Calculate face and vertex normals directly into result arrays.
+ * Calculate vertex normals directly into the result array.
+ *
+ * \note Vertex and face normals can be calculated at the same time with
+ * #normals_calc_faces_and_verts, which can have performance benefits in some cases.
  *
  * \note Usually #Mesh::vert_normals() is the preferred way to access vertex normals,
  * since they may already be calculated and cached on the mesh.
  */
-void normals_calc_face_vert(Span<float3> vert_positions,
-                            OffsetIndices<int> faces,
-                            Span<int> corner_verts,
-                            MutableSpan<float3> face_normals,
-                            MutableSpan<float3> vert_normals);
+void normals_calc_verts(Span<float3> vert_positions,
+                        OffsetIndices<int> faces,
+                        Span<int> corner_verts,
+                        Span<float3> face_normals,
+                        MutableSpan<float3> vert_normals);
 
 /** \} */
 
@@ -143,7 +146,6 @@ short2 lnor_space_custom_normal_to_data(const CornerNormalSpace &lnor_space,
  * Useful to materialize sharp edges (or non-smooth faces) without actually modifying the geometry
  * (splitting edges).
  *
- * \param loop_to_face_map: Optional pre-created map from corners to their face.
  * \param sharp_edges: Optional array of sharp edge tags, used to split the evaluated normals on
  * each side of the edge.
  * \param r_lnors_spacearr: Optional return data filled with information about the custom
@@ -201,6 +203,7 @@ void edges_sharp_from_angle_set(OffsetIndices<int> faces,
                                 Span<int> corner_verts,
                                 Span<int> corner_edges,
                                 Span<float3> face_normals,
+                                Span<int> loop_to_face,
                                 const bool *sharp_faces,
                                 const float split_angle,
                                 MutableSpan<bool> sharp_edges);

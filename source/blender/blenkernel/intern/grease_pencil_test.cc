@@ -4,6 +4,8 @@
 
 #include "testing/testing.h"
 
+#include "BLI_string.h"
+
 #include "BKE_curves.hh"
 #include "BKE_grease_pencil.hh"
 #include "BKE_idtype.h"
@@ -144,7 +146,7 @@ TEST(greasepencil, layer_tree_pre_order_iteration2)
   char name[64];
   for (const int i : layers.index_range()) {
     const Layer &layer = *layers[i];
-    snprintf(name, 64, "%s%d", "Layer", i + 1);
+    SNPRINTF(name, "%s%d", "Layer", i + 1);
     EXPECT_STREQ(layer.name().data(), name);
   }
 }

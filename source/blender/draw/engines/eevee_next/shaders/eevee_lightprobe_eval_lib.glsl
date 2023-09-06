@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * The resources expected to be defined are:
@@ -21,7 +24,7 @@ ivec3 lightprobe_irradiance_grid_brick_coord(vec3 lP)
 }
 
 /**
- * Return the local coordinated of the shading point inside the brick in unormalized coordinate.
+ * Return the local coordinated of the shading point inside the brick in unnormalized coordinate.
  */
 vec3 lightprobe_irradiance_grid_brick_local_coord(IrradianceGridData grid_data,
                                                   vec3 lP,
@@ -181,7 +184,7 @@ void lightprobe_eval(ClosureDiffuse diffuse,
                      inout vec3 out_specular)
 {
   /* NOTE: Use the diffuse normal for biasing the probe sampling location since it is smoother than
-   * geometric normal. Could also try to use interp.N. */
+   * geometric normal. Could also try to use `interp.N`. */
   SphericalHarmonicL1 irradiance = lightprobe_irradiance_sample(
       irradiance_atlas_tx, P, V, diffuse.N, true);
 

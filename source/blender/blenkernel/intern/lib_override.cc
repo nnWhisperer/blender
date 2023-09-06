@@ -1774,16 +1774,20 @@ void BKE_lib_override_library_main_hierarchy_root_ensure(Main *bmain)
     int best_level = 0;
     ID *id_root = lib_override_root_find(bmain, id, best_level, &best_level);
 
-    if (!ELEM(id_root->override_library->hierarchy_root, id_root, nullptr)) {
-      /* FIXME This is probably never actually reached with current code? Check above for non-null
-       * hierarchy root pointer either skip the rest of the loop, or reset it to nullptr. */
+    if (!ELEM(id->override_library->hierarchy_root, id_root, nullptr)) {
+      /* In case the detected hierarchy root does not match with the currently defined one, this is
+       * likely an issue and is worth a warning. */
       CLOG_WARN(&LOG,
                 "Potential inconsistency in library override hierarchy of ID '%s' (current root "
                 "%s), detected as part of the hierarchy of '%s' (current root '%s')",
                 id->name,
-                id->override_library->hierarchy_root->name,
+                id->override_library->hierarchy_root != nullptr ?
+                    id->override_library->hierarchy_root->name :
+                    "<NONE>",
                 id_root->name,
-                id_root->override_library->hierarchy_root->name);
+                id_root->override_library->hierarchy_root != nullptr ?
+                    id_root->override_library->hierarchy_root->name :
+                    "<NONE>");
       processed_ids.add(id);
       continue;
     }
@@ -2290,9 +2294,8 @@ static bool lib_override_library_resync(Main *bmain,
       /* Apply rules on new override ID using old one as 'source' data. */
       /* Note that since we already remapped ID pointers in old override IDs to new ones, we
        * can also apply ID pointer override rules safely here. */
-      PointerRNA rnaptr_src, rnaptr_dst;
-      RNA_id_pointer_create(id_override_old, &rnaptr_src);
-      RNA_id_pointer_create(id_override_new, &rnaptr_dst);
+      PointerRNA rnaptr_src = RNA_id_pointer_create(id_override_old);
+      PointerRNA rnaptr_dst = RNA_id_pointer_create(id_override_new);
 
       /* In case the parent of the liboverride object matches hierarchy-wise the parent of its
        * linked reference, also enforce clearing any override of the other related parenting
@@ -4095,9 +4098,8 @@ bool BKE_lib_override_library_status_check_local(Main *bmain, ID *local)
 
   /* Note that reference is assumed always valid, caller has to ensure that itself. */
 
-  PointerRNA rnaptr_local, rnaptr_reference;
-  RNA_id_pointer_create(local, &rnaptr_local);
-  RNA_id_pointer_create(reference, &rnaptr_reference);
+  PointerRNA rnaptr_local = RNA_id_pointer_create(local);
+  PointerRNA rnaptr_reference = RNA_id_pointer_create(reference);
 
   if (!RNA_struct_override_matches(
           bmain,
@@ -4154,9 +4156,8 @@ bool BKE_lib_override_library_status_check_reference(Main *bmain, ID *local)
     }
   }
 
-  PointerRNA rnaptr_local, rnaptr_reference;
-  RNA_id_pointer_create(local, &rnaptr_local);
-  RNA_id_pointer_create(reference, &rnaptr_reference);
+  PointerRNA rnaptr_local = RNA_id_pointer_create(local);
+  PointerRNA rnaptr_reference = RNA_id_pointer_create(reference);
 
   if (!RNA_struct_override_matches(bmain,
                                    &rnaptr_local,
@@ -4205,9 +4206,8 @@ static void lib_override_library_operations_create(Main *bmain,
       }
     }
 
-    PointerRNA rnaptr_local, rnaptr_reference;
-    RNA_id_pointer_create(local, &rnaptr_local);
-    RNA_id_pointer_create(local->override_library->reference, &rnaptr_reference);
+    PointerRNA rnaptr_local = RNA_id_pointer_create(local);
+    PointerRNA rnaptr_reference = RNA_id_pointer_create(local->override_library->reference);
 
     eRNAOverrideMatchResult local_report_flags = RNA_OVERRIDE_MATCH_RESULT_INIT;
     RNA_struct_override_matches(bmain,
@@ -4257,9 +4257,8 @@ void BKE_lib_override_library_operations_restore(Main *bmain, ID *local, int *r_
     return;
   }
 
-  PointerRNA rnaptr_src, rnaptr_dst;
-  RNA_id_pointer_create(local, &rnaptr_dst);
-  RNA_id_pointer_create(local->override_library->reference, &rnaptr_src);
+  PointerRNA rnaptr_src = RNA_id_pointer_create(local);
+  PointerRNA rnaptr_dst = RNA_id_pointer_create(local->override_library->reference);
   RNA_struct_override_apply(
       bmain,
       &rnaptr_dst,
@@ -4441,14 +4440,12 @@ static bool lib_override_library_id_reset_do(Main *bmain,
     bool do_op_delete = true;
     const bool is_collection = op->rna_prop_type == PROP_COLLECTION;
     if (is_collection || op->rna_prop_type == PROP_POINTER) {
-      PointerRNA ptr_root, ptr_root_lib, ptr, ptr_lib;
+      PointerRNA ptr, ptr_lib;
       PropertyRNA *prop, *prop_lib;
 
-      RNA_pointer_create(id_root, &RNA_ID, id_root, &ptr_root);
-      RNA_pointer_create(id_root->override_library->reference,
-                         &RNA_ID,
-                         id_root->override_library->reference,
-                         &ptr_root_lib);
+      PointerRNA ptr_root = RNA_pointer_create(id_root, &RNA_ID, id_root);
+      PointerRNA ptr_root_lib = RNA_pointer_create(
+          id_root->override_library->reference, &RNA_ID, id_root->override_library->reference);
 
       bool prop_exists = RNA_path_resolve_property(&ptr_root, op->rna_path, &ptr, &prop);
       if (prop_exists) {
@@ -4742,12 +4739,12 @@ void BKE_lib_override_library_update(Main *bmain, ID *local)
     STRNCPY(tmp_key->id.name, local_key->id.name);
   }
 
-  PointerRNA rnaptr_src, rnaptr_dst, rnaptr_storage_stack, *rnaptr_storage = nullptr;
-  RNA_id_pointer_create(local, &rnaptr_src);
-  RNA_id_pointer_create(tmp_id, &rnaptr_dst);
+  PointerRNA rnaptr_src = RNA_id_pointer_create(local);
+  PointerRNA rnaptr_dst = RNA_id_pointer_create(tmp_id);
+  PointerRNA rnaptr_storage_stack, *rnaptr_storage = nullptr;
   if (local->override_library->storage) {
+    rnaptr_storage_stack = RNA_id_pointer_create(local->override_library->storage);
     rnaptr_storage = &rnaptr_storage_stack;
-    RNA_id_pointer_create(local->override_library->storage, rnaptr_storage);
   }
 
   RNA_struct_override_apply(bmain,
@@ -4957,10 +4954,9 @@ ID *BKE_lib_override_library_operations_store_start(Main *bmain,
   storage_id = BKE_id_copy(reinterpret_cast<Main *>(liboverride_storage), local);
 
   if (storage_id != nullptr) {
-    PointerRNA rnaptr_reference, rnaptr_final, rnaptr_storage;
-    RNA_id_pointer_create(local->override_library->reference, &rnaptr_reference);
-    RNA_id_pointer_create(local, &rnaptr_final);
-    RNA_id_pointer_create(storage_id, &rnaptr_storage);
+    PointerRNA rnaptr_reference = RNA_id_pointer_create(local->override_library->reference);
+   PointerRNA rnaptr_final = RNA_id_pointer_create(local);
+   PointerRNA rnaptr_storage = RNA_id_pointer_create(storage_id);
 
     if (!RNA_struct_override_store(
             bmain, &rnaptr_final, &rnaptr_reference, &rnaptr_storage, local->override_library))

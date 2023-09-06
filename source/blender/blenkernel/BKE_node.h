@@ -31,7 +31,6 @@ extern "C" {
 #define MAX_SOCKET 512
 
 struct BlendDataReader;
-struct BlendExpander;
 struct BlendLibReader;
 struct BlendWriter;
 struct FreestyleLineStyle;
@@ -116,9 +115,8 @@ using NodeDeclareFunction = void (*)(blender::nodes::NodeDeclarationBuilder &bui
 using NodeDeclareDynamicFunction = void (*)(const bNodeTree &tree,
                                             const bNode &node,
                                             blender::nodes::NodeDeclaration &r_declaration);
-using SocketGetCPPValueFunction = void (*)(const struct bNodeSocket &socket, void *r_value);
-using SocketGetGeometryNodesCPPValueFunction = void (*)(const struct bNodeSocket &socket,
-                                                        void *r_value);
+using SocketGetCPPValueFunction = void (*)(const void *socket_value, void *r_value);
+using SocketGetGeometryNodesCPPValueFunction = void (*)(const void *socket_value, void *r_value);
 
 /* Adds socket link operations that are specific to this node type. */
 using NodeGatherSocketLinkOperationsFunction =
@@ -171,18 +169,21 @@ typedef struct bNodeSocketType {
                      struct PointerRNA *ptr,
                      struct PointerRNA *node_ptr,
                      float *r_color);
+  void (*draw_color_simple)(const bNodeSocketType *socket_type, float *r_color);
 
-  void (*interface_draw)(struct bContext *C, struct uiLayout *layout, struct PointerRNA *ptr);
-  void (*interface_draw_color)(struct bContext *C, struct PointerRNA *ptr, float *r_color);
-  void (*interface_init_socket)(struct bNodeTree *ntree,
-                                const struct bNodeSocket *interface_socket,
+  void (*interface_draw)(struct ID *id,
+                         struct bNodeTreeInterfaceSocket *socket,
+                         struct bContext *C,
+                         struct uiLayout *layout);
+  void (*interface_init_socket)(struct ID *id,
+                                const struct bNodeTreeInterfaceSocket *interface_socket,
                                 struct bNode *node,
-                                struct bNodeSocket *sock,
+                                struct bNodeSocket *socket,
                                 const char *data_path);
-  void (*interface_from_socket)(struct bNodeTree *ntree,
-                                struct bNodeSocket *interface_socket,
+  void (*interface_from_socket)(struct ID *id,
+                                struct bNodeTreeInterfaceSocket *interface_socket,
                                 const struct bNode *node,
-                                const struct bNodeSocket *sock);
+                                const struct bNodeSocket *socket);
 
   /* RNA integration */
   ExtensionRNA ext_socket;
@@ -541,19 +542,6 @@ void ntreeBlendWrite(struct BlendWriter *writer, struct bNodeTree *ntree);
 /** \} */
 
 /* -------------------------------------------------------------------- */
-/** \name Node Tree Interface
- * \{ */
-
-void ntreeRemoveSocketInterface(bNodeTree *ntree, bNodeSocket *sock);
-
-struct bNodeSocket *ntreeAddSocketInterface(struct bNodeTree *ntree,
-                                            eNodeSocketInOut in_out,
-                                            const char *idname,
-                                            const char *name);
-
-/** \} */
-
-/* -------------------------------------------------------------------- */
 /** \name Generic API, Nodes
  * \{ */
 
@@ -586,7 +574,7 @@ struct GHashIterator *nodeSocketTypeGetIterator(void);
 const char *nodeSocketTypeLabel(const bNodeSocketType *stype);
 
 const char *nodeStaticSocketType(int type, int subtype);
-const char *nodeStaticSocketInterfaceType(int type, int subtype);
+const char *nodeStaticSocketInterfaceTypeNew(int type, int subtype);
 const char *nodeStaticSocketLabel(int type, int subtype);
 
 /* Helper macros for iterating over node types. */
@@ -1217,7 +1205,7 @@ void BKE_nodetree_remove_layer_n(struct bNodeTree *ntree, struct Scene *scene, i
 #define GEO_NODE_INPUT_RADIUS 1105
 #define GEO_NODE_INPUT_CURVE_TILT 1106
 #define GEO_NODE_INPUT_CURVE_HANDLES 1107
-#define GEO_NODE_INPUT_SHADE_SMOOTH 1108
+#define GEO_NODE_INPUT_FACE_SMOOTH 1108
 #define GEO_NODE_INPUT_SPLINE_RESOLUTION 1109
 #define GEO_NODE_INPUT_SPLINE_CYCLIC 1110
 #define GEO_NODE_SET_CURVE_RADIUS 1111
@@ -1323,6 +1311,8 @@ void BKE_nodetree_remove_layer_n(struct bNodeTree *ntree, struct Scene *scene, i
 #define GEO_NODE_TOOL_3D_CURSOR 2111
 #define GEO_NODE_TOOL_FACE_SET 2112
 #define GEO_NODE_TOOL_SET_FACE_SET 2113
+#define GEO_NODE_POINTS_TO_CURVES 2114
+#define GEO_NODE_INPUT_EDGE_SMOOTH 2115
 
 /** \} */
 
@@ -1349,6 +1339,15 @@ void BKE_nodetree_remove_layer_n(struct bNodeTree *ntree, struct Scene *scene, i
 #define FN_NODE_INPUT_INT 1220
 #define FN_NODE_SEPARATE_COLOR 1221
 #define FN_NODE_COMBINE_COLOR 1222
+#define FN_NODE_AXIS_ANGLE_TO_ROTATION 1223
+#define FN_NODE_EULER_TO_ROTATION 1224
+#define FN_NODE_QUATERNION_TO_ROTATION 1225
+#define FN_NODE_ROTATION_TO_AXIS_ANGLE 1226
+#define FN_NODE_ROTATION_TO_EULER 1227
+#define FN_NODE_ROTATION_TO_QUATERNION 1228
+#define FN_NODE_ROTATE_VECTOR 1229
+#define FN_NODE_ROTATE_ROTATION 1230
+#define FN_NODE_INVERT_ROTATION 1231
 
 /** \} */
 

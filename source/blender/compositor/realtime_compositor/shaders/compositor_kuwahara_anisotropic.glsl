@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
 #pragma BLENDER_REQUIRE(gpu_shader_math_base_lib.glsl)
 #pragma BLENDER_REQUIRE(gpu_shader_compositor_texture_utilities.glsl)
 
@@ -16,6 +20,10 @@
  *  Kyprianidis, Jan Eric. "Image and video abstraction by multi-scale anisotropic Kuwahara
  *  filtering." 2011.
  */
+
+#pragma BLENDER_REQUIRE(gpu_shader_math_base_lib.glsl)
+#pragma BLENDER_REQUIRE(gpu_shader_compositor_texture_utilities.glsl)
+
 void main()
 {
   ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
@@ -167,7 +175,7 @@ void main()
       vec2 rotated_disk_point = M_SQRT1_2 *
                                 vec2(disk_point.x - disk_point.y, disk_point.x + disk_point.y);
 
-      /* Finally, we compute every other odd-index 4 weights starting from the 45 degreed rotated
+      /* Finally, we compute every other odd-index 4 weights starting from the 45 degrees rotated
        * disk point. */
       vec2 rotated_polynomial = sector_center_overlap_parameter -
                                 cross_sector_overlap_parameter * square(rotated_disk_point);

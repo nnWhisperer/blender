@@ -68,7 +68,7 @@
 
 #include "RNA_enum_types.hh"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 #include "bmesh.h"
 
@@ -160,8 +160,7 @@ IDTypeInfo IDType_ID_PAL = {
 
     /*blend_write*/ palette_blend_write,
     /*blend_read_data*/ palette_blend_read_data,
-    /*blend_read_lib*/ nullptr,
-    /*blend_read_expand*/ nullptr,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ palette_undo_preserve,
 
@@ -228,8 +227,7 @@ IDTypeInfo IDType_ID_PC = {
 
     /*blend_write*/ paint_curve_blend_write,
     /*blend_read_data*/ paint_curve_blend_read_data,
-    /*blend_read_lib*/ nullptr,
-    /*blend_read_expand*/ nullptr,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 
@@ -1279,19 +1277,6 @@ void BKE_paint_blend_read_data(BlendDataReader *reader, const Scene *scene, Pain
   BKE_paint_runtime_init(scene->toolsettings, p);
 }
 
-void BKE_paint_blend_read_lib(BlendLibReader *reader, Scene *sce, Paint *p)
-{
-  if (p) {
-    BLO_read_id_address(reader, &sce->id, &p->brush);
-    for (int i = 0; i < p->tool_slots_len; i++) {
-      if (p->tool_slots[i].brush != nullptr) {
-        BLO_read_id_address(reader, &sce->id, &p->tool_slots[i].brush);
-      }
-    }
-    BLO_read_id_address(reader, &sce->id, &p->palette);
-  }
-}
-
 bool paint_is_grid_face_hidden(const uint *grid_hidden, int gridsize, int x, int y)
 {
   /* Skip face if any of its corners are hidden. */
@@ -1406,13 +1391,7 @@ void BKE_sculptsession_free_deformMats(SculptSession *ss)
 
 void BKE_sculptsession_free_vwpaint_data(SculptSession *ss)
 {
-  SculptVertexPaintGeomMap *gmap = nullptr;
-  if (ss->mode_type == OB_MODE_VERTEX_PAINT) {
-    gmap = &ss->mode.vpaint.gmap;
-  }
-  else if (ss->mode_type == OB_MODE_WEIGHT_PAINT) {
-    gmap = &ss->mode.wpaint.gmap;
-
+  if (ss->mode_type == OB_MODE_WEIGHT_PAINT) {
     MEM_SAFE_FREE(ss->mode.wpaint.alpha_weight);
     if (ss->mode.wpaint.dvert_prev) {
       BKE_defvert_array_free_elems(ss->mode.wpaint.dvert_prev, ss->totvert);
@@ -1420,15 +1399,6 @@ void BKE_sculptsession_free_vwpaint_data(SculptSession *ss)
       ss->mode.wpaint.dvert_prev = nullptr;
     }
   }
-  else {
-    return;
-  }
-  gmap->vert_to_loop_offsets = {};
-  gmap->vert_to_loop_indices = {};
-  gmap->vert_to_loop = {};
-  gmap->vert_to_face_offsets = {};
-  gmap->vert_to_face_indices = {};
-  gmap->vert_to_face = {};
 }
 
 /**
@@ -1474,8 +1444,6 @@ static void sculptsession_free_pbvh(Object *object)
     ss->pbvh = nullptr;
   }
 
-  ss->vert_to_face_offsets = {};
-  ss->vert_to_face_indices = {};
   ss->pmap = {};
   ss->edge_to_face_offsets = {};
   ss->edge_to_face_indices = {};
@@ -1791,12 +1759,8 @@ static void sculpt_update_object(
   sculpt_attribute_update_refs(ob);
   sculpt_update_persistent_base(ob);
 
-  if (ob->type == OB_MESH && ss->pmap.is_empty()) {
-    ss->pmap = blender::bke::mesh::build_vert_to_face_map(me->faces(),
-                                                          me->corner_verts(),
-                                                          me->totvert,
-                                                          ss->vert_to_face_offsets,
-                                                          ss->vert_to_face_indices);
+  if (ob->type == OB_MESH) {
+    ss->pmap = me->vert_to_face_map();
   }
 
   if (ss->pbvh) {
@@ -1927,7 +1891,7 @@ void BKE_sculpt_update_object_before_eval(Object *ob_eval)
       BKE_sculptsession_free_vwpaint_data(ob_eval->sculpt);
     }
     else if (ss->pbvh) {
-      Vector<PBVHNode *> nodes = blender::bke::pbvh::search_gather(ss->pbvh, nullptr, nullptr);
+      Vector<PBVHNode *> nodes = blender::bke::pbvh::search_gather(ss->pbvh, {});
 
       for (PBVHNode *node : nodes) {
         BKE_pbvh_node_mark_update(node);
@@ -2251,7 +2215,7 @@ static PBVH *build_pbvh_from_ccg(Object *ob, SubdivCCG *subdiv_ccg)
                        subdiv_ccg->grids,
                        subdiv_ccg->num_grids,
                        &key,
-                       (void **)subdiv_ccg->grid_faces,
+                       subdiv_ccg->grid_to_face_map,
                        subdiv_ccg->grid_flag_mats,
                        subdiv_ccg->grid_hidden,
                        base_mesh,
@@ -2340,7 +2304,7 @@ void BKE_sculpt_bvh_update_from_ccg(PBVH *pbvh, SubdivCCG *subdiv_ccg)
 
   BKE_pbvh_grids_update(pbvh,
                         subdiv_ccg->grids,
-                        (void **)subdiv_ccg->grid_faces,
+                        subdiv_ccg->grid_to_face_map,
                         subdiv_ccg->grid_flag_mats,
                         subdiv_ccg->grid_hidden,
                         &key);

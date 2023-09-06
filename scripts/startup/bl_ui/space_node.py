@@ -56,7 +56,7 @@ class NODE_HT_header(Header):
 
                 NODE_MT_editor_menus.draw_collapsible(context, layout)
 
-                # No shader nodes for Eevee lights
+                # No shader nodes for EEVEE lights.
                 if snode_id and not (context.engine == 'BLENDER_EEVEE' and ob_type == 'LIGHT'):
                     row = layout.row()
                     row.prop(snode_id, "use_nodes")
@@ -160,6 +160,8 @@ class NODE_HT_header(Header):
                             row.template_ID(active_modifier, "node_group", new="node.new_geometry_node_group_assign")
                     else:
                         row.template_ID(snode, "node_tree", new="node.new_geometry_nodes_modifier")
+                if snode.node_tree and snode.node_tree.asset_data:
+                    layout.popover(panel="NODE_PT_geometry_node_asset_traits")
             else:
                 layout.template_ID(snode, "node_tree", new="node.new_geometry_node_group_tool")
                 if snode.node_tree and snode.node_tree.asset_data:
@@ -223,6 +225,7 @@ class NODE_MT_add(bpy.types.Menu):
     bl_space_type = 'NODE_EDITOR'
     bl_label = "Add"
     bl_translation_context = i18n_contexts.operator_default
+    bl_options = {'SEARCH_ON_KEY_PRESS'}
 
     def draw(self, context):
         import nodeitems_utils
@@ -232,16 +235,17 @@ class NODE_MT_add(bpy.types.Menu):
 
         snode = context.space_data
         if snode.tree_type == 'GeometryNodeTree':
-            props = layout.operator("node.add_search", text="Search...", icon='VIEWZOOM')
-            layout.separator()
             layout.menu_contents("NODE_MT_geometry_node_add_all")
-        elif nodeitems_utils.has_node_categories(context):
+        elif snode.tree_type == 'CompositorNodeTree':
+            layout.menu_contents("NODE_MT_compositor_node_add_all")
+        elif snode.tree_type == 'ShaderNodeTree':
+            layout.menu_contents("NODE_MT_shader_node_add_all")
+        elif snode.tree_type == 'TextureNodeTree':
             props = layout.operator("node.add_search", text="Search...", icon='VIEWZOOM')
-            props.use_transform = True
-
             layout.separator()
-
-            # actual node submenus are defined by draw functions from node categories
+            layout.menu_contents("NODE_MT_texture_node_add_all")
+        elif nodeitems_utils.has_node_categories(context):
+            # Actual node sub-menus are defined by draw functions from node categories.
             nodeitems_utils.draw_node_categories_menu(self, context)
 
 
@@ -255,11 +259,6 @@ class NODE_MT_view(Menu):
 
         layout.prop(snode, "show_region_toolbar")
         layout.prop(snode, "show_region_ui")
-
-        layout.separator()
-
-        # Auto-offset nodes (called "insert_offset" in code)
-        layout.prop(snode, "use_insert_offset")
 
         layout.separator()
 
@@ -351,10 +350,10 @@ class NODE_MT_node(Menu):
 
         layout.separator()
 
+        layout.operator("node.group_make")
+        layout.operator("node.group_insert", text="Insert Into Group")
         layout.operator("node.group_edit").exit = False
         layout.operator("node.group_ungroup")
-        layout.operator("node.group_make")
-        layout.operator("node.group_insert")
 
         layout.separator()
 
@@ -445,18 +444,21 @@ class NODE_PT_geometry_node_asset_traits(Panel):
         snode = context.space_data
         group = snode.node_tree
 
-        col = layout.column(heading="Type")
-        col.prop(group, "is_tool")
-        col = layout.column(heading="Mode")
-        col.active = group.is_tool
-        col.prop(group, "is_mode_edit")
-        col.prop(group, "is_mode_sculpt")
-        col = layout.column(heading="Geometry")
-        col.active = group.is_tool
-        col.prop(group, "is_type_mesh")
-        col.prop(group, "is_type_curve")
-        if context.preferences.experimental.use_new_point_cloud_type:
-            col.prop(group, "is_type_point_cloud")
+        if snode.geometry_nodes_type == 'MODIFIER':
+            layout.prop(group, "is_modifier")
+        else:
+            col = layout.column(heading="Type")
+            col.prop(group, "is_tool")
+            col = layout.column(heading="Mode")
+            col.active = group.is_tool
+            col.prop(group, "is_mode_edit")
+            col.prop(group, "is_mode_sculpt")
+            col = layout.column(heading="Geometry")
+            col.active = group.is_tool
+            col.prop(group, "is_type_mesh")
+            col.prop(group, "is_type_curve")
+            if context.preferences.experimental.use_new_point_cloud_type:
+                col.prop(group, "is_type_point_cloud")
 
 
 class NODE_PT_node_color_presets(PresetPanel, Panel):
@@ -589,7 +591,7 @@ class NODE_MT_context_menu(Menu):
         layout.operator("node.group_insert", text="Insert Into Group")
 
         if active_node and active_node.type == 'GROUP':
-            layout.operator("node.group_edit", text="Edit").exit = False
+            layout.operator("node.group_edit").exit = False
             layout.operator("node.group_ungroup", text="Ungroup")
 
         if is_nested:
@@ -712,7 +714,7 @@ class NODE_PT_texture_mapping(Panel):
     bl_category = "Node"
     bl_label = "Texture Mapping"
     bl_options = {'DEFAULT_CLOSED'}
-    COMPAT_ENGINES = {'BLENDER_RENDER', 'BLENDER_EEVEE', 'BLENDER_WORKBENCH', 'BLENDER_WORKBENCH_NEXT'}
+    COMPAT_ENGINES = {'BLENDER_RENDER', 'BLENDER_EEVEE', 'BLENDER_WORKBENCH'}
 
     @classmethod
     def poll(cls, context):
@@ -860,22 +862,20 @@ class NODE_PT_overlay(Panel):
             col.prop(overlay, "show_named_attributes", text="Named Attributes")
 
 
-class NODE_UL_interface_sockets(bpy.types.UIList):
-    def draw_item(self, context, layout, _data, item, icon, _active_data, _active_propname, _index):
-        socket = item
-        color = socket.draw_color(context)
+class NODE_MT_node_tree_interface_context_menu(Menu):
+    bl_label = "Node Tree Interface Specials"
 
-        if self.layout_type in {'DEFAULT', 'COMPACT'}:
-            row = layout.row(align=True)
+    def draw(self, _context):
+        layout = self.layout
 
-            row.template_node_socket(color=color)
-            row.prop(socket, "name", text="", emboss=False, icon_value=icon)
-        elif self.layout_type == 'GRID':
-            layout.alignment = 'CENTER'
-            layout.template_node_socket(color=color)
+        layout.operator("node.interface_item_duplicate", icon='DUPLICATE')
 
 
-class NodeTreeInterfacePanel(Panel):
+class NODE_PT_node_tree_interface(Panel):
+    bl_space_type = 'NODE_EDITOR'
+    bl_region_type = 'UI'
+    bl_category = "Group"
+    bl_label = "Interface"
 
     @classmethod
     def poll(cls, context):
@@ -889,119 +889,53 @@ class NodeTreeInterfacePanel(Panel):
             return False
         return True
 
-    def draw_socket_list(self, context, in_out, sockets_propname, active_socket_propname):
+    def draw(self, context):
         layout = self.layout
-
         snode = context.space_data
         tree = snode.edit_tree
-        sockets = getattr(tree, sockets_propname)
-        active_socket_index = getattr(tree, active_socket_propname)
-        active_socket = sockets[active_socket_index] if active_socket_index >= 0 else None
 
         split = layout.row()
 
-        split.template_list("NODE_UL_interface_sockets", in_out, tree, sockets_propname, tree, active_socket_propname)
+        split.template_node_tree_interface(tree.interface)
 
-        ops_col = split.column()
-
-        add_remove_col = ops_col.column(align=True)
-        props = add_remove_col.operator("node.tree_socket_add", icon='ADD', text="")
-        props.in_out = in_out
-        props = add_remove_col.operator("node.tree_socket_remove", icon='REMOVE', text="")
-        props.in_out = in_out
+        ops_col = split.column(align=True)
+        ops_col.operator_menu_enum("node.interface_item_new", "item_type", icon='ADD', text="")
+        ops_col.operator("node.interface_item_remove", icon='REMOVE', text="")
+        ops_col.separator()
+        ops_col.menu("NODE_MT_node_tree_interface_context_menu", icon='DOWNARROW_HLT', text="")
 
         ops_col.separator()
 
-        up_down_col = ops_col.column(align=True)
-        props = up_down_col.operator("node.tree_socket_move", icon='TRIA_UP', text="")
-        props.in_out = in_out
-        props.direction = 'UP'
-        props = up_down_col.operator("node.tree_socket_move", icon='TRIA_DOWN', text="")
-        props.in_out = in_out
-        props.direction = 'DOWN'
-
-        if active_socket is not None:
-            # Mimicking property split.
-            layout.use_property_split = False
-            layout.use_property_decorate = False
-            layout_row = layout.row(align=True)
-            layout_split = layout_row.split(factor=0.4, align=True)
-
-            label_column = layout_split.column(align=True)
-            label_column.alignment = 'RIGHT'
-            # Menu to change the socket type.
-            label_column.label(text="Type")
-
-            property_row = layout_split.row(align=True)
-            props = property_row.operator_menu_enum(
-                "node.tree_socket_change_type",
-                "socket_type",
-                text=(iface_(active_socket.bl_label) if active_socket.bl_label
-                      else iface_(active_socket.bl_idname)),
-            )
-            props.in_out = in_out
-
-            with context.temp_override(interface_socket=active_socket):
-                if bpy.ops.node.tree_socket_change_subtype.poll():
-                    layout_row = layout.row(align=True)
-                    layout_split = layout_row.split(factor=0.4, align=True)
-
-                    label_column = layout_split.column(align=True)
-                    label_column.alignment = 'RIGHT'
-                    label_column.label(text="Subtype")
-                    property_row = layout_split.row(align=True)
-
-                    property_row.context_pointer_set("interface_socket", active_socket)
-                    props = property_row.operator_menu_enum(
-                        "node.tree_socket_change_subtype",
-                        "socket_subtype",
-                        text=(iface_(active_socket.bl_subtype_label) if active_socket.bl_subtype_label
-                              else iface_(active_socket.bl_idname)),
-                    )
-
+        active_item = tree.interface.active
+        if active_item is not None:
             layout.use_property_split = True
             layout.use_property_decorate = False
 
-            layout.prop(active_socket, "name")
-            # Display descriptions only for Geometry Nodes, since it's only used in the modifier panel.
-            if tree.type == 'GEOMETRY':
-                layout.prop(active_socket, "description")
-                field_socket_prefixes = {
-                    "NodeSocketInt",
-                    "NodeSocketColor",
-                    "NodeSocketVector",
-                    "NodeSocketBool",
-                    "NodeSocketFloat",
-                }
-                is_field_type = any(
-                    active_socket.bl_socket_idname.startswith(prefix)
-                    for prefix in field_socket_prefixes
-                )
-                if is_field_type:
-                    if in_out == 'OUT':
-                        layout.prop(active_socket, "attribute_domain")
-                    layout.prop(active_socket, "default_attribute_name")
-            active_socket.draw(context, layout)
+            if active_item.item_type == 'SOCKET':
+                layout.prop(active_item, "socket_type", text="Type")
+                layout.prop(active_item, "description")
+                layout.prop(active_item, "in_out", text="Input/Output")
+                # Display descriptions only for Geometry Nodes, since it's only used in the modifier panel.
+                if tree.type == 'GEOMETRY':
+                    field_socket_types = {
+                        "NodeSocketInt",
+                        "NodeSocketColor",
+                        "NodeSocketVector",
+                        "NodeSocketBool",
+                        "NodeSocketFloat",
+                    }
+                    if active_item.socket_type in field_socket_types:
+                        if 'OUTPUT' in active_item.in_out:
+                            layout.prop(active_item, "attribute_domain")
+                        layout.prop(active_item, "default_attribute_name")
+                active_item.draw(context, layout)
 
+            if active_item.item_type == 'PANEL':
+                layout.prop(active_item, "name")
+                layout.prop(active_item, "description")
+                layout.prop(active_item, "default_closed", text="Closed by Default")
 
-class NODE_PT_node_tree_interface_inputs(NodeTreeInterfacePanel):
-    bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'UI'
-    bl_category = "Group"
-    bl_label = "Inputs"
-
-    def draw(self, context):
-        self.draw_socket_list(context, "IN", "inputs", "active_input")
-
-
-class NODE_PT_node_tree_interface_outputs(NodeTreeInterfacePanel):
-    bl_space_type = 'NODE_EDITOR'
-    bl_region_type = 'UI'
-    bl_category = "Group"
-    bl_label = "Outputs"
-
-    def draw(self, context):
-        self.draw_socket_list(context, "OUT", "outputs", "active_output")
+            layout.use_property_split = False
 
 
 class NODE_UL_simulation_zone_items(bpy.types.UIList):
@@ -1210,6 +1144,8 @@ classes = (
     NODE_PT_material_slots,
     NODE_PT_geometry_node_asset_traits,
     NODE_PT_node_color_presets,
+    NODE_MT_node_tree_interface_context_menu,
+    NODE_PT_node_tree_interface,
     NODE_PT_active_node_generic,
     NODE_PT_active_node_color,
     NODE_PT_texture_mapping,
@@ -1218,9 +1154,6 @@ classes = (
     NODE_PT_quality,
     NODE_PT_annotation,
     NODE_PT_overlay,
-    NODE_UL_interface_sockets,
-    NODE_PT_node_tree_interface_inputs,
-    NODE_PT_node_tree_interface_outputs,
     NODE_UL_simulation_zone_items,
     NODE_PT_simulation_zone_items,
     NODE_UL_repeat_zone_items,

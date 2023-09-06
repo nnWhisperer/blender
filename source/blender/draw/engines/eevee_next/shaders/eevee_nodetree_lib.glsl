@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma BLENDER_REQUIRE(common_view_lib.glsl)
 #pragma BLENDER_REQUIRE(common_math_lib.glsl)
@@ -206,7 +209,7 @@ Closure closure_eval(ClosureDiffuse diffuse,
   return Closure(0);
 }
 
-/* Noop since we are sampling closures. */
+/* NOP since we are sampling closures. */
 Closure closure_add(Closure cl1, Closure cl2)
 {
   return Closure(0);
@@ -221,7 +224,7 @@ float ambient_occlusion_eval(vec3 normal,
                              const float inverted,
                              const float sample_count)
 {
-  /* Avoid multiline preprocesor conditionals.
+  /* Avoid multi-line pre-processor conditionals.
    * Some drivers don't handle them correctly. */
   // clang-format off
 #if defined(GPU_FRAGMENT_SHADER) && defined(MAT_AMBIENT_OCCLUSION) && !defined(MAT_DEPTH) && !defined(MAT_SHADOW)
@@ -253,23 +256,6 @@ float nodetree_thickness();
 vec4 closure_to_rgba(Closure cl);
 #endif
 
-/* Fresnel monochromatic, perfect mirror */
-float F_eta(float eta, float cos_theta)
-{
-  /* Compute fresnel reflectance without explicitly computing
-   * the refracted direction. */
-  float c = abs(cos_theta);
-  float g = eta * eta - 1.0 + c * c;
-  if (g > 0.0) {
-    g = sqrt(g);
-    float A = (g - c) / (g + c);
-    float B = (c * (g + c) - 1.0) / (c * (g - c) + 1.0);
-    return 0.5 * A * A * (1.0 + B * B);
-  }
-  /* Total internal reflections. */
-  return 1.0;
-}
-
 /* Simplified form of F_eta(eta, 1.0). */
 float F0_from_ior(float eta)
 {
@@ -277,41 +263,43 @@ float F0_from_ior(float eta)
   return A * A;
 }
 
-/* Return the fresnel color from a precomputed LUT value (from brdf_lutb). */
+/* Return the fresnel color from a precomputed LUT value (from brdf_lut). */
 vec3 F_brdf_single_scatter(vec3 f0, vec3 f90, vec2 lut)
 {
-  return lut.y * f90 + lut.x * f0;
+  return f0 * lut.x + f90 * lut.y;
 }
 
-/* Return the fresnel color from a precomputed LUT value (from brdf_lutb). */
+/* Multi-scattering brdf approximation from
+ * "A Multiple-Scattering Microfacet Model for Real-Time Image-based Lighting"
+ * https://jcgt.org/published/0008/01/03/paper.pdf by Carmelo J. Fdez-Agüera. */
 vec3 F_brdf_multi_scatter(vec3 f0, vec3 f90, vec2 lut)
 {
-  /**
-   * From "A Multiple-Scattering Microfacet Model for Real-Time Image-based Lighting"
-   * by Carmelo J. Fdez-Aguera
-   * https://jcgt.org/published/0008/01/03/paper.pdf
-   */
-  vec3 FssEss = lut.y * f90 + lut.x * f0;
+  vec3 FssEss = F_brdf_single_scatter(f0, f90, lut);
 
   float Ess = lut.x + lut.y;
   float Ems = 1.0 - Ess;
-  vec3 Favg = f0 + (1.0 - f0) / 21.0;
-  vec3 Fms = FssEss * Favg / (1.0 - (1.0 - Ess) * Favg);
-  /* We don't do anything special for diffuse surfaces because the principle bsdf
-   * does not care about energy conservation of the specular layer for dielectrics. */
-  return FssEss + Fms * Ems;
+  vec3 Favg = f0 + (f90 - f0) / 21.0;
+
+  /* The original paper uses `FssEss * radiance + Fms*Ems * irradiance`, but
+   * "A Journey Through Implementing Multiscattering BRDFs and Area Lights" by Steve McAuley
+   * suggests to use `FssEss * radiance + Fms*Ems * radiance` which results in comparable quality.
+   * We handle `radiance` outside of this function, so the result simplifies to:
+   * `FssEss + Fms*Ems = FssEss * (1 + Ems*Favg / (1 - Ems*Favg)) = FssEss / (1 - Ems*Favg)`.
+   * This is a simple albedo scaling very similar to the approach used by Cycles:
+   * "Practical multiple scattering compensation for microfacet model". */
+  return FssEss / (1.0 - Ems * Favg);
 }
 
 vec2 brdf_lut(float cos_theta, float roughness)
 {
 #ifdef EEVEE_UTILITY_TX
-  return utility_tx_sample_lut(utility_tx, vec2(cos_theta, roughness), UTIL_BSDF_LAYER).rg;
+  return utility_tx_sample_lut(utility_tx, cos_theta, roughness, UTIL_BSDF_LAYER).rg;
 #else
   return vec2(1.0, 0.0);
 #endif
 }
 
-vec2 btdf_lut(float cos_theta, float roughness, float ior)
+vec2 btdf_lut(float cos_theta, float roughness, float ior, float do_multiscatter)
 {
   if (ior <= 1e-5) {
     return vec2(0.0);
@@ -320,16 +308,16 @@ vec2 btdf_lut(float cos_theta, float roughness, float ior)
   if (ior >= 1.0) {
     vec2 split_sum = brdf_lut(cos_theta, roughness);
     float f0 = F0_from_ior(ior);
-    /* Baked IOR for GGX BRDF. */
-    const float specular = 1.0;
-    const float eta_brdf = (2.0 / (1.0 - sqrt(0.08 * specular))) - 1.0;
-    /* Avoid harsh transition coming from ior == 1. */
-    float f90 = fast_sqrt(saturate(f0 / (F0_from_ior(eta_brdf) * 0.25)));
-    float fresnel = F_brdf_single_scatter(vec3(f0), vec3(f90), split_sum).r;
-    /* Setting the BTDF to one is not really important since it is only used for multiscatter
-     * and it's already quite close to ground truth. */
-    float btdf = 1.0;
-    return vec2(btdf, fresnel);
+    /* Gradually increase `f90` from 0 to 1 when IOR is in the range of [1.0, 1.33], to avoid harsh
+     * transition at `IOR == 1`. */
+    float f90 = fast_sqrt(saturate(f0 / 0.02));
+
+    float brdf = F_brdf_multi_scatter(vec3(f0), vec3(f90), split_sum).r;
+    /* Energy conservation. */
+    float btdf = 1.0 - brdf;
+    /* Assuming the energy loss caused by single-scattering is distributed proportionally in the
+     * reflection and refraction lobes. */
+    return vec2(btdf, brdf) * ((do_multiscatter == 0.0) ? sum(split_sum) : 1.0);
   }
 
   /* IOR is sin of critical angle. */
@@ -350,11 +338,18 @@ vec2 btdf_lut(float cos_theta, float roughness, float ior)
 
 #ifdef EEVEE_UTILITY_TX
   coords.z = UTIL_BTDF_LAYER + layer_floored;
-  vec2 btdf_low = utility_tx_sample_lut(utility_tx, coords.xy, coords.z).rg;
-  vec2 btdf_high = utility_tx_sample_lut(utility_tx, coords.xy, coords.z + 1.0).rg;
+  vec2 btdf_brdf_low = utility_tx_sample_lut(utility_tx, coords.xy, coords.z).rg;
+  vec2 btdf_brdf_high = utility_tx_sample_lut(utility_tx, coords.xy, coords.z + 1.0).rg;
   /* Manual trilinear interpolation. */
-  vec2 btdf = mix(btdf_low, btdf_high, layer - layer_floored);
-  return btdf;
+  vec2 btdf_brdf = mix(btdf_brdf_low, btdf_brdf_high, layer - layer_floored);
+
+  if (do_multiscatter != 0.0) {
+    /* For energy-conserving BSDF the reflection and refraction lobes should sum to one. Assuming
+     * the energy loss of single-scattering is distributed proportionally in the two lobes. */
+    btdf_brdf /= (btdf_brdf.x + btdf_brdf.y);
+  }
+
+  return btdf_brdf;
 #else
   return vec2(0.0);
 #endif
@@ -556,7 +551,7 @@ vec4 attr_load_color_post(vec4 attr)
   return attr;
 }
 
-#else /* Noop for any other surface. */
+#else /* NOP for any other surface. */
 
 float attr_load_temperature_post(float attr)
 {

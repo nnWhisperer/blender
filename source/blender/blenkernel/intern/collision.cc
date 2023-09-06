@@ -17,7 +17,6 @@
 #include "DNA_scene_types.h"
 
 #include "BLI_blenlib.h"
-#include "BLI_edgehash.h"
 #include "BLI_linklist.h"
 #include "BLI_math_geom.h"
 #include "BLI_math_vector.h"
@@ -25,7 +24,7 @@
 #include "BLI_threads.h"
 #include "BLI_utildefines.h"
 
-#include "BKE_cloth.h"
+#include "BKE_cloth.hh"
 #include "BKE_collection.h"
 #include "BKE_effect.h"
 #include "BKE_layer.h"
@@ -1079,7 +1078,7 @@ static bool cloth_bvh_selfcollision_is_active(const ClothModifierData *clmd,
       }
 
       if (sewing_active) {
-        if (BLI_edgeset_haskey(cloth->sew_edge_graph, tri_a->tri[i], tri_b->tri[j])) {
+        if (cloth->sew_edge_graph.contains({tri_a->tri[i], tri_b->tri[j]})) {
           return false;
         }
       }

@@ -90,14 +90,13 @@ void VKBackend::detect_workarounds(VKDevice &device)
 void VKBackend::platform_exit()
 {
   GPG.clear();
-}
-
-void VKBackend::delete_resources()
-{
-  if (device_.is_initialized()) {
-    device_.deinit();
+  VKDevice &device = VKBackend::get().device_;
+  if (device.is_initialized()) {
+    device.deinit();
   }
 }
+
+void VKBackend::delete_resources() {}
 
 void VKBackend::samplers_update() {}
 
@@ -135,6 +134,9 @@ Context *VKBackend::context_alloc(void *ghost_window, void *ghost_context)
 
   VKContext *context = new VKContext(ghost_window, ghost_context);
   device_.context_register(*context);
+  GHOST_SetVulkanSwapBuffersCallbacks((GHOST_ContextHandle)ghost_context,
+                                      VKContext::swap_buffers_pre_callback,
+                                      VKContext::swap_buffers_post_callback);
   return context;
 }
 

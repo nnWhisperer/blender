@@ -261,6 +261,22 @@ static void wm_keymap_diff_item_free(wmKeyMapDiffItem *kmdi)
 
 wmKeyConfig *WM_keyconfig_new(wmWindowManager *wm, const char *idname, bool user_defined)
 {
+  BLI_assert(!BLI_findstring(&wm->keyconfigs, idname, offsetof(wmKeyConfig, idname)));
+  /* Create new configuration. */
+  wmKeyConfig *keyconf = static_cast<wmKeyConfig *>(
+      MEM_callocN(sizeof(wmKeyConfig), "wmKeyConfig"));
+  STRNCPY_UTF8(keyconf->idname, idname);
+  BLI_addtail(&wm->keyconfigs, keyconf);
+
+  if (user_defined) {
+    keyconf->flag |= KEYCONF_USER;
+  }
+
+  return keyconf;
+}
+
+wmKeyConfig *WM_keyconfig_ensure(wmWindowManager *wm, const char *idname, bool user_defined)
+{
   wmKeyConfig *keyconf = static_cast<wmKeyConfig *>(
       BLI_findstring(&wm->keyconfigs, idname, offsetof(wmKeyConfig, idname)));
   if (keyconf) {
@@ -279,38 +295,33 @@ wmKeyConfig *WM_keyconfig_new(wmWindowManager *wm, const char *idname, bool user
     return keyconf;
   }
 
-  /* Create new configuration. */
-  keyconf = static_cast<wmKeyConfig *>(MEM_callocN(sizeof(wmKeyConfig), "wmKeyConfig"));
-  STRNCPY(keyconf->idname, idname);
-  BLI_addtail(&wm->keyconfigs, keyconf);
-
-  if (user_defined) {
-    keyconf->flag |= KEYCONF_USER;
-  }
-
-  return keyconf;
-}
-
-wmKeyConfig *WM_keyconfig_new_user(wmWindowManager *wm, const char *idname)
-{
-  return WM_keyconfig_new(wm, idname, true);
+  return WM_keyconfig_new(wm, idname, user_defined);
 }
 
 bool WM_keyconfig_remove(wmWindowManager *wm, wmKeyConfig *keyconf)
 {
-  if (BLI_findindex(&wm->keyconfigs, keyconf) != -1) {
-    if (STREQLEN(U.keyconfigstr, keyconf->idname, sizeof(U.keyconfigstr))) {
-      STRNCPY(U.keyconfigstr, wm->defaultconf->idname);
-      U.runtime.is_dirty = true;
-      WM_keyconfig_update_tag(nullptr, nullptr);
-    }
-
-    BLI_remlink(&wm->keyconfigs, keyconf);
-    WM_keyconfig_free(keyconf);
-
-    return true;
+  if (UNLIKELY(BLI_findindex(&wm->keyconfigs, keyconf) == -1)) {
+    return false;
   }
-  return false;
+
+  if (STREQLEN(U.keyconfigstr, keyconf->idname, sizeof(U.keyconfigstr))) {
+    STRNCPY(U.keyconfigstr, wm->defaultconf->idname);
+    U.runtime.is_dirty = true;
+    WM_keyconfig_update_tag(nullptr, nullptr);
+  }
+
+  BLI_remlink(&wm->keyconfigs, keyconf);
+  WM_keyconfig_free(keyconf);
+
+  /* Clear pointers. */
+  wmKeyConfig **keyconf_arr_p[] = {WM_KEYCONFIG_ARRAY_P(wm)};
+  for (int i = 0; i < ARRAY_SIZE(keyconf_arr_p); i++) {
+    wmKeyConfig **kc_p = keyconf_arr_p[i];
+    if (*kc_p == keyconf) {
+      *kc_p = nullptr;
+    }
+  }
+  return true;
 }
 
 void WM_keyconfig_clear(wmKeyConfig *keyconf)
@@ -371,7 +382,7 @@ static wmKeyMap *wm_keymap_new(const char *idname, int spaceid, int regionid)
 {
   wmKeyMap *km = static_cast<wmKeyMap *>(MEM_callocN(sizeof(wmKeyMap), "keymap list"));
 
-  STRNCPY(km->idname, idname);
+  STRNCPY_UTF8(km->idname, idname);
   km->spaceid = spaceid;
   km->regionid = regionid;
 
@@ -423,15 +434,15 @@ void WM_keymap_clear(wmKeyMap *keymap)
 
 bool WM_keymap_remove(wmKeyConfig *keyconf, wmKeyMap *keymap)
 {
-  if (BLI_findindex(&keyconf->keymaps, keymap) != -1) {
-
-    WM_keymap_clear(keymap);
-    BLI_remlink(&keyconf->keymaps, keymap);
-    MEM_freeN(keymap);
-
-    return true;
+  if (UNLIKELY(BLI_findindex(&keyconf->keymaps, keymap) == -1)) {
+    return false;
   }
-  return false;
+
+  WM_keymap_clear(keymap);
+  BLI_remlink(&keyconf->keymaps, keymap);
+  MEM_freeN(keymap);
+
+  return true;
 }
 
 bool WM_keymap_poll(bContext *C, wmKeyMap *keymap)
@@ -546,17 +557,18 @@ wmKeyMapItem *WM_keymap_add_item_copy(wmKeyMap *keymap, wmKeyMapItem *kmi_src)
 
 bool WM_keymap_remove_item(wmKeyMap *keymap, wmKeyMapItem *kmi)
 {
-  if (BLI_findindex(&keymap->items, kmi) != -1) {
-    if (kmi->ptr) {
-      WM_operator_properties_free(kmi->ptr);
-      MEM_freeN(kmi->ptr);
-    }
-    BLI_freelinkN(&keymap->items, kmi);
-
-    WM_keyconfig_update_tag(keymap, nullptr);
-    return true;
+  if (UNLIKELY(BLI_findindex(&keymap->items, kmi) == -1)) {
+    return false;
   }
-  return false;
+
+  if (kmi->ptr) {
+    WM_operator_properties_free(kmi->ptr);
+    MEM_freeN(kmi->ptr);
+  }
+  BLI_freelinkN(&keymap->items, kmi);
+
+  WM_keyconfig_update_tag(keymap, nullptr);
+  return true;
 }
 
 /** \} */
@@ -1359,11 +1371,10 @@ static wmKeyMapItem *wm_keymap_item_find_in_keymap(wmKeyMap *keymap,
           wmOperatorType *ot = WM_operatortype_find(opname, true);
           if (ot) {
             /* make a copy of the properties and set unset ones to their default values. */
-            PointerRNA opptr;
             IDProperty *properties_default = IDP_CopyProperty(
                 static_cast<const IDProperty *>(kmi->ptr->data));
 
-            RNA_pointer_create(nullptr, ot->srna, properties_default, &opptr);
+            PointerRNA opptr = RNA_pointer_create(nullptr, ot->srna, properties_default);
             WM_operator_properties_default(&opptr, true);
 
             if (IDP_EqualsProperties_ex(properties, properties_default, is_strict)) {
@@ -1588,10 +1599,9 @@ static wmKeyMapItem *wm_keymap_item_find(const bContext *C,
   if (!found && properties) {
     if (ot && ot->prop) { /* XXX Shall we also check ot->prop is actually an enum? */
       /* make a copy of the properties and unset the 'ot->prop' one if set. */
-      PointerRNA opptr;
       IDProperty *properties_temp = IDP_CopyProperty(properties);
 
-      RNA_pointer_create(nullptr, ot->srna, properties_temp, &opptr);
+      PointerRNA opptr = RNA_pointer_create(nullptr, ot->srna, properties_temp);
 
       if (RNA_property_is_set(&opptr, ot->prop)) {
         /* For operator that has enum menu,
@@ -1611,10 +1621,9 @@ static wmKeyMapItem *wm_keymap_item_find(const bContext *C,
     if (!found && is_strict && properties) {
       if (ot) {
         /* make a copy of the properties and set unset ones to their default values. */
-        PointerRNA opptr;
         IDProperty *properties_default = IDP_CopyProperty(properties);
 
-        RNA_pointer_create(nullptr, ot->srna, properties_default, &opptr);
+        PointerRNA opptr = RNA_pointer_create(nullptr, ot->srna, properties_default);
         WM_operator_properties_default(&opptr, true);
 
         wmKeyMap *km;
@@ -1846,26 +1855,12 @@ void WM_keyconfig_update(wmWindowManager *wm)
   }
 
   if (wm_keymap_update_flag & WM_KEYMAP_UPDATE_OPERATORTYPE) {
-    /* an operatortype has been removed, this won't happen often
-     * but when it does we have to check _every_ keymap item */
-    ListBase *keymaps_lb[] = {
-        &U.user_keymaps,
-        &wm->userconf->keymaps,
-        &wm->defaultconf->keymaps,
-        &wm->addonconf->keymaps,
-        nullptr,
-    };
-
-    int i;
-
-    for (i = 0; keymaps_lb[i]; i++) {
-      wm_keymap_item_properties_update_ot_from_list(keymaps_lb[i]);
-    }
-
+    /* One or more operator-types have been removed, this won't happen often
+     * but when it does we have to check _every_ key-map item. */
+    wm_keymap_item_properties_update_ot_from_list(&U.user_keymaps);
     LISTBASE_FOREACH (wmKeyConfig *, kc, &wm->keyconfigs) {
       wm_keymap_item_properties_update_ot_from_list(&kc->keymaps);
     }
-
     wm_keymap_update_flag &= ~WM_KEYMAP_UPDATE_OPERATORTYPE;
   }
 

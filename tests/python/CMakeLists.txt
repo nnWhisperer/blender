@@ -314,6 +314,22 @@ add_blender_test(
 )
 
 # ------------------------------------------------------------------------------
+# NODE GROUP TESTS
+add_blender_test(
+  bl_node_group_compat
+  --python ${CMAKE_CURRENT_LIST_DIR}/bl_node_group_compat.py
+  --
+  --testdir "${TEST_SRC_DIR}/node_group"
+)
+
+add_blender_test(
+  bl_node_group_interface
+  --python ${CMAKE_CURRENT_LIST_DIR}/bl_node_group_interface.py
+  --
+  --testdir "${TEST_SRC_DIR}/node_group"
+)
+
+# ------------------------------------------------------------------------------
 # IO TESTS
 
 # STL Import tests
@@ -717,14 +733,48 @@ if(WITH_COMPOSITOR_CPU)
 
     foreach(comp_test ${compositor_tests})
       add_python_test(
-        compositor_${comp_test}_test
-        ${CMAKE_CURRENT_LIST_DIR}/compositor_render_tests.py
+        compositor_${comp_test}_cpu_test
+        ${CMAKE_CURRENT_LIST_DIR}/compositor_cpu_render_tests.py
         -blender "${TEST_BLENDER_EXE}"
         -testdir "${TEST_SRC_DIR}/compositor/${comp_test}"
         -idiff "${OPENIMAGEIO_IDIFF}"
-        -outdir "${TEST_OUT_DIR}/compositor"
+        -outdir "${TEST_OUT_DIR}/compositor_cpu"
       )
     endforeach()
+
+  endif()
+endif()
+
+# NOTE: WITH_COMPOSITOR_CPU is needed for rendering.
+if(WITH_COMPOSITOR_REALTIME_TESTS AND WITH_COMPOSITOR_CPU)
+  if(NOT OPENIMAGEIO_IDIFF)
+      message(WARNING "Disabling realtime compositor tests because OIIO idiff does not exist")
+    else()
+      set(compositor_tests
+          color
+          converter
+          filter
+          input
+          output
+          vector
+
+          multiple_node_setups
+        )
+
+      if(WITH_LIBMV)
+        list(APPEND compositor_tests distort matte)
+      endif()
+
+      foreach(comp_test ${compositor_tests})
+        add_python_test(
+          compositor_${comp_test}_realtime_test
+          ${CMAKE_CURRENT_LIST_DIR}/compositor_realtime_render_tests.py
+          -blender "${TEST_BLENDER_EXE}"
+          -testdir "${TEST_SRC_DIR}/compositor/${comp_test}"
+          -idiff "${OPENIMAGEIO_IDIFF}"
+          -outdir "${TEST_OUT_DIR}/compositor_realtime"
+        )
+      endforeach()
   endif()
 endif()
 

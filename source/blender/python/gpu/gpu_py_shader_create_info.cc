@@ -17,6 +17,7 @@
 #include "intern/gpu_shader_create_info.hh"
 
 #include "../generic/py_capi_utils.h"
+#include "../generic/python_compat.h"
 
 #include "gpu_py_shader.h" /* own include */
 
@@ -528,6 +529,7 @@ static PyObject *pygpu_shader_info_fragment_out(BPyGPUShaderCreateInfo *self,
 
   static const char *_keywords[] = {"slot", "type", "name", "blend", nullptr};
   static _PyArg_Parser _parser = {
+      PY_ARG_PARSER_HEAD_COMPAT()
       "i"  /* `slot` */
       "O&" /* `type` */
       "s"  /* `name` */
@@ -632,6 +634,7 @@ static PyObject *pygpu_shader_info_image(BPyGPUShaderCreateInfo *self,
 
   static const char *_keywords[] = {"slot", "format", "type", "name", "qualifiers", nullptr};
   static _PyArg_Parser _parser = {
+      PY_ARG_PARSER_HEAD_COMPAT()
       "i"  /* `slot` */
       "O&" /* `format` */
       "O&" /* `type` */
@@ -723,12 +726,20 @@ static int constant_type_size(Type type)
     case Type::UINT:
     case Type::UCHAR4:
     case Type::CHAR4:
-    case blender::gpu::shader::Type::VEC3_101010I2:
+    case Type::VEC3_101010I2:
+    case Type::USHORT2:
+    case Type::SHORT2:
       return 4;
+      break;
+    case Type::USHORT3:
+    case Type::SHORT3:
+      return 6;
       break;
     case Type::VEC2:
     case Type::UVEC2:
     case Type::IVEC2:
+    case Type::USHORT4:
+    case Type::SHORT4:
       return 8;
       break;
     case Type::VEC3:
@@ -746,16 +757,18 @@ static int constant_type_size(Type type)
     case Type::MAT4:
       return 64;
       break;
-    case blender::gpu::shader::Type::UCHAR:
-    case blender::gpu::shader::Type::CHAR:
+    case Type::UCHAR:
+    case Type::CHAR:
       return 1;
       break;
-    case blender::gpu::shader::Type::UCHAR2:
-    case blender::gpu::shader::Type::CHAR2:
+    case Type::UCHAR2:
+    case Type::CHAR2:
+    case Type::USHORT:
+    case Type::SHORT:
       return 2;
       break;
-    case blender::gpu::shader::Type::UCHAR3:
-    case blender::gpu::shader::Type::CHAR3:
+    case Type::UCHAR3:
+    case Type::CHAR3:
       return 3;
       break;
   }
@@ -815,6 +828,7 @@ static PyObject *pygpu_shader_info_push_constant(BPyGPUShaderCreateInfo *self,
 
   static const char *_keywords[] = {"type", "name", "size", nullptr};
   static _PyArg_Parser _parser = {
+      PY_ARG_PARSER_HEAD_COMPAT()
       "O&" /* `type` */
       "s"  /* `name` */
       "|"  /* Optional arguments. */

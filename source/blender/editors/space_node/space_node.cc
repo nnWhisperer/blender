@@ -6,6 +6,10 @@
  * \ingroup spnode
  */
 
+#include "AS_asset_representation.hh"
+
+#include "BLI_string.h"
+
 #include "DNA_ID.h"
 #include "DNA_gpencil_legacy_types.h"
 #include "DNA_light_types.h"
@@ -15,8 +19,10 @@
 
 #include "MEM_guardedalloc.h"
 
+#include "BKE_asset.h"
 #include "BKE_context.h"
 #include "BKE_gpencil_legacy.h"
+#include "BKE_idprop.h"
 #include "BKE_lib_id.h"
 #include "BKE_lib_query.h"
 #include "BKE_lib_remap.h"
@@ -35,7 +41,7 @@
 
 #include "DEG_depsgraph.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
@@ -672,9 +678,40 @@ static void node_main_region_draw(const bContext *C, ARegion *region)
 
 /* ************* dropboxes ************* */
 
-static bool node_group_drop_poll(bContext * /*C*/, wmDrag *drag, const wmEvent * /*event*/)
+static bool node_group_drop_poll(bContext *C, wmDrag *drag, const wmEvent * /*event*/)
 {
-  return WM_drag_is_ID_type(drag, ID_NT);
+  SpaceNode *snode = CTX_wm_space_node(C);
+
+  if (snode->edittree == nullptr) {
+    return false;
+  }
+
+  if (!WM_drag_is_ID_type(drag, ID_NT)) {
+    return false;
+  }
+
+  if (drag->type == WM_DRAG_ID) {
+    const bNodeTree *node_tree = reinterpret_cast<const bNodeTree *>(
+        WM_drag_get_local_ID(drag, ID_NT));
+    if (!node_tree) {
+      return false;
+    }
+    return node_tree->type == snode->edittree->type;
+  }
+
+  if (drag->type == WM_DRAG_ASSET) {
+    const wmDragAsset *asset_data = WM_drag_get_asset_data(drag, ID_NT);
+    if (!asset_data) {
+      return false;
+    }
+    const AssetMetaData *metadata = &asset_data->asset->get_metadata();
+    const IDProperty *tree_type = BKE_asset_metadata_idprop_find(metadata, "type");
+    if (!tree_type || IDP_Int(tree_type) != snode->edittree->type) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 static bool node_object_drop_poll(bContext *C, wmDrag *drag, const wmEvent * /*event*/)
@@ -702,11 +739,18 @@ static bool node_mask_drop_poll(bContext * /*C*/, wmDrag *drag, const wmEvent * 
   return WM_drag_is_ID_type(drag, ID_MSK);
 }
 
+static bool node_material_drop_poll(bContext *C, wmDrag *drag, const wmEvent * /*event*/)
+{
+  return WM_drag_is_ID_type(drag, ID_MA) && !UI_but_active_drop_name(C);
+}
+
 static void node_group_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop)
 {
   ID *id = WM_drag_get_local_ID_or_import_from_asset(C, drag, 0);
 
   RNA_int_set(drop->ptr, "session_uuid", int(id->session_uuid));
+
+  RNA_boolean_set(drop->ptr, "show_datablock_in_node", (drag->type != WM_DRAG_ASSET));
 }
 
 static void node_id_drop_copy(bContext *C, wmDrag *drag, wmDropBox *drop)
@@ -766,6 +810,12 @@ static void node_dropboxes()
   WM_dropbox_add(lb,
                  "NODE_OT_add_mask",
                  node_mask_drop_poll,
+                 node_id_drop_copy,
+                 WM_drag_free_imported_drag_ID,
+                 nullptr);
+  WM_dropbox_add(lb,
+                 "NODE_OT_add_material",
+                 node_material_drop_poll,
                  node_id_drop_copy,
                  WM_drag_free_imported_drag_ID,
                  nullptr);
@@ -1036,8 +1086,8 @@ static void node_foreach_id(SpaceLink *space_link, LibraryForeachIDData *data)
   const int data_flags = BKE_lib_query_foreachid_process_flags_get(data);
   const bool is_readonly = (data_flags & IDWALK_READONLY) != 0;
   const bool allow_pointer_access = (data_flags & IDWALK_NO_ORIG_POINTERS_ACCESS) == 0;
-  const bool is_embedded_nodetree = snode->id != nullptr && allow_pointer_access &&
-                                    ntreeFromID(snode->id) == snode->nodetree;
+  bool is_embedded_nodetree = snode->id != nullptr && allow_pointer_access &&
+                              ntreeFromID(snode->id) == snode->nodetree;
 
   BKE_LIB_FOREACHID_PROCESS_ID(data, snode->id, IDWALK_CB_NOP);
   BKE_LIB_FOREACHID_PROCESS_ID(data, snode->from, IDWALK_CB_NOP);
@@ -1074,10 +1124,21 @@ static void node_foreach_id(SpaceLink *space_link, LibraryForeachIDData *data)
              (snode->nodetree->id.flag & LIB_EMBEDDED_DATA) == 0 ||
              snode->nodetree == ntreeFromID(snode->id));
 
+  /* This is mainly here for readfile case ('lib_link' process), as in such case there is no access
+   * to original data allowed, so no way to know whether the SpaceNode nodetree pointer is an
+   * embedded one or not. */
+  if (!is_readonly && snode->id && !snode->nodetree) {
+    is_embedded_nodetree = true;
+    snode->nodetree = ntreeFromID(snode->id);
+    if (path != nullptr) {
+      path->nodetree = snode->nodetree;
+    }
+  }
+
   if (path != nullptr) {
     for (path = path->next; path != nullptr; path = path->next) {
       BLI_assert(path->nodetree != nullptr);
-      if ((data_flags & IDWALK_NO_ORIG_POINTERS_ACCESS) == 0) {
+      if (allow_pointer_access) {
         BLI_assert((path->nodetree->id.flag & LIB_EMBEDDED_DATA) == 0);
       }
 
@@ -1156,57 +1217,6 @@ static void node_space_blend_read_data(BlendDataReader *reader, SpaceLink *sl)
   snode->runtime = nullptr;
 }
 
-static void node_space_blend_read_lib(BlendLibReader *reader, ID *parent_id, SpaceLink *sl)
-{
-  SpaceNode *snode = (SpaceNode *)sl;
-
-  /* node tree can be stored locally in id too, link this first */
-  BLO_read_id_address(reader, parent_id, &snode->id);
-  BLO_read_id_address(reader, parent_id, &snode->from);
-
-  bNodeTree *ntree = snode->id ? ntreeFromID(snode->id) : nullptr;
-  if (ntree) {
-    snode->nodetree = ntree;
-  }
-  else {
-    BLO_read_id_address(reader, parent_id, &snode->nodetree);
-  }
-
-  bNodeTreePath *path;
-  for (path = static_cast<bNodeTreePath *>(snode->treepath.first); path; path = path->next) {
-    if (path == snode->treepath.first) {
-      /* first nodetree in path is same as snode->nodetree */
-      path->nodetree = snode->nodetree;
-    }
-    else {
-      BLO_read_id_address(reader, parent_id, &path->nodetree);
-    }
-
-    if (!path->nodetree) {
-      break;
-    }
-  }
-
-  /* remaining path entries are invalid, remove */
-  bNodeTreePath *path_next;
-  for (; path; path = path_next) {
-    path_next = path->next;
-
-    BLI_remlink(&snode->treepath, path);
-    MEM_freeN(path);
-  }
-
-  /* edittree is just the last in the path,
-   * set this directly since the path may have been shortened above */
-  if (snode->treepath.last) {
-    path = static_cast<bNodeTreePath *>(snode->treepath.last);
-    snode->edittree = path->nodetree;
-  }
-  else {
-    snode->edittree = nullptr;
-  }
-}
-
 static void node_space_blend_write(BlendWriter *writer, SpaceLink *sl)
 {
   SpaceNode *snode = (SpaceNode *)sl;
@@ -1247,7 +1257,7 @@ void ED_spacetype_node()
   st->space_subtype_get = node_space_subtype_get;
   st->space_subtype_set = node_space_subtype_set;
   st->blend_read_data = node_space_blend_read_data;
-  st->blend_read_lib = node_space_blend_read_lib;
+  st->blend_read_after_liblink = nullptr;
   st->blend_write = node_space_blend_write;
 
   /* regions: main window */

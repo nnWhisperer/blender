@@ -56,7 +56,7 @@
 
 #include "CLG_log.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 using blender::float3;
 using blender::IndexRange;
@@ -134,7 +134,9 @@ static void curve_free_data(ID *id)
 
 static void curve_foreach_id(ID *id, LibraryForeachIDData *data)
 {
-  Curve *curve = (Curve *)id;
+  Curve *curve = reinterpret_cast<Curve *>(id);
+  const int flag = BKE_lib_query_foreachid_process_flags_get(data);
+
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, curve->bevobj, IDWALK_CB_NOP);
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, curve->taperobj, IDWALK_CB_NOP);
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, curve->textoncurve, IDWALK_CB_NOP);
@@ -146,6 +148,10 @@ static void curve_foreach_id(ID *id, LibraryForeachIDData *data)
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, curve->vfontb, IDWALK_CB_USER);
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, curve->vfonti, IDWALK_CB_USER);
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, curve->vfontbi, IDWALK_CB_USER);
+
+  if (flag & IDWALK_DO_DEPRECATED_POINTERS) {
+    BKE_LIB_FOREACHID_PROCESS_ID_NOCHECK(data, curve->ipo, IDWALK_CB_USER);
+  }
 }
 
 static void curve_blend_write(BlendWriter *writer, ID *id, const void *id_address)
@@ -266,43 +272,6 @@ static void curve_blend_read_data(BlendDataReader *reader, ID *id)
   }
 }
 
-static void curve_blend_read_lib(BlendLibReader *reader, ID *id)
-{
-  Curve *cu = (Curve *)id;
-  for (int a = 0; a < cu->totcol; a++) {
-    BLO_read_id_address(reader, id, &cu->mat[a]);
-  }
-
-  BLO_read_id_address(reader, id, &cu->bevobj);
-  BLO_read_id_address(reader, id, &cu->taperobj);
-  BLO_read_id_address(reader, id, &cu->textoncurve);
-  BLO_read_id_address(reader, id, &cu->vfont);
-  BLO_read_id_address(reader, id, &cu->vfontb);
-  BLO_read_id_address(reader, id, &cu->vfonti);
-  BLO_read_id_address(reader, id, &cu->vfontbi);
-
-  BLO_read_id_address(reader, id, &cu->ipo); /* XXX deprecated - old animation system */
-  BLO_read_id_address(reader, id, &cu->key);
-}
-
-static void curve_blend_read_expand(BlendExpander *expander, ID *id)
-{
-  Curve *cu = (Curve *)id;
-  for (int a = 0; a < cu->totcol; a++) {
-    BLO_expand(expander, cu->mat[a]);
-  }
-
-  BLO_expand(expander, cu->vfont);
-  BLO_expand(expander, cu->vfontb);
-  BLO_expand(expander, cu->vfonti);
-  BLO_expand(expander, cu->vfontbi);
-  BLO_expand(expander, cu->key);
-  BLO_expand(expander, cu->ipo); /* XXX deprecated - old animation system */
-  BLO_expand(expander, cu->bevobj);
-  BLO_expand(expander, cu->taperobj);
-  BLO_expand(expander, cu->textoncurve);
-}
-
 IDTypeInfo IDType_ID_CU_LEGACY = {
     /*id_code*/ ID_CU_LEGACY,
     /*id_filter*/ FILTER_ID_CU_LEGACY,
@@ -325,8 +294,7 @@ IDTypeInfo IDType_ID_CU_LEGACY = {
 
     /*blend_write*/ curve_blend_write,
     /*blend_read_data*/ curve_blend_read_data,
-    /*blend_read_lib*/ curve_blend_read_lib,
-    /*blend_read_expand*/ curve_blend_read_expand,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 
@@ -4064,32 +4032,49 @@ void BKE_nurb_handle_calc_simple_auto(Nurb *nu, BezTriple *bezt)
   }
 }
 
-void BKE_nurb_bezt_handle_test(BezTriple *bezt,
-                               const eBezTriple_Flag__Alias sel_flag,
-                               const bool use_handle,
-                               const bool use_around_local)
-{
-  short flag = 0;
-
 #define SEL_F1 (1 << 0)
 #define SEL_F2 (1 << 1)
 #define SEL_F3 (1 << 2)
 
-  if (use_handle) {
-    if (bezt->f1 & sel_flag) {
-      flag |= SEL_F1;
-    }
-    if (bezt->f2 & sel_flag) {
-      flag |= SEL_F2;
-    }
-    if (bezt->f3 & sel_flag) {
-      flag |= SEL_F3;
-    }
-  }
-  else {
-    flag = (bezt->f2 & sel_flag) ? (SEL_F1 | SEL_F2 | SEL_F3) : 0;
-  }
+short BKE_nurb_bezt_handle_test_calc_flag(const BezTriple *bezt,
+                                          const eBezTriple_Flag__Alias sel_flag,
+                                          const eNurbHandleTest_Mode handle_mode)
+{
+  short flag = 0;
 
+  switch (handle_mode) {
+    case NURB_HANDLE_TEST_KNOT_ONLY: {
+      flag = (bezt->f2 & sel_flag) ? (SEL_F1 | SEL_F2 | SEL_F3) : 0;
+      break;
+    }
+    case NURB_HANDLE_TEST_KNOT_OR_EACH:
+      if (bezt->f2 & sel_flag) {
+        flag = (bezt->f2 & sel_flag) ? (SEL_F1 | SEL_F2 | SEL_F3) : 0;
+        break;
+      }
+      [[fallthrough]];
+    case NURB_HANDLE_TEST_EACH: {
+      if (bezt->f1 & sel_flag) {
+        flag |= SEL_F1;
+      }
+      if (bezt->f2 & sel_flag) {
+        flag |= SEL_F2;
+      }
+      if (bezt->f3 & sel_flag) {
+        flag |= SEL_F3;
+      }
+      break;
+    }
+  }
+  return flag;
+}
+
+void BKE_nurb_bezt_handle_test(BezTriple *bezt,
+                               const eBezTriple_Flag__Alias sel_flag,
+                               const eNurbHandleTest_Mode handle_mode,
+                               const bool use_around_local)
+{
+  short flag = BKE_nurb_bezt_handle_test_calc_flag(bezt, sel_flag, handle_mode);
   if (use_around_local) {
     flag &= ~SEL_F2;
   }
@@ -4114,13 +4099,15 @@ void BKE_nurb_bezt_handle_test(BezTriple *bezt,
       }
     }
   }
+}
 
 #undef SEL_F1
 #undef SEL_F2
 #undef SEL_F3
-}
 
-void BKE_nurb_handles_test(Nurb *nu, const bool use_handle, const bool use_around_local)
+void BKE_nurb_handles_test(Nurb *nu,
+                           const eNurbHandleTest_Mode handle_mode,
+                           const bool use_around_local)
 {
   BezTriple *bezt;
   int a;
@@ -4132,7 +4119,7 @@ void BKE_nurb_handles_test(Nurb *nu, const bool use_handle, const bool use_aroun
   bezt = nu->bezt;
   a = nu->pntsu;
   while (a--) {
-    BKE_nurb_bezt_handle_test(bezt, SELECT, use_handle, use_around_local);
+    BKE_nurb_bezt_handle_test(bezt, SELECT, handle_mode, use_around_local);
     bezt++;
   }
 
@@ -4227,7 +4214,9 @@ void BKE_nurbList_handles_autocalc(ListBase *editnurb, uint8_t flag)
   }
 }
 
-void BKE_nurbList_handles_set(ListBase *editnurb, const char code)
+void BKE_nurbList_handles_set(ListBase *editnurb,
+                              eNurbHandleTest_Mode handle_mode,
+                              const char code)
 {
   BezTriple *bezt;
   int a;
@@ -4238,11 +4227,12 @@ void BKE_nurbList_handles_set(ListBase *editnurb, const char code)
         bezt = nu->bezt;
         a = nu->pntsu;
         while (a--) {
-          if ((bezt->f1 & SELECT) || (bezt->f3 & SELECT)) {
-            if (bezt->f1 & SELECT) {
+          const short flag = BKE_nurb_bezt_handle_test_calc_flag(bezt, SELECT, handle_mode);
+          if ((flag & (1 << 0)) || (flag & (1 << 2))) {
+            if (flag & (1 << 0)) {
               bezt->h1 = code;
             }
-            if (bezt->f3 & SELECT) {
+            if (flag & (1 << 2)) {
               bezt->h2 = code;
             }
             if (bezt->h1 != bezt->h2) {
@@ -4279,8 +4269,9 @@ void BKE_nurbList_handles_set(ListBase *editnurb, const char code)
           bezt = nu->bezt;
           a = nu->pntsu;
           while (a--) {
-            if (((bezt->f1 & SELECT) && bezt->h1 != HD_FREE) ||
-                ((bezt->f3 & SELECT) && bezt->h2 != HD_FREE)) {
+            const short flag = BKE_nurb_bezt_handle_test_calc_flag(bezt, SELECT, handle_mode);
+            if (((flag & (1 << 0)) && bezt->h1 != HD_FREE) ||
+                ((flag & (1 << 2)) && bezt->h2 != HD_FREE)) {
               h_new = HD_AUTO;
               break;
             }

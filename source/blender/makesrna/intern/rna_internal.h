@@ -175,6 +175,7 @@ void RNA_def_modifier(struct BlenderRNA *brna);
 void RNA_def_nla(struct BlenderRNA *brna);
 void RNA_def_nodetree(struct BlenderRNA *brna);
 void RNA_def_node_socket_subtypes(struct BlenderRNA *brna);
+void RNA_def_node_tree_interface(struct BlenderRNA *brna);
 void RNA_def_object(struct BlenderRNA *brna);
 void RNA_def_object_force(struct BlenderRNA *brna);
 void RNA_def_packedfile(struct BlenderRNA *brna);
@@ -403,6 +404,9 @@ char *rna_TextureSlot_path(const struct PointerRNA *ptr);
 char *rna_Node_ImageUser_path(const struct PointerRNA *ptr);
 char *rna_CameraBackgroundImage_image_or_movieclip_user_path(const struct PointerRNA *ptr);
 
+/* Node socket subtypes for group interface. */
+void rna_def_node_socket_interface_subtypes(BlenderRNA *brna);
+
 /* Set U.is_dirty and redraw. */
 
 /**
@@ -421,6 +425,7 @@ void RNA_api_action(StructRNA *srna);
 void RNA_api_animdata(struct StructRNA *srna);
 void RNA_api_armature_edit_bone(StructRNA *srna);
 void RNA_api_bone(StructRNA *srna);
+void RNA_api_bonecollection(StructRNA *srna);
 void RNA_api_camera(StructRNA *srna);
 void RNA_api_curve(StructRNA *srna);
 void RNA_api_curve_nurb(StructRNA *srna);

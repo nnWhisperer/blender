@@ -28,12 +28,6 @@
 
 #include "rna_internal.h"
 
-#ifdef _WIN32
-#  ifndef snprintf
-#    define snprintf _snprintf
-#  endif
-#endif
-
 #include "CLG_log.h"
 
 static CLG_LogRef LOG = {"makesrna"};
@@ -67,10 +61,10 @@ static bool file_older(const char *file1, const char *file2)
   }
 
   if (stat(file1, &st1)) {
-    return 0;
+    return false;
   }
   if (stat(file2, &st2)) {
-    return 0;
+    return false;
   }
 
   return (st1.st_mtime < st2.st_mtime);
@@ -426,17 +420,17 @@ static void rna_print_id_get(FILE *f, PropertyDefRNA * /*dp*/)
 static void rna_construct_function_name(
     char *buffer, int size, const char *structname, const char *propname, const char *type)
 {
-  snprintf(buffer, size, "%s_%s_%s", structname, propname, type);
+  BLI_snprintf(buffer, size, "%s_%s_%s", structname, propname, type);
 }
 
 static void rna_construct_wrapper_function_name(
     char *buffer, int size, const char *structname, const char *propname, const char *type)
 {
   if (type == nullptr || type[0] == '\0') {
-    snprintf(buffer, size, "%s_%s", structname, propname);
+    BLI_snprintf(buffer, size, "%s_%s", structname, propname);
   }
   else {
-    snprintf(buffer, size, "%s_%s_%s", structname, propname, type);
+    BLI_snprintf(buffer, size, "%s_%s_%s", structname, propname, type);
   }
 }
 
@@ -2975,11 +2969,11 @@ static void rna_def_struct_function_impl_cpp(FILE *f, StructRNA *srna, FunctionD
         fprintf(f, "\t\t::%s *retdata = ", rna_parameter_type_name(dp->prop));
         rna_def_struct_function_call_impl_cpp(f, srna, dfunc);
         if (ret_srna->flag & STRUCT_ID) {
-          fprintf(f, "\t\tRNA_id_pointer_create((::ID *) retdata, &result);\n");
+          fprintf(f, "\t\tresult = RNA_id_pointer_create((::ID *) retdata);\n");
         }
         else {
           fprintf(f,
-                  "\t\tRNA_pointer_create((::ID *) ptr.owner_id, &RNA_%s, retdata, &result);\n",
+                  "\t\tresult = RNA_pointer_create((::ID *) ptr.owner_id, &RNA_%s, retdata);\n",
                   (const char *)pprop->type);
         }
       }
@@ -3391,6 +3385,27 @@ static void rna_def_function_funcs(FILE *f, StructDefRNA *dsrna, FunctionDefRNA 
   fprintf(f, "}\n\n");
 
   dfunc->gencall = funcname;
+}
+
+static void rna_sanity_checks()
+{
+  /* Ensure RNA enum definitions follow naming convention. */
+  {
+#define DEF_ENUM(id) #id,
+    const char *rna_enum_id_array[] = {
+#include "RNA_enum_items.hh"
+    };
+    for (int i = 0; i < ARRAY_SIZE(rna_enum_id_array); i++) {
+      if (!(BLI_str_startswith(rna_enum_id_array[i], "rna_enum_") &&
+            BLI_str_endswith(rna_enum_id_array[i], "_items")))
+      {
+        fprintf(stderr,
+                "Error: enum defined in \"RNA_enum_items.hh\" "
+                "doesn't confirm to \"rna_enum_*_items\" convention!\n");
+        DefRNA.error = true;
+      }
+    }
+  }
 }
 
 static void rna_auto_types()
@@ -4090,7 +4105,7 @@ static void rna_generate_property(FILE *f, StructRNA *srna, const char *nest, Pr
           }
         }
         else {
-          if (!defaultfound && !(eprop->item_fn && eprop->item == DummyRNA_NULL_items)) {
+          if (!defaultfound && !(eprop->item_fn && eprop->item == rna_enum_dummy_NULL_items)) {
             CLOG_ERROR(&LOG,
                        "%s%s.%s, enum default is not in items.",
                        srna->identifier,
@@ -4736,6 +4751,7 @@ static RNAProcessItem PROCESS_ITEMS[] = {
     {"rna_nla.cc", nullptr, RNA_def_nla},
     {"rna_nodetree.cc", nullptr, RNA_def_nodetree},
     {"rna_node_socket.cc", nullptr, RNA_def_node_socket_subtypes},
+    {"rna_node_tree_interface.cc", nullptr, RNA_def_node_tree_interface},
     {"rna_object.cc", "rna_object_api.cc", RNA_def_object},
     {"rna_object_force.cc", nullptr, RNA_def_object_force},
     {"rna_depsgraph.cc", nullptr, RNA_def_depsgraph},
@@ -5540,6 +5556,11 @@ static int rna_preprocess(const char *outfile, const char *public_header_outfile
         }
       }
     }
+  }
+
+  rna_sanity_checks();
+  if (DefRNA.error) {
+    status = EXIT_FAILURE;
   }
 
   rna_auto_types();

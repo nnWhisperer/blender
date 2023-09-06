@@ -103,7 +103,7 @@ struct TransformProperties {
   float ob_dims_orig[3];
   float ob_scale_orig[3];
   float ob_dims[3];
-  float active_vertex_weight;
+  blender::Vector<float> vertex_weights;
   /* Floats only (treated as an array). */
   TransformMedian ve_median, median;
   bool tag_for_update;
@@ -278,8 +278,15 @@ static void apply_scale_factor_clamp(float *val,
 static TransformProperties *v3d_transform_props_ensure(View3D *v3d)
 {
   if (v3d->runtime.properties_storage == nullptr) {
-    v3d->runtime.properties_storage = MEM_callocN(sizeof(TransformProperties),
-                                                  "TransformProperties");
+    TransformProperties *tfp = static_cast<TransformProperties *>(
+        MEM_callocN(sizeof(TransformProperties), "TransformProperties"));
+    /* Construct C++ structures in otherwise zero initialized struct. */
+    new (tfp) TransformProperties();
+
+    v3d->runtime.properties_storage = tfp;
+    v3d->runtime.properties_storage_free = [](void *properties_storage) {
+      MEM_delete(static_cast<TransformProperties *>(properties_storage));
+    };
   }
   return static_cast<TransformProperties *>(v3d->runtime.properties_storage);
 }
@@ -429,7 +436,7 @@ static void v3d_editvertex_buts(uiLayout *layout, View3D *v3d, Object *ob, float
     }
 
     if (totcurvedata == 1) {
-      RNA_pointer_create(&cu->id, seltype, selp, &data_ptr);
+      data_ptr = RNA_pointer_create(&cu->id, seltype, selp);
     }
   }
   else if (ob->type == OB_LATTICE) {
@@ -457,7 +464,7 @@ static void v3d_editvertex_buts(uiLayout *layout, View3D *v3d, Object *ob, float
     }
 
     if (totlattdata == 1) {
-      RNA_pointer_create(&lt->id, seltype, selp, &data_ptr);
+      data_ptr = RNA_pointer_create(&lt->id, seltype, selp);
     }
   }
 
@@ -1187,7 +1194,7 @@ static void v3d_editvertex_buts(uiLayout *layout, View3D *v3d, Object *ob, float
         if (CU_IS_2D(cu)) {
           BKE_nurb_project_2d(nu);
         }
-        BKE_nurb_handles_test(nu, true, false); /* test for bezier too */
+        BKE_nurb_handles_test(nu, NURB_HANDLE_TEST_EACH, false); /* test for bezier too */
       }
     }
     else if ((ob->type == OB_LATTICE) && (apply_vcos || median_basis.lattice.weight)) {
@@ -1284,8 +1291,7 @@ static void v3d_object_dimension_buts(bContext *C, uiLayout *layout, View3D *v3d
     BKE_object_dimensions_set_ex(
         ob, tfp->ob_dims, axis_mask, tfp->ob_scale_orig, tfp->ob_obmat_orig);
 
-    PointerRNA obptr;
-    RNA_id_pointer_create(&ob->id, &obptr);
+    PointerRNA obptr = RNA_id_pointer_create(&ob->id);
     PropertyRNA *prop = RNA_struct_find_property(&obptr, "scale");
     RNA_property_update(C, &obptr, prop);
   }
@@ -1334,7 +1340,7 @@ static void update_active_vertex_weight(bContext *C, void *arg1, void * /*arg2*/
   MDeformVert *dv = ED_mesh_active_dvert_get_only(ob);
   const int vertex_group_index = POINTER_AS_INT(arg1);
   MDeformWeight *dw = BKE_defvert_find_index(dv, vertex_group_index);
-  dw->weight = tfp->active_vertex_weight;
+  dw->weight = tfp->vertex_weights[vertex_group_index];
 }
 
 static void view3d_panel_vgroup(const bContext *C, Panel *panel)
@@ -1355,7 +1361,7 @@ static void view3d_panel_vgroup(const bContext *C, Panel *panel)
     ToolSettings *ts = scene->toolsettings;
 
     wmOperatorType *ot;
-    PointerRNA op_ptr, tools_ptr;
+    PointerRNA op_ptr;
     PointerRNA *but_ptr;
 
     uiLayout *col, *bcol;
@@ -1374,7 +1380,7 @@ static void view3d_panel_vgroup(const bContext *C, Panel *panel)
     bcol = uiLayoutColumn(panel->layout, true);
     row = uiLayoutRow(bcol, true); /* The filter button row */
 
-    RNA_pointer_create(nullptr, &RNA_ToolSettings, ts, &tools_ptr);
+    PointerRNA tools_ptr = RNA_pointer_create(nullptr, &RNA_ToolSettings, ts);
     uiItemR(row, &tools_ptr, "vertex_group_subset", UI_ITEM_R_EXPAND, nullptr, ICON_NONE);
 
     col = uiLayoutColumn(bcol, true);
@@ -1382,6 +1388,8 @@ static void view3d_panel_vgroup(const bContext *C, Panel *panel)
     vgroup_validmap = BKE_object_defgroup_subset_from_select_type(
         ob, subset_type, &vgroup_tot, &subset_count);
     const ListBase *defbase = BKE_object_defgroup_list(ob);
+    const int vgroup_num = BLI_listbase_count(defbase);
+    tfp->vertex_weights.resize(vgroup_num);
 
     for (i = 0, dg = static_cast<bDeformGroup *>(defbase->first); dg; i++, dg = dg->next) {
       bool locked = (dg->flag & DG_LOCK_WEIGHT) != 0;
@@ -1419,7 +1427,8 @@ static void view3d_panel_vgroup(const bContext *C, Panel *panel)
 
           /* The weight group value */
           /* To be reworked still */
-          tfp->active_vertex_weight = dw->weight;
+          float &vertex_weight = tfp->vertex_weights[i];
+          vertex_weight = dw->weight;
           but = uiDefButF(block,
                           UI_BTYPE_NUM,
                           B_VGRP_PNL_EDIT_SINGLE + i,
@@ -1428,7 +1437,7 @@ static void view3d_panel_vgroup(const bContext *C, Panel *panel)
                           yco,
                           (x = UI_UNIT_X * 4),
                           UI_UNIT_Y,
-                          &tfp->active_vertex_weight,
+                          &vertex_weight,
                           0.0,
                           1.0,
                           0,
@@ -1622,17 +1631,16 @@ static void v3d_transform_butsR(uiLayout *layout, PointerRNA *ptr)
 static void v3d_posearmature_buts(uiLayout *layout, Object *ob)
 {
   bPoseChannel *pchan;
-  PointerRNA pchanptr;
   uiLayout *col;
 
-  pchan = BKE_pose_channel_active_if_layer_visible(ob);
+  pchan = BKE_pose_channel_active_if_bonecoll_visible(ob);
 
   if (!pchan) {
     uiItemL(layout, IFACE_("No Bone Active"), ICON_NONE);
     return;
   }
 
-  RNA_pointer_create(&ob->id, &RNA_PoseBone, pchan, &pchanptr);
+  PointerRNA pchanptr = RNA_pointer_create(&ob->id, &RNA_PoseBone, pchan);
 
   col = uiLayoutColumn(layout, false);
 
@@ -1647,7 +1655,6 @@ static void v3d_editarmature_buts(uiLayout *layout, Object *ob)
   bArmature *arm = static_cast<bArmature *>(ob->data);
   EditBone *ebone;
   uiLayout *col;
-  PointerRNA eboneptr;
 
   ebone = arm->act_edbone;
 
@@ -1656,7 +1663,7 @@ static void v3d_editarmature_buts(uiLayout *layout, Object *ob)
     return;
   }
 
-  RNA_pointer_create(&arm->id, &RNA_EditBone, ebone, &eboneptr);
+  PointerRNA eboneptr = RNA_pointer_create(&arm->id, &RNA_EditBone, ebone);
 
   col = uiLayoutColumn(layout, false);
   uiItemR(col, &eboneptr, "head", UI_ITEM_NONE, nullptr, ICON_NONE);
@@ -1678,7 +1685,6 @@ static void v3d_editarmature_buts(uiLayout *layout, Object *ob)
 
 static void v3d_editmetaball_buts(uiLayout *layout, Object *ob)
 {
-  PointerRNA mbptr, ptr;
   MetaBall *mball = static_cast<MetaBall *>(ob->data);
   uiLayout *col;
 
@@ -1687,9 +1693,7 @@ static void v3d_editmetaball_buts(uiLayout *layout, Object *ob)
     return;
   }
 
-  RNA_pointer_create(&mball->id, &RNA_MetaBall, mball, &mbptr);
-
-  RNA_pointer_create(&mball->id, &RNA_MetaElement, mball->lastelem, &ptr);
+  PointerRNA ptr = RNA_pointer_create(&mball->id, &RNA_MetaElement, mball->lastelem);
 
   col = uiLayoutColumn(layout, false);
   uiItemR(col, &ptr, "co", UI_ITEM_NONE, nullptr, ICON_NONE);
@@ -1797,9 +1801,7 @@ static void view3d_panel_transform(const bContext *C, Panel *panel)
     v3d_posearmature_buts(col, ob);
   }
   else {
-    PointerRNA obptr;
-
-    RNA_id_pointer_create(&ob->id, &obptr);
+    PointerRNA obptr = RNA_id_pointer_create(&ob->id);
     v3d_transform_butsR(col, &obptr);
 
     /* Dimensions and editmode are mostly the same check. */

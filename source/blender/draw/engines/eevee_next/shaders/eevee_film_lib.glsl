@@ -1,7 +1,10 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * Film accumulation utils functions.
- **/
+ */
 
 #pragma BLENDER_REQUIRE(common_view_lib.glsl)
 #pragma BLENDER_REQUIRE(common_math_geom_lib.glsl)
@@ -56,7 +59,7 @@ FilmSample film_sample_get(int sample_n, ivec2 texel_film)
 #  endif
 
   FilmSample film_sample = film_buf.samples[sample_n];
-  film_sample.texel += texel_film + film_buf.offset;
+  film_sample.texel += texel_film + film_buf.render_offset;
   /* Use extend on borders. */
   film_sample.texel = clamp(film_sample.texel, ivec2(0, 0), film_buf.render_extent - 1);
 
@@ -331,7 +334,7 @@ void film_combined_neighbor_boundbox(ivec2 texel, out vec4 min_c, out vec4 max_c
    * Compute Variance of neighborhood as described in:
    * "An Excursion in Temporal Supersampling" by Marco Salvi at GDC 2016.
    * and:
-   * "A Survey of Temporal Antialiasing Techniques" by Yang et al.
+   * "A Survey of Temporal Anti-aliasing Techniques" by Yang et al.
    */
 
   /* First 2 moments. */
@@ -349,7 +352,7 @@ void film_combined_neighbor_boundbox(ivec2 texel, out vec4 min_c, out vec4 max_c
   const float gamma = 1.25;
   /* Standard deviation. */
   vec4 sigma = sqrt(abs(mu2 - sqr(mu1)));
-  /* eq. 6 in "A Survey of Temporal Antialiasing Techniques". */
+  /* eq. 6 in "A Survey of Temporal Anti-aliasing Techniques". */
   min_c = mu1 - gamma * sigma;
   max_c = mu1 + gamma * sigma;
 #else
@@ -448,7 +451,7 @@ void film_store_combined(
   vec4 color_src, color_dst;
   float weight_src, weight_dst;
 
-  /* Undo the weighting to get final spatialy-filtered color. */
+  /* Undo the weighting to get final spatially-filtered color. */
   color_src = color / color_weight;
 
   if (film_buf.use_reprojection) {

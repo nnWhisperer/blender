@@ -44,10 +44,6 @@ typedef struct GreasePencilLayerRuntimeHandle GreasePencilLayerRuntimeHandle;
 typedef struct GreasePencilLayerGroupRuntimeHandle GreasePencilLayerGroupRuntimeHandle;
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct GreasePencil;
 struct BlendDataReader;
 struct BlendWriter;
@@ -235,6 +231,7 @@ typedef enum GreasePencilLayerTreeNodeFlag {
   GP_LAYER_TREE_NODE_MUTE = (1 << 3),
   GP_LAYER_TREE_NODE_USE_LIGHTS = (1 << 4),
   GP_LAYER_TREE_NODE_USE_ONION_SKINNING = (1 << 5),
+  GP_LAYER_TREE_NODE_EXPANDED = (1 << 6),
 } GreasePencilLayerTreeNodeFlag;
 
 struct GreasePencilLayerTreeGroup;
@@ -246,7 +243,7 @@ typedef struct GreasePencilLayerTreeNode {
   /**
    * Name of the layer/group. Dynamic length.
    */
-  char *name_ptr;
+  char *name;
   /**
    * One of `GreasePencilLayerTreeNodeType`.
    * Indicates the type of struct this element is.
@@ -538,7 +535,3 @@ typedef struct GreasePencil {
   void print_layer_tree();
 #endif
 } GreasePencil;
-
-#ifdef __cplusplus
-}
-#endif

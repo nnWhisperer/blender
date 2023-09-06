@@ -761,6 +761,7 @@ endif()
 option(WITH_GTESTS "Enable GTest unit testing" OFF)
 option(WITH_OPENGL_RENDER_TESTS "Enable OpenGL render related unit testing (Experimental)" OFF)
 option(WITH_OPENGL_DRAW_TESTS "Enable OpenGL UI drawing related unit testing (Experimental)" OFF)
+option(WITH_COMPOSITOR_REALTIME_TESTS "Enable regression testing for realtime compositor" OFF)
 # NOTE: All callers of this must add `TEST_PYTHON_EXE_EXTRA_ARGS` before any other arguments.
 set(TEST_PYTHON_EXE "" CACHE PATH "Python executable to run unit tests")
 mark_as_advanced(TEST_PYTHON_EXE)
@@ -944,11 +945,11 @@ Include the files needed for debugging python scripts with visual studio 2017+."
   option(WITH_WINDOWS_SCCACHE "Use sccache to speed up builds (Ninja builder only)" OFF)
   mark_as_advanced(WITH_WINDOWS_SCCACHE)
 
-  option(WITH_WINDOWS_PDB "Generate a pdb file for client side stacktraces" ON)
-  mark_as_advanced(WITH_WINDOWS_PDB)
+  option(WITH_WINDOWS_RELEASE_PDB "Generate a pdb file for client side stacktraces for release builds" ON)
+  mark_as_advanced(WITH_WINDOWS_RELEASE_PDB)
 
-  option(WITH_WINDOWS_STRIPPED_PDB "Use a stripped PDB file" ON)
-  mark_as_advanced(WITH_WINDOWS_STRIPPED_PDB)
+  option(WITH_WINDOWS_RELEASE_STRIPPED_PDB "Use a stripped PDB file for release builds" ON)
+  mark_as_advanced(WITH_WINDOWS_RELEASE_STRIPPED_PDB)
 
 endif()
 

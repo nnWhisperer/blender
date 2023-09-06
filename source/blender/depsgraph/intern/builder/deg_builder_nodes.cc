@@ -55,6 +55,7 @@
 #include "BKE_anim_data.h"
 #include "BKE_animsys.h"
 #include "BKE_armature.h"
+#include "BKE_bake_geometry_nodes_modifier.hh"
 #include "BKE_cachefile.h"
 #include "BKE_collection.h"
 #include "BKE_constraint.h"
@@ -87,7 +88,6 @@
 #include "BKE_rigidbody.h"
 #include "BKE_scene.h"
 #include "BKE_shader_fx.h"
-#include "BKE_simulation_state.hh"
 #include "BKE_sound.h"
 #include "BKE_tracking.h"
 #include "BKE_volume.h"
@@ -807,7 +807,7 @@ void DepsgraphNodeBuilder::build_object(int base_index,
   if (object->constraints.first != nullptr) {
     BuilderWalkUserData data;
     data.builder = this;
-    BKE_constraints_id_loop(&object->constraints, constraint_walk, &data);
+    BKE_constraints_id_loop(&object->constraints, constraint_walk, IDWALK_NOP, &data);
   }
   /* Object data. */
   build_object_data(object);
@@ -1276,8 +1276,7 @@ void DepsgraphNodeBuilder::build_driver(ID *id, FCurve *fcurve, int driver_index
 
 void DepsgraphNodeBuilder::build_driver_variables(ID *id, FCurve *fcurve)
 {
-  PointerRNA id_ptr;
-  RNA_id_pointer_create(id, &id_ptr);
+  PointerRNA id_ptr = RNA_id_pointer_create(id);
 
   build_driver_id_property(id_ptr, fcurve->rna_path);
 
@@ -1321,8 +1320,7 @@ void DepsgraphNodeBuilder::build_driver_scene_camera_variable(Scene *scene,
   /* This skips scene->camera, which was already handled by the caller. */
   LISTBASE_FOREACH (TimeMarker *, marker, &scene->markers) {
     if (!ELEM(marker->camera, nullptr, scene->camera)) {
-      PointerRNA camera_ptr;
-      RNA_id_pointer_create(&marker->camera->id, &camera_ptr);
+      PointerRNA camera_ptr = RNA_id_pointer_create(&marker->camera->id);
       build_driver_id_property(camera_ptr, camera_path);
     }
   }
@@ -1792,15 +1790,16 @@ void DepsgraphNodeBuilder::build_armature(bArmature *armature)
   build_idproperties(armature->id.properties);
   build_animdata(&armature->id);
   build_parameters(&armature->id);
-  /* Make sure pose is up-to-date with armature updates. */
-  bArmature *armature_cow = (bArmature *)get_cow_id(&armature->id);
-  add_operation_node(&armature->id,
-                     NodeType::ARMATURE,
-                     OperationCode::ARMATURE_EVAL,
-                     [armature_cow](::Depsgraph *depsgraph) {
-                       BKE_armature_refresh_layer_used(depsgraph, armature_cow);
-                     });
+  /* This operation is no longer necessary, as it was updating things with the bone layers (which
+   * got replaced by bone collections). However, it's still used by other depsgraph components as a
+   * dependency, so for now the node itself is kept as a no-op.
+   * TODO: remove this node & the references to it, if eventually it turns out we really don't need
+   * this.
+   */
+  add_operation_node(
+      &armature->id, NodeType::ARMATURE, OperationCode::ARMATURE_EVAL, [](::Depsgraph *) {});
   build_armature_bones(&armature->bonebase);
+  build_armature_bone_collections(&armature->collections);
 }
 
 void DepsgraphNodeBuilder::build_armature_bones(ListBase *bones)
@@ -1808,6 +1807,13 @@ void DepsgraphNodeBuilder::build_armature_bones(ListBase *bones)
   LISTBASE_FOREACH (Bone *, bone, bones) {
     build_idproperties(bone->prop);
     build_armature_bones(&bone->childbase);
+  }
+}
+
+void DepsgraphNodeBuilder::build_armature_bone_collections(ListBase *collections)
+{
+  LISTBASE_FOREACH (BoneCollection *, bcoll, collections) {
+    build_idproperties(bcoll->prop);
   }
 }
 
@@ -1953,11 +1959,13 @@ void DepsgraphNodeBuilder::build_nodetree(bNodeTree *ntree)
     }
   }
 
-  LISTBASE_FOREACH (bNodeSocket *, socket, &ntree->inputs) {
-    build_idproperties(socket->prop);
+  /* Needed for interface cache. */
+  ntree->ensure_topology_cache();
+  for (bNodeTreeInterfaceSocket *socket : ntree->interface_inputs()) {
+    build_idproperties(socket->properties);
   }
-  LISTBASE_FOREACH (bNodeSocket *, socket, &ntree->outputs) {
-    build_idproperties(socket->prop);
+  for (bNodeTreeInterfaceSocket *socket : ntree->interface_outputs()) {
+    build_idproperties(socket->properties);
   }
 
   /* TODO: link from nodetree to owner_component? */

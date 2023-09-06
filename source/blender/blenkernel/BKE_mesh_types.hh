@@ -72,10 +72,6 @@ struct MeshRuntime {
   Mesh *mesh_eval = nullptr;
   std::mutex eval_mutex;
 
-  /* A separate mutex is needed for normal calculation, because sometimes
-   * the normals are needed while #eval_mutex is already locked. */
-  std::mutex normals_mutex;
-
   /** Needed to ensure some thread-safety during render data pre-processing. */
   std::mutex render_mutex;
 
@@ -140,16 +136,21 @@ struct MeshRuntime {
    */
   SubsurfRuntimeData *subsurf_runtime_data = nullptr;
 
-  /**
-   * Caches for lazily computed vertex and face normals. These are stored here rather than in
-   * #CustomData because they can be calculated on a `const` mesh, and adding custom data layers on
-   * a `const` mesh is not thread-safe.
-   */
-  bool vert_normals_dirty = true;
-  bool face_normals_dirty = true;
-  mutable Vector<float3> vert_normals;
-  mutable Vector<float3> face_normals;
+  /** Caches for lazily computed vertex and face normals. */
+  SharedCache<Vector<float3>> vert_normals_cache;
+  SharedCache<Vector<float3>> face_normals_cache;
 
+  /**
+   * Cache of offsets for vert to face/corner maps. The same offsets array is used to group
+   * indices for both the vertex to face and vertex to corner maps.
+   */
+  SharedCache<Array<int>> vert_to_face_offset_cache;
+  /** Cache of indices for vert to face map. */
+  SharedCache<Array<int>> vert_to_face_map_cache;
+  /** Cache of indices for vert to corner map. */
+  SharedCache<Array<int>> vert_to_corner_map_cache;
+  /** Cache of face indices for each face corner. */
+  SharedCache<Array<int>> corner_to_face_map_cache;
   /** Cache of data about edges not used by faces. See #Mesh::loose_edges(). */
   SharedCache<LooseEdgeCache> loose_edges_cache;
   /** Cache of data about vertices not used by edges. See #Mesh::loose_verts(). */

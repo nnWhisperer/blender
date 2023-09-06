@@ -439,13 +439,6 @@ static void detect_workarounds()
     GLContext::generate_mipmap_workaround = true;
   }
 
-  /* Buggy interface query functions cause crashes when handling SSBOs (#93680) */
-  if (GPU_type_matches(GPU_DEVICE_INTEL, GPU_OS_ANY, GPU_DRIVER_ANY) &&
-      (strstr(renderer, "HD Graphics 4400") || strstr(renderer, "HD Graphics 4600")))
-  {
-    GCaps.shader_storage_buffer_objects_support = false;
-  }
-
   /* Certain Intel/AMD based platforms don't clear the viewport textures. Always clearing leads to
    * noticeable performance regressions on other platforms as well. */
   if (GPU_type_matches(GPU_DEVICE_ANY, GPU_OS_MAC, GPU_DRIVER_ANY) ||
@@ -563,6 +556,8 @@ void GLBackend::capabilities_init()
   GCaps.shader_storage_buffer_objects_support = epoxy_has_gl_extension(
       "GL_ARB_shader_storage_buffer_object");
   GCaps.transform_feedback_support = true;
+  GCaps.texture_view_support = epoxy_gl_version() >= 43 ||
+                               epoxy_has_gl_extension("GL_ARB_texture_view");
 
   /* GL specific capabilities. */
   glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &GCaps.max_texture_3d_size);

@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
+
 /**
  * Ray generation routines for each BSDF types.
  */
@@ -16,7 +20,7 @@
 #define RAY_BIAS_REFRACTION 0.02
 #define RAY_BIAS_DIFFUSE 0.02
 
-/* Returns viewspace ray. */
+/* Returns view-space ray. */
 vec3 ray_generate_direction(vec2 noise, ClosureReflection reflection, vec3 V, out float pdf)
 {
   vec2 noise_offset = sampling_rng_2D_get(SAMPLING_RAYTRACE_U);
@@ -35,7 +39,7 @@ vec3 ray_generate_direction(vec2 noise, ClosureReflection reflection, vec3 V, ou
   return sample_ggx_reflect(Xi, roughness_sqr, V, N, T, B, pdf);
 }
 
-/* Returns viewspace ray. */
+/* Returns view-space ray. */
 vec3 ray_generate_direction(vec2 noise, ClosureRefraction refraction, vec3 V, out float pdf)
 {
   vec2 noise_offset = sampling_rng_2D_get(SAMPLING_RAYTRACE_U);
@@ -54,7 +58,7 @@ vec3 ray_generate_direction(vec2 noise, ClosureRefraction refraction, vec3 V, ou
   return sample_ggx_refract(Xi, roughness_sqr, refraction.ior, V, N, T, B, pdf);
 }
 
-/* Returns viewspace ray. */
+/* Returns view-space ray. */
 vec3 ray_generate_direction(vec2 noise, ClosureDiffuse diffuse, vec3 V, out float pdf)
 {
   vec2 noise_offset = sampling_rng_2D_get(SAMPLING_RAYTRACE_U);

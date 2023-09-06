@@ -260,7 +260,7 @@ static int pyrna_struct_keyframe_parse(PointerRNA *ptr,
   if (r_options) {
     if (pyoptions &&
         (pyrna_enum_bitfield_from_set(
-             rna_enum_keying_flag_items_api, pyoptions, r_options, error_prefix) == -1))
+             rna_enum_keying_flag_api_items, pyoptions, r_options, error_prefix) == -1))
     {
       return -1;
     }
@@ -583,13 +583,13 @@ PyObject *pyrna_struct_driver_add(BPy_StructRNA *self, PyObject *args)
       int i = 0;
       ret = PyList_New(0);
       while ((fcu = BKE_fcurve_find(&adt->drivers, path_full, i++))) {
-        RNA_pointer_create(id, &RNA_FCurve, fcu, &tptr);
+        tptr = RNA_pointer_create(id, &RNA_FCurve, fcu);
         PyList_APPEND(ret, pyrna_struct_CreatePyObject(&tptr));
       }
     }
     else {
       fcu = BKE_fcurve_find(&adt->drivers, path_full, index);
-      RNA_pointer_create(id, &RNA_FCurve, fcu, &tptr);
+      tptr = RNA_pointer_create(id, &RNA_FCurve, fcu);
       ret = pyrna_struct_CreatePyObject(&tptr);
     }
 

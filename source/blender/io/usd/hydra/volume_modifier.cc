@@ -10,6 +10,7 @@
 #include "DNA_volume_types.h"
 
 #include "BLI_path_util.h"
+#include "BLI_string.h"
 
 #include "BKE_mesh.h"
 #include "BKE_modifier.h"
@@ -124,8 +125,7 @@ std::string VolumeModifierData::get_cached_file_path(std::string directory, int 
 {
   char file_path[FILE_MAX];
   char file_name[32];
-  snprintf(
-      file_name, sizeof(file_name), "%s_####%s", FLUID_NAME_DATA, FLUID_DOMAIN_EXTENSION_OPENVDB);
+  SNPRINTF(file_name, "%s_####%s", FLUID_NAME_DATA, FLUID_DOMAIN_EXTENSION_OPENVDB);
   BLI_path_frame(file_name, sizeof(file_name), frame, 0);
   BLI_path_join(file_path, sizeof(file_path), directory.c_str(), FLUID_DOMAIN_DIR_DATA, file_name);
 

@@ -1628,14 +1628,13 @@ static PointerRNA rna_ParticleInstanceModifier_particle_system_get(PointerRNA *p
 {
   ParticleInstanceModifierData *psmd = static_cast<ParticleInstanceModifierData *>(ptr->data);
   ParticleSystem *psys;
-  PointerRNA rptr;
 
   if (!psmd->ob) {
     return PointerRNA_NULL;
   }
 
   psys = static_cast<ParticleSystem *>(BLI_findlink(&psmd->ob->particlesystem, psmd->psys - 1));
-  RNA_pointer_create((ID *)psmd->ob, &RNA_ParticleSystem, psys, &rptr);
+  PointerRNA rptr = RNA_pointer_create((ID *)psmd->ob, &RNA_ParticleSystem, psys);
   return rptr;
 }
 
@@ -4812,6 +4811,7 @@ static void rna_def_modifier_solidify(BlenderRNA *brna)
   prop = RNA_def_property(srna, "nonmanifold_boundary_mode", PROP_ENUM, PROP_NONE);
   RNA_def_property_enum_items(prop, nonmanifold_boundary_mode_items);
   RNA_def_property_ui_text(prop, "Boundary Shape", "Selects the boundary adjustment algorithm");
+  RNA_def_property_translation_context(prop, BLT_I18NCONTEXT_ID_MESH);
   RNA_def_property_update(prop, 0, "rna_Modifier_update");
 
   prop = RNA_def_property(srna, "nonmanifold_merge_threshold", PROP_FLOAT, PROP_DISTANCE);

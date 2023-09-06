@@ -26,6 +26,7 @@
 #include "BLI_map.hh"
 #include "BLI_math_color.h"
 #include "BLI_math_vector_types.hh"
+#include "BLI_string.h"
 #include "BLI_string_ref.hh"
 #include "BLI_timeit.hh"
 #include "BLI_utildefines.h"
@@ -512,7 +513,7 @@ struct PBVHBatches {
           foreach_grids([&](int /*x*/, int /*y*/, int /*grid_index*/, CCGElem *elems[4], int i) {
             float *mask = CCG_elem_mask(&args.ccg_key, elems[i]);
 
-            *static_cast<uchar *>(GPU_vertbuf_raw_step(&access)) = uchar(*mask * 255.0f);
+            *static_cast<float *>(GPU_vertbuf_raw_step(&access)) = *mask;
           });
         }
         else {
@@ -648,10 +649,10 @@ struct PBVHBatches {
         if (const float *mask = static_cast<const float *>(
                 CustomData_get_layer(args.vert_data, CD_PAINT_MASK)))
         {
-          extract_data_vert_faces<float, uchar>(args, {mask, args.me->totvert}, vert_buf);
+          extract_data_vert_faces<float, float>(args, {mask, args.me->totvert}, vert_buf);
         }
         else {
-          MutableSpan(static_cast<uchar *>(GPU_vertbuf_get_data(vbo.vert_buf)), totvert).fill(0);
+          MutableSpan(static_cast<float *>(GPU_vertbuf_get_data(vbo.vert_buf)), totvert).fill(0);
         }
         break;
       }
@@ -814,7 +815,7 @@ struct PBVHBatches {
           foreach_bmesh([&](BMLoop *l) {
             float mask = BM_ELEM_CD_GET_FLOAT(l->v, cd_mask);
 
-            *static_cast<uchar *>(GPU_vertbuf_raw_step(&access)) = uchar(mask * 255.0f);
+            *static_cast<float *>(GPU_vertbuf_raw_step(&access)) = mask;
           });
         }
         break;
@@ -876,7 +877,7 @@ struct PBVHBatches {
         GPU_vertformat_attr_add(&format, "fset", GPU_COMP_U8, 3, GPU_FETCH_INT_TO_FLOAT_UNIT);
         break;
       case CD_PBVH_MASK_TYPE:
-        GPU_vertformat_attr_add(&format, "msk", GPU_COMP_U8, 1, GPU_FETCH_INT_TO_FLOAT_UNIT);
+        GPU_vertformat_attr_add(&format, "msk", GPU_COMP_F32, 1, GPU_FETCH_FLOAT);
         break;
       case CD_PROP_FLOAT:
         GPU_vertformat_attr_add(&format, "f", GPU_COMP_F32, 1, GPU_FETCH_FLOAT);

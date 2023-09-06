@@ -139,7 +139,7 @@ static const EnumPropertyItem part_fluid_type_items[] = {
 #  include "BLI_string_utils.h"
 
 #  include "BKE_boids.h"
-#  include "BKE_cloth.h"
+#  include "BKE_cloth.hh"
 #  include "BKE_colortools.h"
 #  include "BKE_context.h"
 #  include "BKE_deform.h"
@@ -2224,6 +2224,7 @@ static void rna_def_particle_settings_mtex(BlenderRNA *brna)
   prop = RNA_def_property(srna, "mapping", PROP_ENUM, PROP_NONE);
   RNA_def_property_enum_items(prop, prop_mapping_items);
   RNA_def_property_ui_text(prop, "Mapping", "");
+  RNA_def_property_translation_context(prop, BLT_I18NCONTEXT_ID_IMAGE);
   RNA_def_property_update(prop, 0, "rna_Particle_reset");
 
   /* map to */

@@ -67,6 +67,8 @@
 #include "RNA_define.hh"
 #include "RNA_prototypes.h"
 
+#include "ANIM_bone_collections.h"
+
 #include "outliner_intern.hh"
 #include "tree/tree_display.hh"
 #include "tree/tree_element_grease_pencil_node.hh"
@@ -717,7 +719,7 @@ static void tree_element_sequence_activate(bContext *C,
                                            const eOLSetState set)
 {
   const TreeElementSequence *te_seq = tree_element_cast<TreeElementSequence>(te);
-  Sequence *seq = &te_seq->getSequence();
+  Sequence *seq = &te_seq->get_sequence();
   Editing *ed = SEQ_editing_get(scene);
 
   if (BLI_findindex(ed->seqbasep, seq) != -1) {
@@ -1008,7 +1010,7 @@ static eOLDrawState tree_element_posegroup_state_get(const Scene *scene,
 static eOLDrawState tree_element_sequence_state_get(const Scene *scene, const TreeElement *te)
 {
   const TreeElementSequence *te_seq = tree_element_cast<TreeElementSequence>(te);
-  const Sequence *seq = &te_seq->getSequence();
+  const Sequence *seq = &te_seq->get_sequence();
   const Editing *ed = scene->ed;
 
   if (ed && ed->act_seq == seq && seq->flag & SELECT) {
@@ -1021,7 +1023,7 @@ static eOLDrawState tree_element_sequence_dup_state_get(const TreeElement *te)
 {
   const TreeElementSequenceStripDuplicate *te_dup =
       tree_element_cast<TreeElementSequenceStripDuplicate>(te);
-  const Sequence *seq = &te_dup->getSequence();
+  const Sequence *seq = &te_dup->get_sequence();
   if (seq->flag & SELECT) {
     return OL_DRAWSEL_NORMAL;
   }
@@ -1241,7 +1243,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
 
   /* ID Types */
   if (tselem->type == TSE_SOME_ID) {
-    RNA_id_pointer_create(tselem->id, &ptr);
+    ptr = RNA_id_pointer_create(tselem->id);
 
     switch (te->idcode) {
       case ID_SCE:
@@ -1279,7 +1281,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
     switch (tselem->type) {
       case TSE_DEFGROUP_BASE:
       case TSE_DEFGROUP:
-        RNA_id_pointer_create(tselem->id, &ptr);
+        ptr = RNA_id_pointer_create(tselem->id);
         context = BCONTEXT_DATA;
         break;
       case TSE_CONSTRAINT_BASE:
@@ -1288,11 +1290,11 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         bPoseChannel *pchan = outliner_find_parent_bone(te, &bone_te);
 
         if (pchan) {
-          RNA_pointer_create(TREESTORE(bone_te)->id, &RNA_PoseBone, pchan, &ptr);
+          ptr = RNA_pointer_create(TREESTORE(bone_te)->id, &RNA_PoseBone, pchan);
           context = BCONTEXT_BONE_CONSTRAINT;
         }
         else {
-          RNA_id_pointer_create(tselem->id, &ptr);
+          ptr = RNA_id_pointer_create(tselem->id);
           context = BCONTEXT_CONSTRAINT;
         }
 
@@ -1304,7 +1306,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
       }
       case TSE_MODIFIER_BASE:
       case TSE_MODIFIER:
-        RNA_id_pointer_create(tselem->id, &ptr);
+        ptr = RNA_id_pointer_create(tselem->id);
         context = BCONTEXT_MODIFIER;
 
         if (tselem->type != TSE_MODIFIER_BASE) {
@@ -1340,7 +1342,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         break;
       case TSE_GPENCIL_EFFECT_BASE:
       case TSE_GPENCIL_EFFECT:
-        RNA_id_pointer_create(tselem->id, &ptr);
+        ptr = RNA_id_pointer_create(tselem->id);
         context = BCONTEXT_SHADERFX;
 
         if (tselem->type != TSE_GPENCIL_EFFECT_BASE) {
@@ -1351,7 +1353,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         bArmature *arm = (bArmature *)tselem->id;
         Bone *bone = static_cast<Bone *>(te->directdata);
 
-        RNA_pointer_create(&arm->id, &RNA_Bone, bone, &ptr);
+        ptr = RNA_pointer_create(&arm->id, &RNA_Bone, bone);
         context = BCONTEXT_BONE;
         break;
       }
@@ -1359,7 +1361,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         bArmature *arm = (bArmature *)tselem->id;
         EditBone *ebone = static_cast<EditBone *>(te->directdata);
 
-        RNA_pointer_create(&arm->id, &RNA_EditBone, ebone, &ptr);
+        ptr = RNA_pointer_create(&arm->id, &RNA_EditBone, ebone);
         context = BCONTEXT_BONE;
         break;
       }
@@ -1368,7 +1370,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         bArmature *arm = static_cast<bArmature *>(ob->data);
         bPoseChannel *pchan = static_cast<bPoseChannel *>(te->directdata);
 
-        RNA_pointer_create(&arm->id, &RNA_PoseBone, pchan, &ptr);
+        ptr = RNA_pointer_create(&arm->id, &RNA_PoseBone, pchan);
         context = BCONTEXT_BONE;
         break;
       }
@@ -1376,14 +1378,14 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         Object *ob = (Object *)tselem->id;
         bArmature *arm = static_cast<bArmature *>(ob->data);
 
-        RNA_pointer_create(&arm->id, &RNA_Armature, arm, &ptr);
+        ptr = RNA_pointer_create(&arm->id, &RNA_Armature, arm);
         context = BCONTEXT_DATA;
         break;
       }
       case TSE_R_LAYER: {
         ViewLayer *view_layer = static_cast<ViewLayer *>(te->directdata);
 
-        RNA_pointer_create(tselem->id, &RNA_ViewLayer, view_layer, &ptr);
+        ptr = RNA_pointer_create(tselem->id, &RNA_ViewLayer, view_layer);
         context = BCONTEXT_VIEW_LAYER;
         break;
       }
@@ -1392,7 +1394,7 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         Object *ob = (Object *)tselem->id;
         bArmature *arm = static_cast<bArmature *>(ob->data);
 
-        RNA_pointer_create(&arm->id, &RNA_Armature, arm, &ptr);
+        ptr = RNA_pointer_create(&arm->id, &RNA_Armature, arm);
         context = BCONTEXT_DATA;
         break;
       }
@@ -1400,13 +1402,13 @@ static void outliner_set_properties_tab(bContext *C, TreeElement *te, TreeStoreE
         Object *ob = (Object *)tselem->id;
         ParticleSystem *psys = psys_get_current(ob);
 
-        RNA_pointer_create(&ob->id, &RNA_ParticleSystem, psys, &ptr);
+        ptr = RNA_pointer_create(&ob->id, &RNA_ParticleSystem, psys);
         context = BCONTEXT_PARTICLE;
         break;
       }
       case TSE_GP_LAYER:
       case TSE_GREASE_PENCIL_NODE:
-        RNA_id_pointer_create(tselem->id, &ptr);
+        ptr = RNA_id_pointer_create(tselem->id);
         context = BCONTEXT_DATA;
         break;
     }

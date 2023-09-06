@@ -973,7 +973,7 @@ class _GenericUI:
                 for func in draw_ls._draw_funcs:
 
                     # Begin 'owner_id' filter.
-                    # Exclude Import/Export menus from this filtering (io addons should always show there)
+                    # Exclude Import/Export menus from this filtering (IO add-ons should always show there).
                     if not getattr(self, "bl_owner_use_filter", True):
                         pass
                     elif owner_names is not None:
@@ -1218,7 +1218,11 @@ class NodeSocket(StructRNA, metaclass=RNAMetaPropGroup):
                 link.to_socket == self))
 
 
-class NodeSocketInterface(StructRNA, metaclass=RNAMetaPropGroup):
+class NodeTreeInterfaceItem(StructRNA):
+    __slots__ = ()
+
+
+class NodeTreeInterfaceSocket(NodeTreeInterfaceItem, metaclass=RNAMetaPropGroup):
     __slots__ = ()
 
 

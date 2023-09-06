@@ -314,8 +314,7 @@ static bool node_group_ungroup(Main *bmain, bNodeTree *ntree, bNode *gnode)
      * if the old node-tree has animation data which potentially covers this node. */
     const char *old_animation_basepath = nullptr;
     if (wgroup->adt) {
-      PointerRNA ptr;
-      RNA_pointer_create(&wgroup->id, &RNA_Node, node, &ptr);
+      PointerRNA ptr = RNA_pointer_create(&wgroup->id, &RNA_Node, node);
       old_animation_basepath = RNA_path_from_ID_to_struct(&ptr);
     }
 
@@ -330,8 +329,7 @@ static bool node_group_ungroup(Main *bmain, bNodeTree *ntree, bNode *gnode)
     BKE_ntree_update_tag_node_new(ntree, node);
 
     if (wgroup->adt) {
-      PointerRNA ptr;
-      RNA_pointer_create(&ntree->id, &RNA_Node, node, &ptr);
+      PointerRNA ptr = RNA_pointer_create(&ntree->id, &RNA_Node, node);
       const char *new_animation_basepath = RNA_path_from_ID_to_struct(&ptr);
       BLI_addtail(&anim_basepaths,
                   animation_basepath_change_new(old_animation_basepath, new_animation_basepath));
@@ -554,10 +552,9 @@ static bool node_group_separate_selected(
     /* Keep track of this node's RNA "base" path (the part of the path identifying the node)
      * if the old node-tree has animation data which potentially covers this node. */
     if (ngroup.adt) {
-      PointerRNA ptr;
       char *path;
 
-      RNA_pointer_create(&ngroup.id, &RNA_Node, newnode, &ptr);
+      PointerRNA ptr = RNA_pointer_create(&ngroup.id, &RNA_Node, newnode);
       path = RNA_path_from_ID_to_struct(&ptr);
 
       if (path) {
@@ -907,9 +904,9 @@ static bool prefer_node_for_interface_name(const bNode &node)
   return node.is_group() || node.is_group_input() || node.is_group_output();
 }
 
-static bNodeSocket *add_interface_from_socket(const bNodeTree &original_tree,
-                                              bNodeTree &tree_for_interface,
-                                              const bNodeSocket &socket)
+static bNodeTreeInterfaceSocket *add_interface_from_socket(const bNodeTree &original_tree,
+                                                           bNodeTree &tree_for_interface,
+                                                           const bNodeSocket &socket)
 {
   /* The "example socket" has to have the same `in_out` status as the new interface socket. */
   const bNodeSocket &socket_for_io = find_socket_to_use_for_interface(original_tree, socket);
@@ -917,11 +914,8 @@ static bNodeSocket *add_interface_from_socket(const bNodeTree &original_tree,
   const bNodeSocket &socket_for_name = prefer_node_for_interface_name(socket.owner_node()) ?
                                            socket :
                                            socket_for_io;
-  return bke::ntreeAddSocketInterfaceFromSocketWithName(&tree_for_interface,
-                                                        &node_for_io,
-                                                        &socket_for_io,
-                                                        socket_for_io.idname,
-                                                        socket_for_name.name);
+  return bke::node_interface::add_interface_socket_from_node(
+      tree_for_interface, node_for_io, socket_for_io, socket_for_io.idname, socket_for_name.name);
 }
 
 static void update_nested_node_refs_after_moving_nodes_into_group(
@@ -1011,12 +1005,12 @@ static void node_group_make_insert_selected(const bContext &C,
     bNode *from_node;
     /* All the links that came from the socket on the unselected node. */
     Vector<bNodeLink *> links;
-    const bNodeSocket *interface_socket;
+    const bNodeTreeInterfaceSocket *interface_socket;
   };
 
   struct OutputLinkInfo {
     bNodeLink *link;
-    const bNodeSocket *interface_socket;
+    const bNodeTreeInterfaceSocket *interface_socket;
   };
 
   /* Map from single non-selected output sockets to potentially many selected input sockets. */
@@ -1029,6 +1023,30 @@ static void node_group_make_insert_selected(const bContext &C,
 
   ntree.ensure_topology_cache();
   for (bNode *node : nodes_to_move) {
+    for (bNodeSocket *output_socket : node->output_sockets()) {
+      for (bNodeLink *link : output_socket->directly_linked_links()) {
+        if (nodeLinkIsHidden(link)) {
+          links_to_remove.add(link);
+          continue;
+        }
+        if (link->tonode == gnode) {
+          links_to_remove.add(link);
+          continue;
+        }
+        if (nodes_to_move.contains(link->tonode)) {
+          internal_links_to_move.add(link);
+          continue;
+        }
+        bNodeTreeInterfaceSocket *io_socket = add_interface_from_socket(
+            ntree, group, *link->fromsock);
+        if (io_socket) {
+          output_links.append({link, io_socket});
+        }
+        else {
+          links_to_remove.add(link);
+        }
+      }
+    }
     for (bNodeSocket *input_socket : node->input_sockets()) {
       for (bNodeLink *link : input_socket->directly_linked_links()) {
         if (nodeLinkIsHidden(link)) {
@@ -1051,29 +1069,12 @@ static void node_group_make_insert_selected(const bContext &C,
         }
       }
     }
-    for (bNodeSocket *output_socket : node->output_sockets()) {
-      for (bNodeLink *link : output_socket->directly_linked_links()) {
-        if (nodeLinkIsHidden(link)) {
-          links_to_remove.add(link);
-          continue;
-        }
-        if (link->tonode == gnode) {
-          links_to_remove.add(link);
-          continue;
-        }
-        if (nodes_to_move.contains(link->tonode)) {
-          internal_links_to_move.add(link);
-          continue;
-        }
-        output_links.append({link, add_interface_from_socket(ntree, group, *link->fromsock)});
-      }
-    }
   }
 
   struct NewInternalLinkInfo {
     bNode *node;
     bNodeSocket *socket;
-    const bNodeSocket *interface_socket;
+    const bNodeTreeInterfaceSocket *interface_socket;
   };
 
   const bool expose_visible = nodes_to_move.size() == 1;
@@ -1088,9 +1089,11 @@ static void node_group_make_insert_selected(const bContext &C,
           if (socket->is_directly_linked()) {
             continue;
           }
-          const bNodeSocket *io_socket = bke::ntreeAddSocketInterfaceFromSocket(
-              &group, node, socket);
-          new_internal_links.append({node, socket, io_socket});
+          const bNodeTreeInterfaceSocket *io_socket =
+              bke::node_interface::add_interface_socket_from_node(group, *node, *socket);
+          if (io_socket) {
+            new_internal_links.append({node, socket, io_socket});
+          }
         }
       };
       expose_sockets(node->input_sockets());
@@ -1114,8 +1117,7 @@ static void node_group_make_insert_selected(const bContext &C,
   if (ntree.adt) {
     ListBase anim_basepaths = {nullptr, nullptr};
     for (bNode *node : nodes_to_move) {
-      PointerRNA ptr;
-      RNA_pointer_create(&ntree.id, &RNA_Node, node, &ptr);
+      PointerRNA ptr = RNA_pointer_create(&ntree.id, &RNA_Node, node);
       if (char *path = RNA_path_from_ID_to_struct(&ptr)) {
         BLI_addtail(&anim_basepaths, animation_basepath_change_new(path, path));
       }
@@ -1168,8 +1170,9 @@ static void node_group_make_insert_selected(const bContext &C,
 
   /* Handle links to the new group inputs. */
   for (const auto item : input_links.items()) {
-    const char *interface_identifier = item.value.interface_socket->identifier;
-    bNodeSocket *input_socket = node_group_input_find_socket(input_node, interface_identifier);
+    const StringRefNull interface_identifier = item.value.interface_socket->identifier;
+    bNodeSocket *input_socket = node_group_input_find_socket(input_node,
+                                                             interface_identifier.c_str());
 
     for (bNodeLink *link : item.value.links) {
       /* Move the link into the new group, connected from the input node to the original socket. */
@@ -1185,20 +1188,21 @@ static void node_group_make_insert_selected(const bContext &C,
   /* Handle links to new group outputs. */
   for (const OutputLinkInfo &info : output_links) {
     /* Create a new link inside of the group. */
-    const char *io_identifier = info.interface_socket->identifier;
-    bNodeSocket *output_sock = node_group_output_find_socket(output_node, io_identifier);
+    const StringRefNull io_identifier = info.interface_socket->identifier;
+    bNodeSocket *output_sock = node_group_output_find_socket(output_node, io_identifier.c_str());
     nodeAddLink(&group, info.link->fromnode, info.link->fromsock, output_node, output_sock);
   }
 
   /* Handle new links inside the group. */
   for (const NewInternalLinkInfo &info : new_internal_links) {
-    const char *io_identifier = info.interface_socket->identifier;
+    const StringRefNull io_identifier = info.interface_socket->identifier;
     if (info.socket->in_out == SOCK_IN) {
-      bNodeSocket *input_socket = node_group_input_find_socket(input_node, io_identifier);
+      bNodeSocket *input_socket = node_group_input_find_socket(input_node, io_identifier.c_str());
       nodeAddLink(&group, input_node, input_socket, info.node, info.socket);
     }
     else {
-      bNodeSocket *output_socket = node_group_output_find_socket(output_node, io_identifier);
+      bNodeSocket *output_socket = node_group_output_find_socket(output_node,
+                                                                 io_identifier.c_str());
       nodeAddLink(&group, info.node, info.socket, output_node, output_socket);
     }
   }
@@ -1212,8 +1216,9 @@ static void node_group_make_insert_selected(const bContext &C,
 
   /* Add new links to inputs outside of the group. */
   for (const auto item : input_links.items()) {
-    const char *interface_identifier = item.value.interface_socket->identifier;
-    bNodeSocket *group_node_socket = node_group_find_input_socket(gnode, interface_identifier);
+    const StringRefNull interface_identifier = item.value.interface_socket->identifier;
+    bNodeSocket *group_node_socket = node_group_find_input_socket(gnode,
+                                                                  interface_identifier.c_str());
     nodeAddLink(&ntree, item.value.from_node, item.key, gnode, group_node_socket);
   }
 

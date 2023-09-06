@@ -312,6 +312,11 @@ static int node_add_group_exec(bContext *C, wmOperator *op)
     BKE_report(op->reports, RPT_WARNING, "Could not add node group");
     return OPERATOR_CANCELLED;
   }
+  if (!RNA_boolean_get(op->ptr, "show_datablock_in_node")) {
+    /* By default, don't show the data-block selector since it's not usually necessary for assets.
+     */
+    group_node->flag &= ~NODE_OPTIONS;
+  }
 
   group_node->id = &node_group->id;
   id_us_plus(group_node->id);
@@ -319,6 +324,7 @@ static int node_add_group_exec(bContext *C, wmOperator *op)
 
   nodeSetActive(ntree, group_node);
   ED_node_tree_propagate_change(C, bmain, nullptr);
+  WM_event_add_notifier(C, NC_NODE | NA_ADDED, nullptr);
   DEG_relations_tag_update(bmain);
   return OPERATOR_FINISHED;
 }
@@ -371,6 +377,10 @@ void NODE_OT_add_group(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO | OPTYPE_INTERNAL;
 
   WM_operator_properties_id_lookup(ot, true);
+
+  PropertyRNA *prop = RNA_def_boolean(
+      ot->srna, "show_datablock_in_node", true, "Show the datablock selector in the node", "");
+  RNA_def_property_flag(prop, (PropertyFlag)(PROP_SKIP_SAVE | PROP_HIDDEN));
 }
 
 /** \} */
@@ -416,6 +426,7 @@ static bool add_node_group_asset(const bContext &C,
 
   nodeSetActive(&edit_tree, group_node);
   ED_node_tree_propagate_change(&C, &bmain, nullptr);
+  WM_event_add_notifier(&C, NC_NODE | NA_ADDED, nullptr);
   DEG_relations_tag_update(&bmain);
 
   return true;
@@ -835,6 +846,84 @@ void NODE_OT_add_mask(wmOperatorType *ot)
 /** \} */
 
 /* -------------------------------------------------------------------- */
+/** \name Add Material Operator
+ * \{ */
+
+static int node_add_material_exec(bContext *C, wmOperator *op)
+{
+  Main *bmain = CTX_data_main(C);
+  SpaceNode *snode = CTX_wm_space_node(C);
+  bNodeTree *ntree = snode->edittree;
+
+  Material *material = reinterpret_cast<Material *>(
+      WM_operator_properties_id_lookup_from_name_or_session_uuid(bmain, op->ptr, ID_MA));
+
+  if (!material) {
+    return OPERATOR_CANCELLED;
+  }
+
+  ED_preview_kill_jobs(CTX_wm_manager(C), CTX_data_main(C));
+
+  bNode *material_node = add_static_node(*C, GEO_NODE_INPUT_MATERIAL, snode->runtime->cursor);
+  if (!material_node) {
+    BKE_report(op->reports, RPT_WARNING, "Could not add material");
+    return OPERATOR_CANCELLED;
+  }
+
+  material_node->id = &material->id;
+  id_us_plus(&material->id);
+
+  ED_node_tree_propagate_change(C, bmain, ntree);
+  DEG_relations_tag_update(bmain);
+
+  return OPERATOR_FINISHED;
+}
+
+static int node_add_material_invoke(bContext *C, wmOperator *op, const wmEvent *event)
+{
+  ARegion *region = CTX_wm_region(C);
+  SpaceNode *snode = CTX_wm_space_node(C);
+
+  /* Convert mouse coordinates to v2d space. */
+  UI_view2d_region_to_view(&region->v2d,
+                           event->mval[0],
+                           event->mval[1],
+                           &snode->runtime->cursor[0],
+                           &snode->runtime->cursor[1]);
+
+  snode->runtime->cursor[0] /= UI_SCALE_FAC;
+  snode->runtime->cursor[1] /= UI_SCALE_FAC;
+
+  return node_add_material_exec(C, op);
+}
+
+static bool node_add_material_poll(bContext *C)
+{
+  const SpaceNode *snode = CTX_wm_space_node(C);
+  return ED_operator_node_editable(C) && ELEM(snode->nodetree->type, NTREE_GEOMETRY);
+}
+
+void NODE_OT_add_material(wmOperatorType *ot)
+{
+  /* identifiers */
+  ot->name = "Add Material";
+  ot->description = "Add a material node to the current node editor";
+  ot->idname = "NODE_OT_add_material";
+
+  /* callbacks */
+  ot->exec = node_add_material_exec;
+  ot->invoke = node_add_material_invoke;
+  ot->poll = node_add_material_poll;
+
+  /* flags */
+  ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO | OPTYPE_INTERNAL;
+
+  WM_operator_properties_id_lookup(ot, true);
+}
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
 /** \name New Node Tree Operator
  * \{ */
 
@@ -843,7 +932,7 @@ static int new_node_tree_exec(bContext *C, wmOperator *op)
   SpaceNode *snode = CTX_wm_space_node(C);
   Main *bmain = CTX_data_main(C);
   bNodeTree *ntree;
-  PointerRNA ptr, idptr;
+  PointerRNA ptr;
   PropertyRNA *prop;
   const char *idname;
   char treename_buf[MAX_ID_NAME - 2];
@@ -884,7 +973,7 @@ static int new_node_tree_exec(bContext *C, wmOperator *op)
      * user. */
     id_us_min(&ntree->id);
 
-    RNA_id_pointer_create(&ntree->id, &idptr);
+    PointerRNA idptr = RNA_id_pointer_create(&ntree->id);
     RNA_property_pointer_set(&ptr, prop, idptr, nullptr);
     RNA_property_update(C, &ptr, prop);
   }
@@ -922,7 +1011,7 @@ void NODE_OT_new_node_tree(wmOperatorType *ot)
   /* flags */
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
-  prop = RNA_def_enum(ot->srna, "type", DummyRNA_NULL_items, 0, "Tree Type", "");
+  prop = RNA_def_enum(ot->srna, "type", rna_enum_dummy_NULL_items, 0, "Tree Type", "");
   RNA_def_enum_funcs(prop, new_node_tree_type_itemf);
   RNA_def_string(ot->srna, "name", "NodeTree", MAX_ID_NAME - 2, "Name", "");
 }

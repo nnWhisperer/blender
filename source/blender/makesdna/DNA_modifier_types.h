@@ -15,19 +15,12 @@
 #include "DNA_session_uuid_types.h"
 
 #ifdef __cplusplus
-namespace blender::bke::sim {
-struct ModifierSimulationCachePtr;
-}
 namespace blender {
 struct NodesModifierRuntime;
 }
 using NodesModifierRuntimeHandle = blender::NodesModifierRuntime;
 #else
 typedef struct NodesModifierRuntimeHandle NodesModifierRuntimeHandle;
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 /* WARNING ALERT! TYPEDEF VALUES ARE WRITTEN IN FILES! SO DO NOT CHANGE!
@@ -2422,7 +2415,3 @@ typedef enum VolumeToMeshResolutionMode {
 typedef enum VolumeToMeshFlag {
   VOLUME_TO_MESH_USE_SMOOTH_SHADE = 1 << 0,
 } VolumeToMeshFlag;
-
-#ifdef __cplusplus
-}
-#endif

@@ -471,9 +471,8 @@ static void apply_armature_pose2bones_ui(bContext *C, wmOperator *op)
 {
   uiLayout *layout = op->layout;
   wmWindowManager *wm = CTX_wm_manager(C);
-  PointerRNA ptr;
 
-  RNA_pointer_create(&wm->id, op->type->srna, op->properties, &ptr);
+  PointerRNA ptr = RNA_pointer_create(&wm->id, op->type->srna, op->properties);
 
   uiItemR(layout, &ptr, "selected", UI_ITEM_NONE, nullptr, ICON_NONE);
 }
@@ -796,7 +795,14 @@ static int pose_copy_exec(bContext *C, wmOperator *op)
 
   Object ob_copy = blender::dna::shallow_copy(*ob);
   ob_copy.adt = nullptr;
-  bArmature arm_copy = *((bArmature *)ob->data);
+
+  /* Copy the armature without using the default copy constructor. This prevents
+   * the compiler from complaining that the `layer`, `layer_used`, and
+   * `layer_protected` fields are DNA_DEPRECATED.
+   */
+  bArmature arm_copy;
+  memcpy(&arm_copy, ob->data, sizeof(arm_copy));
+
   arm_copy.adt = nullptr;
   ob_copy.data = &arm_copy;
   BLI_addtail(&temp_bmain->objects, &ob_copy);

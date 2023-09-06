@@ -59,10 +59,11 @@ std::string USDAbstractWriter::get_export_file_path() const
 pxr::UsdTimeCode USDAbstractWriter::get_export_time_code() const
 {
   if (is_animated_) {
-    return usd_export_context_.time_code;
+    BLI_assert(usd_export_context_.get_time_code);
+    return usd_export_context_.get_time_code();
   }
-  /* By using the default timecode USD won't even write a single `timeSample` for non-animated
-   * data. Instead, it writes it as non-timesampled. */
+  /* By using the default time-code USD won't even write a single `timeSample` for non-animated
+   * data. Instead, it writes it as non-time-sampled. */
   static pxr::UsdTimeCode default_timecode = pxr::UsdTimeCode::Default();
   return default_timecode;
 }

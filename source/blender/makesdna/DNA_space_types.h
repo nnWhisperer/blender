@@ -25,10 +25,6 @@
 #include "DNA_view2d_types.h"
 #include "DNA_viewer_path_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct BLI_mempool;
 struct FileLayout;
 struct FileList;
@@ -474,11 +470,8 @@ typedef struct SpaceGraph {
 
   /** Mode for the Graph editor (eGraphEdit_Mode). */
   short mode;
-  /**
-   * Time-transform auto-snapping settings for Graph editor
-   * (eAnimEdit_AutoSnap in DNA_action_types.h).
-   */
-  short autosnap;
+  /* Snapping now lives on the Scene. */
+  short autosnap DNA_DEPRECATED;
   /** Settings for Graph editor (eGraphEdit_Flag). */
   int flag;
 
@@ -564,8 +557,8 @@ typedef struct SpaceNla {
   char _pad0[6];
   /* End 'SpaceLink' header. */
 
-  /** This uses the same settings as autosnap for Action Editor. */
-  short autosnap;
+  /* Snapping now lives on the Scene. */
+  short autosnap DNA_DEPRECATED;
   short flag;
   char _pad[4];
 
@@ -1654,8 +1647,7 @@ typedef enum eSpaceNode_Flag {
   SNODE_FLAG_UNUSED_10 = (1 << 10), /* cleared */
   SNODE_FLAG_UNUSED_11 = (1 << 11), /* cleared */
   SNODE_PIN = (1 << 12),
-  /** automatically offset following nodes in a chain on insertion */
-  SNODE_SKIP_INSOFFSET = (1 << 13),
+  SNODE_FLAG_UNUSED_12 = (1 << 13),
 } eSpaceNode_Flag;
 
 /** #SpaceNode.texfrom */
@@ -2124,7 +2116,3 @@ typedef enum eSpace_Type {
 #define IMG_SIZE_FALLBACK 256
 
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif

@@ -334,7 +334,7 @@ static void print_resource(std::ostream &os,
                            const VKDescriptorSet::Location location,
                            const ShaderCreateInfo::Resource &res)
 {
-  os << "layout(binding = " << static_cast<uint32_t>(location);
+  os << "layout(binding = " << uint32_t(location);
   if (res.bind_type == ShaderCreateInfo::Resource::BindType::IMAGE) {
     os << ", " << to_string(res.image.format);
   }
@@ -419,13 +419,6 @@ static void print_interface_as_struct(std::ostream &os,
 {
   std::string struct_name = prefix + iface.name;
   Interpolation qualifier = iface.inouts[0].interp;
-
-  /* Workaround for shader that have not been converted yet. */
-  for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
-    if (inout.interp == Interpolation::FLAT) {
-      qualifier = Interpolation::FLAT;
-    }
-  }
 
   os << "struct " << struct_name << " {\n";
   for (const StageInterfaceInfo::InOut &inout : iface.inouts) {
@@ -580,7 +573,10 @@ void VKShader::build_shader_module(Span<uint32_t> spirv_module, VkShaderModule *
   const VKDevice &device = VKBackend::get().device_get();
   VkResult result = vkCreateShaderModule(
       device.device_get(), &create_info, vk_allocation_callbacks, r_shader_module);
-  if (result != VK_SUCCESS) {
+  if (result == VK_SUCCESS) {
+    debug::object_label(*r_shader_module, name);
+  }
+  else {
     compilation_failed_ = true;
     *r_shader_module = VK_NULL_HANDLE;
   }
@@ -663,11 +659,6 @@ bool VKShader::finalize(const shader::ShaderCreateInfo *info)
   if (compilation_failed_) {
     return false;
   }
-#if DEBUG
-  if (!info->is_vulkan_compatible()) {
-    std::cout << "'" << info->name_ << "' stage interfaces are not compatible with Vulkan.\n";
-  }
-#endif
 
   VKShaderInterface *vk_interface = new VKShaderInterface();
   vk_interface->init(*info);

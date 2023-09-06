@@ -151,6 +151,7 @@ struct uiBut {
   /** Pointer back to the layout item holding this button. */
   uiLayout *layout = nullptr;
   int flag = 0;
+  int flag2 = 0;
   int drawflag = 0;
   eButType type = eButType(0);
   eButPointerType pointype = UI_BUT_POIN_NONE;
@@ -202,7 +203,7 @@ struct uiBut {
   uiButHandleNFunc funcN = nullptr;
   void *func_argN = nullptr;
 
-  bContextStore *context = nullptr;
+  const bContextStore *context = nullptr;
 
   uiButCompleteFunc autocomplete_func = nullptr;
   void *autofunc_arg = nullptr;
@@ -487,7 +488,7 @@ struct uiBlock {
   ListBase layouts;
   uiLayout *curlayout;
 
-  ListBase contexts;
+  blender::Vector<std::unique_ptr<bContextStore>> contexts;
 
   /** A block can store "views" on data-sets. Currently tree-views (#AbstractTreeView) only.
    * Others are imaginable, e.g. table-views, grid-views, etc. These are stored here to support
@@ -848,6 +849,8 @@ struct uiPopupBlockHandle {
   bool is_grab;
   int grab_xy_prev[2];
   /* #endif */
+
+  char menu_idname[64];
 };
 
 /* -------------------------------------------------------------------- */

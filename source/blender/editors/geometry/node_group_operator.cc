@@ -6,6 +6,8 @@
  * \ingroup edcurves
  */
 
+#include "BLI_string.h"
+
 #include "ED_curves.hh"
 #include "ED_object.hh"
 #include "ED_screen.hh"
@@ -40,12 +42,12 @@
 
 #include "RNA_access.hh"
 #include "RNA_define.hh"
-#include "RNA_enum_types.hh"
 
 #include "UI_interface.hh"
 #include "UI_resources.hh"
 
 #include "ED_asset.hh"
+#include "ED_asset_menu_utils.hh"
 #include "ED_geometry.hh"
 #include "ED_mesh.hh"
 
@@ -70,92 +72,10 @@ namespace blender::ed::geometry {
 /** \name Operator
  * \{ */
 
-/**
- * #AssetLibrary::resolve_asset_weak_reference_to_full_path() currently does not support local
- * assets.
- */
-static const asset_system::AssetRepresentation *get_local_asset_from_relative_identifier(
-    const bContext &C, const StringRefNull relative_identifier, ReportList *reports)
-{
-  AssetLibraryReference library_ref{};
-  library_ref.type = ASSET_LIBRARY_LOCAL;
-  ED_assetlist_storage_fetch(&library_ref, &C);
-  ED_assetlist_ensure_previews_job(&library_ref, &C);
-
-  const asset_system::AssetRepresentation *matching_asset = nullptr;
-  ED_assetlist_iterate(library_ref, [&](asset_system::AssetRepresentation &asset) {
-    if (asset.get_identifier().library_relative_identifier() == relative_identifier) {
-      matching_asset = &asset;
-      return false;
-    }
-    return true;
-  });
-
-  if (reports && !matching_asset) {
-    if (ED_assetlist_is_loaded(&library_ref)) {
-      BKE_reportf(
-          reports, RPT_ERROR, "No asset found at path \"%s\"", relative_identifier.c_str());
-    }
-    else {
-      BKE_report(reports, RPT_WARNING, "Asset loading is unfinished");
-    }
-  }
-  return matching_asset;
-}
-
-static const asset_system::AssetRepresentation *find_asset_from_weak_ref(
-    const bContext &C, const AssetWeakReference &weak_ref, ReportList *reports)
-{
-  if (weak_ref.asset_library_type == ASSET_LIBRARY_LOCAL) {
-    return get_local_asset_from_relative_identifier(
-        C, weak_ref.relative_asset_identifier, reports);
-  }
-
-  const AssetLibraryReference library_ref = asset_system::all_library_reference();
-  ED_assetlist_storage_fetch(&library_ref, &C);
-  ED_assetlist_ensure_previews_job(&library_ref, &C);
-  asset_system::AssetLibrary *all_library = ED_assetlist_library_get_once_available(
-      asset_system::all_library_reference());
-  if (!all_library) {
-    BKE_report(reports, RPT_WARNING, "Asset loading is unfinished");
-  }
-
-  const std::string full_path = all_library->resolve_asset_weak_reference_to_full_path(weak_ref);
-
-  const asset_system::AssetRepresentation *matching_asset = nullptr;
-  ED_assetlist_iterate(library_ref, [&](asset_system::AssetRepresentation &asset) {
-    if (asset.get_identifier().full_path() == full_path) {
-      matching_asset = &asset;
-      return false;
-    }
-    return true;
-  });
-
-  if (reports && !matching_asset) {
-    if (ED_assetlist_is_loaded(&library_ref)) {
-      BKE_reportf(reports, RPT_ERROR, "No asset found at path \"%s\"", full_path.c_str());
-    }
-  }
-  return matching_asset;
-}
-
-/** \note Does not check asset type or meta data. */
-static const asset_system::AssetRepresentation *get_asset(const bContext &C,
-                                                          PointerRNA &ptr,
-                                                          ReportList *reports)
-{
-  AssetWeakReference weak_ref{};
-  weak_ref.asset_library_type = RNA_enum_get(&ptr, "asset_library_type");
-  weak_ref.asset_library_identifier = RNA_string_get_alloc(
-      &ptr, "asset_library_identifier", nullptr, 0, nullptr);
-  weak_ref.relative_asset_identifier = RNA_string_get_alloc(
-      &ptr, "relative_asset_identifier", nullptr, 0, nullptr);
-  return find_asset_from_weak_ref(C, weak_ref, reports);
-}
-
 static const bNodeTree *get_node_group(const bContext &C, PointerRNA &ptr, ReportList *reports)
 {
-  const asset_system::AssetRepresentation *asset = get_asset(C, ptr, reports);
+  const asset_system::AssetRepresentation *asset =
+      asset::operator_asset_reference_props_get_asset_from_all_library(C, ptr, reports);
   if (!asset) {
     return nullptr;
   }
@@ -374,7 +294,8 @@ static std::string run_node_group_get_description(bContext *C,
                                                   wmOperatorType * /*ot*/,
                                                   PointerRNA *ptr)
 {
-  const asset_system::AssetRepresentation *asset = get_asset(*C, *ptr, nullptr);
+  const asset_system::AssetRepresentation *asset =
+      asset::operator_asset_reference_props_get_asset_from_all_library(*C, *ptr, nullptr);
   if (!asset) {
     return "";
   }
@@ -386,9 +307,12 @@ static std::string run_node_group_get_description(bContext *C,
 
 static void add_attribute_search_or_value_buttons(uiLayout *layout,
                                                   PointerRNA *md_ptr,
-                                                  const bNodeSocket &socket)
+                                                  const bNodeTreeInterfaceSocket &socket)
 {
-  char socket_id_esc[sizeof(socket.identifier) * 2];
+  bNodeSocketType *typeinfo = nodeSocketTypeFind(socket.socket_type);
+  const eNodeSocketDatatype socket_type = eNodeSocketDatatype(typeinfo->type);
+
+  char socket_id_esc[MAX_NAME * 2];
   BLI_str_escape(socket_id_esc, socket.identifier, sizeof(socket_id_esc));
   const std::string rna_path = "[\"" + std::string(socket_id_esc) + "\"]";
   const std::string rna_path_use_attribute = "[\"" + std::string(socket_id_esc) +
@@ -404,7 +328,7 @@ static void add_attribute_search_or_value_buttons(uiLayout *layout,
   uiLayoutSetAlignment(name_row, UI_LAYOUT_ALIGN_RIGHT);
 
   const bool use_attribute = RNA_boolean_get(md_ptr, rna_path_use_attribute.c_str());
-  if (socket.type == SOCK_BOOLEAN && !use_attribute) {
+  if (socket_type == SOCK_BOOLEAN && !use_attribute) {
     uiItemL(name_row, "", ICON_NONE);
   }
   else {
@@ -412,7 +336,7 @@ static void add_attribute_search_or_value_buttons(uiLayout *layout,
   }
 
   uiLayout *prop_row = uiLayoutRow(split, true);
-  if (socket.type == SOCK_BOOLEAN) {
+  if (socket_type == SOCK_BOOLEAN) {
     uiLayoutSetPropSep(prop_row, false);
     uiLayoutSetAlignment(prop_row, UI_LAYOUT_ALIGN_EXPAND);
   }
@@ -422,7 +346,7 @@ static void add_attribute_search_or_value_buttons(uiLayout *layout,
     uiItemR(prop_row, md_ptr, rna_path_attribute_name.c_str(), UI_ITEM_NONE, "", ICON_NONE);
   }
   else {
-    const char *name = socket.type == SOCK_BOOLEAN ? socket.name : "";
+    const char *name = socket_type == SOCK_BOOLEAN ? socket.name : "";
     uiItemR(prop_row, md_ptr, rna_path.c_str(), UI_ITEM_NONE, name, ICON_NONE);
   }
 
@@ -435,9 +359,12 @@ static void draw_property_for_socket(const bNodeTree &node_tree,
                                      IDProperty *op_properties,
                                      PointerRNA *bmain_ptr,
                                      PointerRNA *op_ptr,
-                                     const bNodeSocket &socket,
+                                     const bNodeTreeInterfaceSocket &socket,
                                      const int socket_index)
 {
+  bNodeSocketType *typeinfo = nodeSocketTypeFind(socket.socket_type);
+  const eNodeSocketDatatype socket_type = eNodeSocketDatatype(typeinfo->type);
+
   /* The property should be created in #MOD_nodes_update_interface with the correct type. */
   IDProperty *property = IDP_GetPropertyFromGroup(op_properties, socket.identifier);
 
@@ -447,7 +374,7 @@ static void draw_property_for_socket(const bNodeTree &node_tree,
     return;
   }
 
-  char socket_id_esc[sizeof(socket.identifier) * 2];
+  char socket_id_esc[MAX_NAME * 2];
   BLI_str_escape(socket_id_esc, socket.identifier, sizeof(socket_id_esc));
 
   char rna_path[sizeof(socket_id_esc) + 4];
@@ -459,7 +386,7 @@ static void draw_property_for_socket(const bNodeTree &node_tree,
   /* Use #uiItemPointerR to draw pointer properties because #uiItemR would not have enough
    * information about what type of ID to select for editing the values. This is because
    * pointer IDProperties contain no information about their type. */
-  switch (socket.type) {
+  switch (socket_type) {
     case SOCK_OBJECT:
       uiItemPointerR(row, op_ptr, rna_path, bmain_ptr, "objects", socket.name, ICON_OBJECT_DATA);
       break;
@@ -495,18 +422,19 @@ static void run_node_group_ui(bContext *C, wmOperator *op)
   uiLayoutSetPropSep(layout, true);
   uiLayoutSetPropDecorate(layout, false);
   Main *bmain = CTX_data_main(C);
-  PointerRNA bmain_ptr;
-  RNA_main_pointer_create(bmain, &bmain_ptr);
+  PointerRNA bmain_ptr = RNA_main_pointer_create(bmain);
 
   const bNodeTree *node_tree = get_node_group(*C, *op->ptr, nullptr);
   if (!node_tree) {
     return;
   }
 
-  int input_index;
-  LISTBASE_FOREACH_INDEX (bNodeSocket *, io_socket, &node_tree->inputs, input_index) {
+  node_tree->ensure_topology_cache();
+  int input_index = 0;
+  for (bNodeTreeInterfaceSocket *io_socket : node_tree->interface_inputs()) {
     draw_property_for_socket(
         *node_tree, layout, op->properties, &bmain_ptr, op->ptr, *io_socket, input_index);
+    ++input_index;
   }
 }
 
@@ -524,20 +452,7 @@ void GEOMETRY_OT_execute_node_group(wmOperatorType *ot)
 
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
-  PropertyRNA *prop;
-  prop = RNA_def_enum(ot->srna,
-                      "asset_library_type",
-                      rna_enum_aset_library_type_items,
-                      ASSET_LIBRARY_LOCAL,
-                      "Asset Library Type",
-                      "");
-  RNA_def_property_flag(prop, PROP_HIDDEN | PROP_SKIP_SAVE);
-  prop = RNA_def_string(
-      ot->srna, "asset_library_identifier", nullptr, 0, "Asset Library Identifier", "");
-  RNA_def_property_flag(prop, PROP_HIDDEN | PROP_SKIP_SAVE);
-  prop = RNA_def_string(
-      ot->srna, "relative_asset_identifier", nullptr, 0, "Relative Asset Identifier", "");
-  RNA_def_property_flag(prop, PROP_HIDDEN | PROP_SKIP_SAVE);
+  asset::operator_asset_reference_props_register(*ot->srna);
 }
 
 /** \} */
@@ -696,7 +611,6 @@ static void node_add_catalog_assets_draw(const bContext *C, Menu *menu)
   for (const asset_system::AssetRepresentation *asset : assets) {
     uiLayout *col = uiLayoutColumn(layout, false);
     wmOperatorType *ot = WM_operatortype_find("GEOMETRY_OT_execute_node_group", true);
-    const std::unique_ptr<AssetWeakReference> weak_ref = asset->make_weak_reference();
     PointerRNA props_ptr;
     uiItemFullO_ptr(col,
                     ot,
@@ -706,9 +620,7 @@ static void node_add_catalog_assets_draw(const bContext *C, Menu *menu)
                     WM_OP_INVOKE_DEFAULT,
                     UI_ITEM_NONE,
                     &props_ptr);
-    RNA_enum_set(&props_ptr, "asset_library_type", weak_ref->asset_library_type);
-    RNA_string_set(&props_ptr, "asset_library_identifier", weak_ref->asset_library_identifier);
-    RNA_string_set(&props_ptr, "relative_asset_identifier", weak_ref->relative_asset_identifier);
+    asset::operator_asset_reference_props_set(*asset, props_ptr);
   }
 
   asset_system::AssetLibrary *all_library = ED_assetlist_library_get_once_available(
@@ -717,18 +629,9 @@ static void node_add_catalog_assets_draw(const bContext *C, Menu *menu)
     return;
   }
 
-  catalog_item->foreach_child([&](asset_system::AssetCatalogTreeItem &child_item) {
-    PointerRNA path_ptr = asset::persistent_catalog_path_rna_pointer(
-        screen, *all_library, child_item);
-    if (path_ptr.data == nullptr) {
-      return;
-    }
-    uiLayout *col = uiLayoutColumn(layout, false);
-    uiLayoutSetContextPointer(col, "asset_catalog_path", &path_ptr);
-    uiItemM(col,
-            "GEO_MT_node_operator_catalog_assets",
-            IFACE_(child_item.get_name().c_str()),
-            ICON_NONE);
+  catalog_item->foreach_child([&](asset_system::AssetCatalogTreeItem &item) {
+    asset::draw_menu_for_catalog(
+        screen, *all_library, item, "GEO_MT_node_operator_catalog_assets", *layout);
   });
 }
 
@@ -739,6 +642,7 @@ MenuType node_group_operator_assets_menu()
   type.poll = asset_menu_poll;
   type.draw = node_add_catalog_assets_draw;
   type.listener = asset::asset_reading_region_listen_fn;
+  type.flag = MenuTypeFlag::ContextDependent;
   return type;
 }
 
@@ -796,17 +700,10 @@ void ui_template_node_operator_asset_root_items(uiLayout &layout, bContext &C)
                                                            eObjectMode(active_object->mode));
 
   tree->catalogs.foreach_root_item([&](asset_system::AssetCatalogTreeItem &item) {
-    if (builtin_menus.contains(item.get_name())) {
-      return;
+    if (!builtin_menus.contains(item.get_name())) {
+      asset::draw_menu_for_catalog(
+          screen, *all_library, item, "GEO_MT_node_operator_catalog_assets", layout);
     }
-    PointerRNA path_ptr = asset::persistent_catalog_path_rna_pointer(screen, *all_library, item);
-    if (path_ptr.data == nullptr) {
-      return;
-    }
-    uiLayout *col = uiLayoutColumn(&layout, false);
-    uiLayoutSetContextPointer(col, "asset_catalog_path", &path_ptr);
-    const char *text = IFACE_(item.get_name().c_str());
-    uiItemM(col, "GEO_MT_node_operator_catalog_assets", text, ICON_NONE);
   });
 }
 

@@ -201,6 +201,13 @@ const EnumPropertyItem rna_enum_snap_node_element_items[] = {
     {0, nullptr, 0, nullptr, nullptr},
 };
 
+const EnumPropertyItem rna_enum_snap_animation_element_items[] = {
+    {SCE_SNAP_TO_FRAME, "FRAME", 0, "Frame", "Snap to frame"},
+    {SCE_SNAP_TO_SECOND, "SECOND", 0, "Second", "Snap to seconds"},
+    {SCE_SNAP_TO_MARKERS, "MARKER", 0, "Nearest Marker", "Snap to nearest marker"},
+    {0, nullptr, 0, nullptr, nullptr},
+};
+
 #ifndef RNA_RUNTIME
 static const EnumPropertyItem snap_uv_element_items[] = {
     {SCE_SNAP_TO_INCREMENT,
@@ -578,7 +585,7 @@ static const EnumPropertyItem rna_enum_view_layer_aov_type_items[] = {
     {0, nullptr, 0, nullptr, nullptr},
 };
 
-const EnumPropertyItem rna_enum_transform_pivot_items_full[] = {
+const EnumPropertyItem rna_enum_transform_pivot_full_items[] = {
     {V3D_AROUND_CENTER_BOUNDS,
      "BOUNDING_BOX_CENTER",
      ICON_PIVOT_BOUNDBOX,
@@ -714,6 +721,7 @@ const EnumPropertyItem rna_enum_grease_pencil_selectmode_items[] = {
 #  include "MEM_guardedalloc.h"
 
 #  include "BKE_animsys.h"
+#  include "BKE_bake_geometry_nodes_modifier.hh"
 #  include "BKE_brush.hh"
 #  include "BKE_collection.h"
 #  include "BKE_colortools.h"
@@ -731,7 +739,6 @@ const EnumPropertyItem rna_enum_grease_pencil_selectmode_items[] = {
 #  include "BKE_pointcache.h"
 #  include "BKE_scene.h"
 #  include "BKE_screen.h"
-#  include "BKE_simulation_state.hh"
 #  include "BKE_unit.h"
 
 #  include "NOD_composite.h"
@@ -956,7 +963,7 @@ static void rna_Scene_fps_update(Main *bmain, Scene * /*active_scene*/, PointerR
    * so this we take care about here. */
   SEQ_sound_update_length(bmain, scene);
   /* Reset simulation states because new frame interval doesn't apply anymore. */
-  blender::bke::sim::scene_simulation_states_reset(*scene);
+  blender::bke::bake::scene_simulation_states_reset(*scene);
 }
 
 static void rna_Scene_listener_update(Main * /*bmain*/, Scene * /*scene*/, PointerRNA *ptr)
@@ -3307,7 +3314,7 @@ static void rna_def_tool_settings(BlenderRNA *brna)
   /* Pivot Point */
   prop = RNA_def_property(srna, "transform_pivot_point", PROP_ENUM, PROP_NONE);
   RNA_def_property_enum_sdna(prop, nullptr, "transform_pivot_point");
-  RNA_def_property_enum_items(prop, rna_enum_transform_pivot_items_full);
+  RNA_def_property_enum_items(prop, rna_enum_transform_pivot_full_items);
   RNA_def_property_ui_text(prop, "Transform Pivot Point", "Pivot center for rotation/scaling");
   RNA_def_property_update(prop, NC_SCENE | ND_TOOLSETTINGS, nullptr);
 
@@ -3447,6 +3454,24 @@ static void rna_def_tool_settings(BlenderRNA *brna)
   RNA_def_property_enum_bitflag_sdna(prop, nullptr, "snap_node_mode");
   RNA_def_property_enum_items(prop, rna_enum_snap_node_element_items);
   RNA_def_property_ui_text(prop, "Snap Node Element", "Type of element to snap to");
+  RNA_def_property_update(prop, NC_SCENE | ND_TOOLSETTINGS, nullptr); /* header redraw */
+
+  prop = RNA_def_property(srna, "use_snap_anim", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_sdna(prop, NULL, "snap_flag_anim", SCE_SNAP);
+  RNA_def_property_ui_text(prop, "Snap", "Enable snapping when transforming keyframes");
+  RNA_def_property_ui_icon(prop, ICON_SNAP_OFF, 1);
+  RNA_def_property_update(prop, NC_SCENE | ND_TOOLSETTINGS, NULL); /* header redraw */
+
+  prop = RNA_def_property(srna, "use_snap_time_absolute", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_boolean_sdna(prop, nullptr, "snap_flag_anim", SCE_SNAP_ABS_TIME_STEP);
+  RNA_def_property_ui_text(
+      prop, "Absolute Time Snap", "Absolute time alignment while translating");
+  RNA_def_property_update(prop, NC_SCENE | ND_TOOLSETTINGS, nullptr); /* header redraw */
+
+  prop = RNA_def_property(srna, "snap_anim_element", PROP_ENUM, PROP_NONE);
+  RNA_def_property_enum_bitflag_sdna(prop, nullptr, "snap_anim_mode");
+  RNA_def_property_enum_items(prop, rna_enum_snap_animation_element_items);
+  RNA_def_property_ui_text(prop, "Snap Anim Element", "Type of element to snap to");
   RNA_def_property_update(prop, NC_SCENE | ND_TOOLSETTINGS, nullptr); /* header redraw */
 
   /* image editor uses own set of snap modes */
@@ -3951,6 +3976,7 @@ static void rna_def_sequencer_tool_settings(BlenderRNA *brna)
   prop = RNA_def_property(srna, "pivot_point", PROP_ENUM, PROP_NONE);
   RNA_def_property_enum_items(prop, pivot_points);
   RNA_def_property_ui_text(prop, "Pivot Point", "Rotation or scaling pivot point");
+  RNA_def_property_update(prop, NC_SPACE | ND_SPACE_SEQUENCER, nullptr);
 }
 
 static void rna_def_unified_paint_settings(BlenderRNA *brna)
@@ -4334,25 +4360,25 @@ static void rna_def_unit_settings(BlenderRNA *brna)
   RNA_def_property_update(prop, NC_WINDOW, nullptr);
 
   prop = RNA_def_property(srna, "length_unit", PROP_ENUM, PROP_NONE);
-  RNA_def_property_enum_items(prop, DummyRNA_DEFAULT_items);
+  RNA_def_property_enum_items(prop, rna_enum_dummy_DEFAULT_items);
   RNA_def_property_enum_funcs(prop, nullptr, nullptr, "rna_UnitSettings_length_unit_itemf");
   RNA_def_property_ui_text(prop, "Length Unit", "Unit that will be used to display length values");
   RNA_def_property_update(prop, NC_WINDOW, nullptr);
 
   prop = RNA_def_property(srna, "mass_unit", PROP_ENUM, PROP_NONE);
-  RNA_def_property_enum_items(prop, DummyRNA_DEFAULT_items);
+  RNA_def_property_enum_items(prop, rna_enum_dummy_DEFAULT_items);
   RNA_def_property_enum_funcs(prop, nullptr, nullptr, "rna_UnitSettings_mass_unit_itemf");
   RNA_def_property_ui_text(prop, "Mass Unit", "Unit that will be used to display mass values");
   RNA_def_property_update(prop, NC_WINDOW, nullptr);
 
   prop = RNA_def_property(srna, "time_unit", PROP_ENUM, PROP_NONE);
-  RNA_def_property_enum_items(prop, DummyRNA_DEFAULT_items);
+  RNA_def_property_enum_items(prop, rna_enum_dummy_DEFAULT_items);
   RNA_def_property_enum_funcs(prop, nullptr, nullptr, "rna_UnitSettings_time_unit_itemf");
   RNA_def_property_ui_text(prop, "Time Unit", "Unit that will be used to display time values");
   RNA_def_property_update(prop, NC_WINDOW, nullptr);
 
   prop = RNA_def_property(srna, "temperature_unit", PROP_ENUM, PROP_NONE);
-  RNA_def_property_enum_items(prop, DummyRNA_DEFAULT_items);
+  RNA_def_property_enum_items(prop, rna_enum_dummy_DEFAULT_items);
   RNA_def_property_enum_funcs(prop, nullptr, nullptr, "rna_UnitSettings_temperature_unit_itemf");
   RNA_def_property_ui_text(
       prop, "Temperature Unit", "Unit that will be used to display temperature values");
@@ -7399,7 +7425,7 @@ static void rna_def_raytrace_eevee(BlenderRNA *brna)
 
   prop = RNA_def_property(srna, "resolution_scale", PROP_ENUM, PROP_NONE);
   RNA_def_property_enum_items(prop, pixel_rate_items);
-  RNA_def_property_ui_text(prop, "Resolution", "Number of ray per pixel");
+  RNA_def_property_ui_text(prop, "Resolution", "Number of rays per pixel");
   RNA_def_property_override_flag(prop, PROPOVERRIDE_OVERRIDABLE_LIBRARY);
   RNA_def_property_update(prop, NC_SCENE | ND_RENDER_OPTIONS, nullptr);
 

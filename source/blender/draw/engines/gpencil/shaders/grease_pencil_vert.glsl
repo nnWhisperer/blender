@@ -1,5 +1,8 @@
+/* SPDX-FileCopyrightText: 2020-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
-#pragma BLENDER_REQUIRE(common_gpencil_lib.glsl)
+#pragma BLENDER_REQUIRE(common_grease_pencil_lib.glsl)
 
 void gpencil_color_output(vec4 stroke_col, vec4 vert_col, float vert_strength, float mix_tex)
 {

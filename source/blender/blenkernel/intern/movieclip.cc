@@ -68,7 +68,7 @@
 
 #include "GPU_texture.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 #include "tracking_private.h"
 
@@ -123,6 +123,9 @@ static void movie_clip_foreach_id(ID *id, LibraryForeachIDData *data)
   LISTBASE_FOREACH (MovieTrackingObject *, object, &tracking->objects) {
     LISTBASE_FOREACH (MovieTrackingTrack *, track, &object->tracks) {
       BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, track->gpd, IDWALK_CB_USER);
+    }
+    LISTBASE_FOREACH (MovieTrackingPlaneTrack *, plane_track, &object->plane_tracks) {
+      BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, plane_track->image, IDWALK_CB_USER);
     }
   }
 }
@@ -274,35 +277,6 @@ static void movieclip_blend_read_data(BlendDataReader *reader, ID *id)
   }
 }
 
-static void lib_link_movieTracks(BlendLibReader *reader, MovieClip *clip, ListBase *tracksbase)
-{
-  LISTBASE_FOREACH (MovieTrackingTrack *, track, tracksbase) {
-    BLO_read_id_address(reader, &clip->id, &track->gpd);
-  }
-}
-
-static void lib_link_moviePlaneTracks(BlendLibReader *reader,
-                                      MovieClip *clip,
-                                      ListBase *tracksbase)
-{
-  LISTBASE_FOREACH (MovieTrackingPlaneTrack *, plane_track, tracksbase) {
-    BLO_read_id_address(reader, &clip->id, &plane_track->image);
-  }
-}
-
-static void movieclip_blend_read_lib(BlendLibReader *reader, ID *id)
-{
-  MovieClip *clip = (MovieClip *)id;
-  MovieTracking *tracking = &clip->tracking;
-
-  BLO_read_id_address(reader, id, &clip->gpd);
-
-  LISTBASE_FOREACH (MovieTrackingObject *, object, &tracking->objects) {
-    lib_link_movieTracks(reader, clip, &object->tracks);
-    lib_link_moviePlaneTracks(reader, clip, &object->plane_tracks);
-  }
-}
-
 IDTypeInfo IDType_ID_MC = {
     /*id_code*/ ID_MC,
     /*id_filter*/ FILTER_ID_MC,
@@ -325,8 +299,7 @@ IDTypeInfo IDType_ID_MC = {
 
     /*blend_write*/ movieclip_blend_write,
     /*blend_read_data*/ movieclip_blend_read_data,
-    /*blend_read_lib*/ movieclip_blend_read_lib,
-    /*blend_read_expand*/ nullptr,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 
@@ -2066,7 +2039,7 @@ void BKE_movieclip_free_gputexture(MovieClip *clip)
     MovieClip_RuntimeGPUTexture *tex = (MovieClip_RuntimeGPUTexture *)BLI_pophead(
         &clip->runtime.gputextures);
     for (int i = 0; i < TEXTARGET_COUNT; i++) {
-      /* free glsl image binding */
+      /* Free GLSL image binding. */
       if (tex->gputexture[i]) {
         GPU_texture_free(tex->gputexture[i]);
         tex->gputexture[i] = nullptr;

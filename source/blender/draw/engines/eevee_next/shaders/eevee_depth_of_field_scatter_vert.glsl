@@ -1,10 +1,13 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * Scatter pass: Use sprites to scatter the color of very bright pixel to have higher quality blur.
  *
  * We only scatter one triangle per sprite and one sprite per 4 pixels to reduce vertex shader
  * invocations and overdraw.
- **/
+ */
 
 #pragma BLENDER_REQUIRE(eevee_depth_of_field_lib.glsl)
 

@@ -1682,10 +1682,9 @@ static void singleuser_action_fn(bContext *C,
 
   if (id) {
     IdAdtTemplate *iat = (IdAdtTemplate *)tsep->id;
-    PointerRNA ptr = {nullptr};
     PropertyRNA *prop;
 
-    RNA_pointer_create(&iat->id, &RNA_AnimData, iat->adt, &ptr);
+    PointerRNA ptr = RNA_pointer_create(&iat->id, &RNA_AnimData, iat->adt);
     prop = RNA_struct_find_property(&ptr, "action");
 
     id_single_user(C, id, &ptr, prop);
@@ -1705,10 +1704,9 @@ static void singleuser_world_fn(bContext *C,
   /* need to use parent scene not just scene, otherwise may end up getting wrong one */
   if (id) {
     Scene *parscene = (Scene *)tsep->id;
-    PointerRNA ptr = {nullptr};
     PropertyRNA *prop;
 
-    RNA_id_pointer_create(&parscene->id, &ptr);
+    PointerRNA ptr = RNA_id_pointer_create(&parscene->id);
     prop = RNA_struct_find_property(&ptr, "world");
 
     id_single_user(C, id, &ptr, prop);
@@ -2163,7 +2161,7 @@ static void ebone_fn(int event, TreeElement *te, TreeStoreElem * /*tselem*/, voi
 static void sequence_fn(int event, TreeElement *te, TreeStoreElem * /*tselem*/, void *scene_ptr)
 {
   TreeElementSequence *te_seq = tree_element_cast<TreeElementSequence>(te);
-  Sequence *seq = &te_seq->getSequence();
+  Sequence *seq = &te_seq->get_sequence();
   Scene *scene = (Scene *)scene_ptr;
   Editing *ed = SEQ_editing_get(scene);
   if (BLI_findindex(ed->seqbasep, seq) != -1) {
@@ -2241,7 +2239,7 @@ static void data_select_linked_fn(int event,
   }
 
   if (event == OL_DOP_SELECT_LINKED) {
-    const PointerRNA &ptr = te_rna_struct->getPointerRNA();
+    const PointerRNA &ptr = te_rna_struct->get_pointer_rna();
     if (RNA_struct_is_ID(ptr.type)) {
       bContext *C = (bContext *)C_v;
       ID *id = static_cast<ID *>(ptr.data);
@@ -2282,7 +2280,7 @@ static void constraint_fn(int event, TreeElement *te, TreeStoreElem * /*tselem*/
       /* there's no active constraint now, so make sure this is the case */
       BKE_constraints_active_set(&ob->constraints, nullptr);
 
-      /* needed to set the flags on posebones correctly */
+      /* Needed to set the flags on pose-bones correctly. */
       ED_object_constraint_update(bmain, ob);
 
       WM_event_add_notifier(C, NC_OBJECT | ND_CONSTRAINT | NA_REMOVED, ob);
@@ -2594,7 +2592,7 @@ void OUTLINER_OT_object_operation(wmOperatorType *ot)
 
 using OutlinerDeleteFn = void (*)(bContext *C, ReportList *reports, Scene *scene, Object *ob);
 
-using ObjectEditData = struct ObjectEditData {
+struct ObjectEditData {
   GSet *objects_set;
   bool is_liboverride_allowed;
   bool is_liboverride_hierarchy_root_allowed;
@@ -3268,7 +3266,7 @@ void OUTLINER_OT_action_set(wmOperatorType *ot)
 
   /* props */
   /* TODO: this would be nicer as an ID-pointer... */
-  prop = RNA_def_enum(ot->srna, "action", DummyRNA_NULL_items, 0, "Action", "");
+  prop = RNA_def_enum(ot->srna, "action", rna_enum_dummy_NULL_items, 0, "Action", "");
   RNA_def_enum_funcs(prop, RNA_action_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
   ot->prop = prop;
@@ -3581,17 +3579,17 @@ static const EnumPropertyItem *outliner_data_op_sets_enum_item_fn(bContext *C,
 {
   /* Check for invalid states. */
   if (C == nullptr) {
-    return DummyRNA_DEFAULT_items;
+    return rna_enum_dummy_DEFAULT_items;
   }
 
   SpaceOutliner *space_outliner = CTX_wm_space_outliner(C);
   if (space_outliner == nullptr) {
-    return DummyRNA_DEFAULT_items;
+    return rna_enum_dummy_DEFAULT_items;
   }
 
   TreeElement *te = get_target_element(space_outliner);
   if (te == nullptr) {
-    return DummyRNA_NULL_items;
+    return rna_enum_dummy_NULL_items;
   }
 
   TreeStoreElem *tselem = TREESTORE(te);
@@ -3627,7 +3625,7 @@ void OUTLINER_OT_data_operation(wmOperatorType *ot)
 
   ot->flag = 0;
 
-  ot->prop = RNA_def_enum(ot->srna, "type", DummyRNA_DEFAULT_items, 0, "Data Operation", "");
+  ot->prop = RNA_def_enum(ot->srna, "type", rna_enum_dummy_DEFAULT_items, 0, "Data Operation", "");
   RNA_def_enum_funcs(ot->prop, outliner_data_op_sets_enum_item_fn);
 }
 
@@ -3643,7 +3641,7 @@ static int outliner_operator_menu(bContext *C, const char *opname)
   uiPopupMenu *pup = UI_popup_menu_begin(C, WM_operatortype_name(ot, nullptr).c_str(), ICON_NONE);
   uiLayout *layout = UI_popup_menu_layout(pup);
 
-  /* set this so the default execution context is the same as submenus */
+  /* Set this so the default execution context is the same as sub-menus. */
   uiLayoutSetOperatorContext(layout, WM_OP_INVOKE_REGION_WIN);
 
   if (WM_operator_poll(C, ot)) {

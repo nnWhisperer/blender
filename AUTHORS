@@ -17,7 +17,7 @@
 # Please keep the list sorted.
 #
 # The individual authors section can be regenerated using:
-#   make authors
+#   python ./tools/utils/authors_git_gen.py
 
 # BEGIN individuals section.
 Aaron Carlisle <carlisle.aaron00@gmail.com>
@@ -226,7 +226,7 @@ Geoffroy Krantz <kgeogeo@hotmail.com>
 George Vogiatzis <Gvgeo>
 Georgiy Markelov <georgiy.m.markelov@gmail.com>
 Germano Cavalcante <germano.costa@ig.com.br>
-Gilberto Rodrigues <gilberto_rodrigues>
+Gilberto Rodrigues <gilbertorodrigues@outlook.com>
 Glenn Tester <karmacop>
 Gottfried Hofmann <gottfried>
 Greg Neumiller <rlneumiller>
@@ -237,6 +237,7 @@ Habib Gahbiche <habibgahbiche@gmail.com>
 Hallam Roberts <MysteryPancake>
 Hamdi Ozbayburtlu <hamdio>
 Hamed Zaghaghi <hamed.zaghaghi@gmail.com>
+Hannes Loeschke <blender@hlae.de>
 Hans Goudey <h.goudey@me.com>
 Hans Lambermont <hans@lambermont.dyndns.org>
 Harley Acheson <harley.acheson@gmail.com>
@@ -519,6 +520,7 @@ Rajesh Advani <rajeshja>
 Ralf Hölzemer <r.hoelzemer@googlemail.com>
 Ramil Roosileht <Limarest>
 Rateeb Riyasat <bmollusc>
+Rawalanche <rawalanche@gmail.com>
 Ray Molenkamp <github@lazydodo.com>
 Rebecca Dengate <beckyd>
 Red Mser <RedMser>
@@ -633,12 +635,13 @@ Victor-Louis De Gusseme <victorlouis>
 Viktoriia Safiullina <safiuvik>
 Ville Kivistö <vkivisto>
 Vincent Blankfield <vvv>
-Vitor Boschi da Silva <vitorboschi>
+Vitor Boschi <vitorboschi@gmail.com>
 Vuk Gardašević <lijenstina>
 Wael El Oraiby <wael.eloraiby@gmail.com>
 Walid Shouman <eng.walidshouman@gmail.com>
 Wannes Malfait <Wannes>
 Wayde Moss <wbmoss_dev@yahoo.com>
+Weikang Qiu <qiuweikang1999@gmail.com>
 Weizhen Huang <weizhen@blender.org>
 Welp <jtf515@gmail.com>
 William Leeson <william@blender.org>

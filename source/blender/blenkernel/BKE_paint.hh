@@ -13,6 +13,8 @@
 #include "BLI_compiler_compat.h"
 #include "BLI_math_vector_types.hh"
 #include "BLI_offset_indices.hh"
+#include "BLI_ordered_edge.hh"
+#include "BLI_set.hh"
 #include "BLI_utildefines.h"
 
 #include "DNA_brush_enums.h"
@@ -31,7 +33,6 @@ struct BlendWriter;
 struct Brush;
 struct CurveMapping;
 struct Depsgraph;
-struct EdgeSet;
 struct EnumPropertyItem;
 struct ExpandCache;
 struct FilterCache;
@@ -261,18 +262,12 @@ Brush *BKE_paint_toolslots_brush_get(Paint *paint, int slot_index);
 
 void BKE_paint_blend_write(BlendWriter *writer, Paint *paint);
 void BKE_paint_blend_read_data(BlendDataReader *reader, const Scene *scene, Paint *paint);
-void BKE_paint_blend_read_lib(BlendLibReader *reader, Scene *scene, Paint *paint);
 
 #define SCULPT_FACE_SET_NONE 0
 
 /** Used for both vertex color and weight paint. */
 struct SculptVertexPaintGeomMap {
-  blender::Array<int> vert_to_loop_offsets;
-  blender::Array<int> vert_to_loop_indices;
   blender::GroupedSpan<int> vert_to_loop;
-
-  blender::Array<int> vert_to_face_offsets;
-  blender::Array<int> vert_to_face_indices;
   blender::GroupedSpan<int> vert_to_face;
 };
 
@@ -354,7 +349,7 @@ struct SculptClothLengthConstraint {
 struct SculptClothSimulation {
   SculptClothLengthConstraint *length_constraints;
   int tot_length_constraints;
-  EdgeSet *created_length_constraints;
+  blender::Set<blender::OrderedEdge> created_length_constraints;
   int capacity_length_constraints;
   float *length_constraint_tweak;
 
@@ -591,9 +586,7 @@ struct SculptSession {
   float *vmask;
 
   /* Mesh connectivity maps. */
-  /* Vertices to adjacent faces. */
-  blender::Array<int> vert_to_face_offsets;
-  blender::Array<int> vert_to_face_indices;
+  /* Vertices to adjacent polys. */
   blender::GroupedSpan<int> pmap;
 
   /* Edges to adjacent faces. */

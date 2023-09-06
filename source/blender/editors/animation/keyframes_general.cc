@@ -206,9 +206,9 @@ void clean_fcurve(bAnimContext *ac, bAnimListElem *ale, float thresh, bool clear
    * the default value and if is, remove fcurve completely. */
   if (cleardefault && fcu->totvert == 1) {
     float default_value = 0.0f;
-    PointerRNA id_ptr, ptr;
+    PointerRNA ptr;
     PropertyRNA *prop;
-    RNA_id_pointer_create(ale->id, &id_ptr);
+    PointerRNA id_ptr = RNA_id_pointer_create(ale->id);
 
     /* get property to read from, and get value as appropriate */
     if (RNA_path_resolve_property(&id_ptr, fcu->rna_path, &ptr, &prop)) {
@@ -800,7 +800,7 @@ bool match_slope_fcurve_segment(FCurve *fcu, FCurveSegment *segment, const float
   }
 
   /* This delta values are used to get the relationship between the bookend keys and the
-   * reference keys beyong those. */
+   * reference keys beyond those. */
   const float y_delta = beyond_key.vec[1][1] - reference_key->vec[1][1];
   const float x_delta = beyond_key.vec[1][0] - reference_key->vec[1][0];
 
@@ -822,6 +822,42 @@ bool match_slope_fcurve_segment(FCurve *fcu, FCurveSegment *segment, const float
     BKE_fcurve_keyframe_move_value_with_handles(&fcu->bezt[i], key_y_value);
   }
   return true;
+}
+
+/* ---------------- */
+
+void shear_fcurve_segment(FCurve *fcu,
+                          FCurveSegment *segment,
+                          const float factor,
+                          tShearDirection direction)
+{
+  const BezTriple *left_key = fcurve_segment_start_get(fcu, segment->start_index);
+  const BezTriple *right_key = fcurve_segment_end_get(fcu, segment->start_index + segment->length);
+
+  const float key_x_range = right_key->vec[1][0] - left_key->vec[1][0];
+  const float key_y_range = right_key->vec[1][1] - left_key->vec[1][1];
+
+  /* Happens if there is only 1 key on the FCurve. Needs to be skipped because it
+   * would be a divide by 0. */
+  if (IS_EQF(key_x_range, 0.0f)) {
+    return;
+  }
+
+  for (int i = segment->start_index; i < segment->start_index + segment->length; i++) {
+    /* For easy calculation of the curve, the  values are normalized. */
+    float normalized_x;
+    if (direction == SHEAR_FROM_LEFT) {
+      normalized_x = (fcu->bezt[i].vec[1][0] - left_key->vec[1][0]) / key_x_range;
+    }
+    else {
+      normalized_x = (right_key->vec[1][0] - fcu->bezt[i].vec[1][0]) / key_x_range;
+    }
+
+    const float y_delta = key_y_range * normalized_x;
+
+    const float key_y_value = fcu->bezt[i].vec[1][1] + y_delta * factor;
+    BKE_fcurve_keyframe_move_value_with_handles(&fcu->bezt[i], key_y_value);
+  }
 }
 
 /* ---------------- */
@@ -1440,10 +1476,10 @@ static tAnimCopybufItem *pastebuf_match_path_property(Main *bmain,
         printf("paste_animedit_keys: error ID has been removed!\n");
       }
       else {
-        PointerRNA id_ptr, rptr;
+        PointerRNA rptr;
         PropertyRNA *prop;
 
-        RNA_id_pointer_create(aci->id, &id_ptr);
+        PointerRNA id_ptr = RNA_id_pointer_create(aci->id);
 
         if (RNA_path_resolve_property(&id_ptr, aci->rna_path, &rptr, &prop)) {
           const char *identifier = RNA_property_identifier(prop);
@@ -1621,7 +1657,7 @@ const EnumPropertyItem rna_enum_keyframe_paste_offset_items[] = {
     {0, nullptr, 0, nullptr, nullptr},
 };
 
-const EnumPropertyItem rna_enum_keyframe_paste_offset_value[] = {
+const EnumPropertyItem rna_enum_keyframe_paste_offset_value_items[] = {
     {KEYFRAME_PASTE_VALUE_OFFSET_LEFT_KEY,
      "LEFT_KEY",
      0,

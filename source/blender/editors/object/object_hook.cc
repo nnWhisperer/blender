@@ -577,7 +577,7 @@ static int add_hook_object(const bContext *C,
 
       STRNCPY(hmd->subtarget, arm->act_bone->name);
 
-      pchan_act = BKE_pose_channel_active_if_layer_visible(ob);
+      pchan_act = BKE_pose_channel_active_if_bonecoll_visible(ob);
       if (LIKELY(pchan_act)) {
         invert_m4_m4(pose_mat, pchan_act->pose_mat);
         mul_v3_m4v3(cent, ob->object_to_world, pchan_act->pose_mat[3]);
@@ -733,7 +733,7 @@ static const EnumPropertyItem *hook_mod_itemf(bContext *C,
   int a, totitem = 0;
 
   if (!ob) {
-    return DummyRNA_NULL_items;
+    return rna_enum_dummy_NULL_items;
   }
 
   for (a = 0, md = static_cast<ModifierData *>(ob->modifiers.first); md; md = md->next, a++) {
@@ -773,7 +773,7 @@ void OBJECT_OT_hook_remove(wmOperatorType *ot)
 
   /* properties */
   prop = RNA_def_enum(
-      ot->srna, "modifier", DummyRNA_NULL_items, 0, "Modifier", "Modifier number to remove");
+      ot->srna, "modifier", rna_enum_dummy_NULL_items, 0, "Modifier", "Modifier number to remove");
   RNA_def_enum_funcs(prop, hook_mod_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
   ot->prop = prop;
@@ -817,8 +817,12 @@ void OBJECT_OT_hook_reset(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   /* properties */
-  prop = RNA_def_enum(
-      ot->srna, "modifier", DummyRNA_NULL_items, 0, "Modifier", "Modifier number to assign to");
+  prop = RNA_def_enum(ot->srna,
+                      "modifier",
+                      rna_enum_dummy_NULL_items,
+                      0,
+                      "Modifier",
+                      "Modifier number to assign to");
   RNA_def_enum_funcs(prop, hook_mod_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
 }
@@ -868,8 +872,12 @@ void OBJECT_OT_hook_recenter(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   /* properties */
-  prop = RNA_def_enum(
-      ot->srna, "modifier", DummyRNA_NULL_items, 0, "Modifier", "Modifier number to assign to");
+  prop = RNA_def_enum(ot->srna,
+                      "modifier",
+                      rna_enum_dummy_NULL_items,
+                      0,
+                      "Modifier",
+                      "Modifier number to assign to");
   RNA_def_enum_funcs(prop, hook_mod_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
 }
@@ -931,8 +939,12 @@ void OBJECT_OT_hook_assign(wmOperatorType *ot)
   ot->flag = /*OPTYPE_REGISTER|*/ OPTYPE_UNDO;
 
   /* properties */
-  prop = RNA_def_enum(
-      ot->srna, "modifier", DummyRNA_NULL_items, 0, "Modifier", "Modifier number to assign to");
+  prop = RNA_def_enum(ot->srna,
+                      "modifier",
+                      rna_enum_dummy_NULL_items,
+                      0,
+                      "Modifier",
+                      "Modifier number to assign to");
   RNA_def_enum_funcs(prop, hook_mod_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
 }
@@ -977,7 +989,7 @@ void OBJECT_OT_hook_select(wmOperatorType *ot)
 
   /* properties */
   prop = RNA_def_enum(
-      ot->srna, "modifier", DummyRNA_NULL_items, 0, "Modifier", "Modifier number to remove");
+      ot->srna, "modifier", rna_enum_dummy_NULL_items, 0, "Modifier", "Modifier number to remove");
   RNA_def_enum_funcs(prop, hook_mod_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
 }

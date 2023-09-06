@@ -802,7 +802,7 @@ static int rna_PoseBones_lookup_string(PointerRNA *ptr, const char *key, Pointer
   bPose *pose = (bPose *)ptr->data;
   bPoseChannel *pchan = BKE_pose_channel_find_name(pose, key);
   if (pchan) {
-    RNA_pointer_create(ptr->owner_id, &RNA_PoseBone, pchan, r_ptr);
+    *r_ptr = RNA_pointer_create(ptr->owner_id, &RNA_PoseBone, pchan);
     return true;
   }
   else {
@@ -1406,6 +1406,10 @@ static void rna_def_pose_channel(BlenderRNA *brna)
   RNA_def_property_ui_text(prop, "Bone Group", "Bone group this pose channel belongs to");
   RNA_def_property_editable_func(prop, "rna_PoseChannel_proxy_editable");
   RNA_def_property_update(prop, NC_OBJECT | ND_POSE, "rna_Pose_update");
+
+  prop = RNA_def_property(srna, "color", PROP_POINTER, PROP_NONE);
+  RNA_def_property_struct_type(prop, "BoneColor");
+  RNA_def_property_clear_flag(prop, PROP_EDITABLE);
 
   /* transform locks */
   prop = RNA_def_property(srna, "lock_location", PROP_BOOLEAN, PROP_NONE);

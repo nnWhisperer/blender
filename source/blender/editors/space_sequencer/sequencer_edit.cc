@@ -2894,6 +2894,7 @@ void SEQUENCER_OT_change_effect_type(wmOperatorType *ot)
                           SEQ_TYPE_CROSS,
                           "Type",
                           "Sequencer effect type");
+  RNA_def_property_translation_context(ot->prop, BLT_I18NCONTEXT_ID_SEQUENCE);
 }
 
 /** \} */
@@ -2980,11 +2981,10 @@ static int sequencer_change_path_exec(bContext *C, wmOperator *op)
   }
   else {
     /* Lame, set rna filepath. */
-    PointerRNA seq_ptr;
     PropertyRNA *prop;
     char filepath[FILE_MAX];
 
-    RNA_pointer_create(&scene->id, &RNA_Sequence, seq, &seq_ptr);
+    PointerRNA seq_ptr = RNA_pointer_create(&scene->id, &RNA_Sequence, seq);
 
     RNA_string_get(op->ptr, "filepath", filepath);
     prop = RNA_struct_find_property(&seq_ptr, "filepath");
@@ -3122,7 +3122,7 @@ void SEQUENCER_OT_change_scene(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   /* Properties. */
-  prop = RNA_def_enum(ot->srna, "scene", DummyRNA_NULL_items, 0, "Scene", "");
+  prop = RNA_def_enum(ot->srna, "scene", rna_enum_dummy_NULL_items, 0, "Scene", "");
   RNA_def_enum_funcs(prop, RNA_scene_without_active_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
   ot->prop = prop;

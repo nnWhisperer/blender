@@ -40,6 +40,7 @@ set(SRC
   ../include/ED_anim_api.hh
   ../include/ED_armature.hh
   ../include/ED_asset.hh
+  ../include/ED_asset_menu_utils.hh
   ../include/ED_buttons.hh
   ../include/ED_clip.hh
   ../include/ED_curve.hh
@@ -64,8 +65,8 @@ set(SRC
   ../include/ED_mask.hh
   ../include/ED_mball.hh
   ../include/ED_mesh.hh
-  ../include/ED_node_c.hh
   ../include/ED_node.hh
+  ../include/ED_node_c.hh
   ../include/ED_node_preview.hh
   ../include/ED_numinput.hh
   ../include/ED_object.hh

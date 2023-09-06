@@ -70,6 +70,8 @@
 #include "BKE_mesh.hh"
 #include "BKE_modifier.h"
 #include "BKE_node.h"
+#include "BKE_node_runtime.hh"
+#include "BKE_node_tree_interface.hh"
 #include "BKE_object.h"
 #include "BKE_pointcloud.h"
 #include "BKE_report.h"
@@ -571,8 +573,8 @@ bool ED_object_parent_set(ReportList *reports,
     }
     case PAR_BONE:
     case PAR_BONE_RELATIVE:
-      pchan = BKE_pose_channel_active_if_layer_visible(par);
-      pchan_eval = BKE_pose_channel_active_if_layer_visible(parent_eval);
+      pchan = BKE_pose_channel_active_if_bonecoll_visible(par);
+      pchan_eval = BKE_pose_channel_active_if_bonecoll_visible(parent_eval);
 
       if (pchan == nullptr || pchan_eval == nullptr) {
         /* If pchan_eval is nullptr, pchan should also be nullptr. */
@@ -1528,11 +1530,12 @@ static int make_links_data_exec(bContext *C, wmOperator *op)
           case MAKE_LINKS_ANIMDATA:
             BKE_animdata_copy_id(bmain, (ID *)ob_dst, (ID *)ob_src, 0);
             if (ob_dst->data && ob_src->data) {
-              if (!BKE_id_is_editable(bmain, obdata_id)) {
-                is_lib = true;
-                break;
+              if (BKE_id_is_editable(bmain, obdata_id)) {
+                BKE_animdata_copy_id(bmain, (ID *)ob_dst->data, (ID *)ob_src->data, 0);
               }
-              BKE_animdata_copy_id(bmain, (ID *)ob_dst->data, (ID *)ob_src->data, 0);
+              else {
+                is_lib = true;
+              }
             }
             DEG_id_tag_update(&ob_dst->id,
                               ID_RECALC_TRANSFORM | ID_RECALC_GEOMETRY | ID_RECALC_ANIMATION);
@@ -1654,7 +1657,7 @@ void OBJECT_OT_make_links_scene(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   /* properties */
-  prop = RNA_def_enum(ot->srna, "scene", DummyRNA_NULL_items, 0, "Scene", "");
+  prop = RNA_def_enum(ot->srna, "scene", rna_enum_dummy_NULL_items, 0, "Scene", "");
   RNA_def_enum_funcs(prop, RNA_scene_local_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
   ot->prop = prop;
@@ -2110,17 +2113,20 @@ static void tag_localizable_objects(bContext *C, const int mode)
 
   /* Also forbid making objects local if other library objects are using
    * them for modifiers or constraints.
+   *
+   * FIXME This is ignoring all other linked ID types potentially using the selected tagged
+   * objects! Probably works fine in most 'usual' cases though.
    */
   for (Object *object = static_cast<Object *>(bmain->objects.first); object;
        object = static_cast<Object *>(object->id.next))
   {
-    if ((object->id.tag & LIB_TAG_DOIT) == 0) {
+    if ((object->id.tag & LIB_TAG_DOIT) == 0 && ID_IS_LINKED(object)) {
       BKE_library_foreach_ID_link(
           nullptr, &object->id, tag_localizable_looper, nullptr, IDWALK_READONLY);
     }
     if (object->data) {
       ID *data_id = (ID *)object->data;
-      if ((data_id->tag & LIB_TAG_DOIT) == 0) {
+      if ((data_id->tag & LIB_TAG_DOIT) == 0 && ID_IS_LINKED(data_id)) {
         BKE_library_foreach_ID_link(
             nullptr, data_id, tag_localizable_looper, nullptr, IDWALK_READONLY);
       }
@@ -2960,23 +2966,32 @@ char *ED_object_ot_drop_geometry_nodes_tooltip(bContext *C,
 
 static bool check_geometry_node_group_sockets(wmOperator *op, const bNodeTree *tree)
 {
-  const bNodeSocket *first_input = (const bNodeSocket *)tree->inputs.first;
-  if (!first_input) {
-    BKE_report(op->reports, RPT_ERROR, "The node group must have a geometry input socket");
-    return false;
+  tree->ensure_topology_cache();
+  if (!tree->interface_inputs().is_empty()) {
+    const bNodeTreeInterfaceSocket *first_input = tree->interface_inputs()[0];
+    if (!first_input) {
+      BKE_report(op->reports, RPT_ERROR, "The node group must have a geometry input socket");
+      return false;
+    }
+    const bNodeSocketType *typeinfo = first_input->socket_typeinfo();
+    const eNodeSocketDatatype type = typeinfo ? eNodeSocketDatatype(typeinfo->type) : SOCK_CUSTOM;
+    if (type != SOCK_GEOMETRY) {
+      BKE_report(op->reports, RPT_ERROR, "The first input must be a geometry socket");
+      return false;
+    }
   }
-  if (first_input->type != SOCK_GEOMETRY) {
-    BKE_report(op->reports, RPT_ERROR, "The first input must be a geometry socket");
-    return false;
-  }
-  const bNodeSocket *first_output = (const bNodeSocket *)tree->outputs.first;
-  if (!first_output) {
-    BKE_report(op->reports, RPT_ERROR, "The node group must have a geometry output socket");
-    return false;
-  }
-  if (first_output->type != SOCK_GEOMETRY) {
-    BKE_report(op->reports, RPT_ERROR, "The first output must be a geometry socket");
-    return false;
+  if (!tree->interface_outputs().is_empty()) {
+    const bNodeTreeInterfaceSocket *first_output = tree->interface_outputs()[0];
+    if (!first_output) {
+      BKE_report(op->reports, RPT_ERROR, "The node group must have a geometry output socket");
+      return false;
+    }
+    const bNodeSocketType *typeinfo = first_output->socket_typeinfo();
+    const eNodeSocketDatatype type = typeinfo ? eNodeSocketDatatype(typeinfo->type) : SOCK_CUSTOM;
+    if (type != SOCK_GEOMETRY) {
+      BKE_report(op->reports, RPT_ERROR, "The first output must be a geometry socket");
+      return false;
+    }
   }
   return true;
 }

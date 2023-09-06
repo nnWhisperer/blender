@@ -783,8 +783,11 @@ if(WITH_GHOST_X11)
 
   if(WITH_X11_XINPUT)
     if(NOT X11_Xinput_LIB)
-      message(FATAL_ERROR "LibXi not found. Disable WITH_X11_XINPUT if you
-      want to build without tablet support")
+      message(
+        FATAL_ERROR
+        "LibXi not found. "
+        "Disable WITH_X11_XINPUT if you want to build without tablet support"
+      )
     endif()
   endif()
 
@@ -793,15 +796,21 @@ if(WITH_GHOST_X11)
     find_library(X11_Xxf86vmode_LIB Xxf86vm   ${X11_LIB_SEARCH_PATH})
     mark_as_advanced(X11_Xxf86vmode_LIB)
     if(NOT X11_Xxf86vmode_LIB)
-      message(FATAL_ERROR "libXxf86vm not found. Disable WITH_X11_XF86VMODE if you
-      want to build without")
+      message(
+        FATAL_ERROR
+        "libXxf86vm not found. "
+        "Disable WITH_X11_XF86VMODE if you want to build without"
+      )
     endif()
   endif()
 
   if(WITH_X11_XFIXES)
     if(NOT X11_Xfixes_LIB)
-      message(FATAL_ERROR "libXfixes not found. Disable WITH_X11_XFIXES if you
-      want to build without")
+      message(
+        FATAL_ERROR
+        "libXfixes not found. "
+        "Disable WITH_X11_XFIXES if you want to build without"
+      )
     endif()
   endif()
 
@@ -809,8 +818,11 @@ if(WITH_GHOST_X11)
     find_library(X11_Xrender_LIB Xrender ${X11_LIB_SEARCH_PATH})
     mark_as_advanced(X11_Xrender_LIB)
     if(NOT X11_Xrender_LIB)
-      message(FATAL_ERROR "libXrender not found. Disable WITH_X11_ALPHA if you
-      want to build without")
+      message(
+        FATAL_ERROR
+        "libXrender not found. "
+        "Disable WITH_X11_ALPHA if you want to build without"
+      )
     endif()
   endif()
 
@@ -1054,11 +1066,7 @@ if(PLATFORM_BUNDLED_LIBRARIES)
 
   # Environment variables to run precompiled executables that needed libraries.
   list(JOIN PLATFORM_BUNDLED_LIBRARY_DIRS ":" _library_paths)
-  if(DEFINED LD_LIBRARY_PATH)
-    set(PLATFORM_ENV_BUILD "LD_LIBRARY_PATH=\"${_library_paths}:${LD_LIBRARY_PATH}\"")
-  else()
-    set(PLATFORM_ENV_BUILD "LD_LIBRARY_PATH=\"${_library_paths}\"")
-  endif()
+  set(PLATFORM_ENV_BUILD "LD_LIBRARY_PATH=\"${_library_paths}:$LD_LIBRARY_PATH\"")
   set(PLATFORM_ENV_INSTALL "LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX_WITH_CONFIG}/lib/;$LD_LIBRARY_PATH")
   unset(_library_paths)
 endif()

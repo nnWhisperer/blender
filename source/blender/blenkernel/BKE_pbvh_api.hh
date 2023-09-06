@@ -13,6 +13,7 @@
 
 #include "BLI_bitmap.h"
 #include "BLI_compiler_compat.h"
+#include "BLI_function_ref.hh"
 #include "BLI_ghash.h"
 #include "BLI_math_vector_types.hh"
 #include "BLI_offset_indices.hh"
@@ -187,7 +188,6 @@ BLI_INLINE PBVHFaceRef BKE_pbvh_index_to_face(PBVH *pbvh, int index)
 /**
  * Returns true if the search should continue from this node, false otherwise.
  */
-typedef bool (*BKE_pbvh_SearchCallback)(PBVHNode *node, void *data);
 
 typedef void (*BKE_pbvh_HitCallback)(PBVHNode *node, void *data);
 typedef void (*BKE_pbvh_HitOccludedCallback)(PBVHNode *node, void *data, float *tmin);
@@ -210,7 +210,7 @@ void BKE_pbvh_build_grids(PBVH *pbvh,
                           CCGElem **grids,
                           int totgrid,
                           CCGKey *key,
-                          void **gridfaces,
+                          blender::Span<int> grid_to_face_map,
                           DMFlagMat *flagmats,
                           unsigned int **grid_hidden,
                           Mesh *me,
@@ -232,8 +232,7 @@ void BKE_pbvh_free(PBVH *pbvh);
  */
 
 void BKE_pbvh_search_callback(PBVH *pbvh,
-                              BKE_pbvh_SearchCallback scb,
-                              void *search_data,
+                              blender::FunctionRef<bool(PBVHNode &)> scb,
                               BKE_pbvh_HitCallback hcb,
                               void *hit_data);
 
@@ -418,11 +417,11 @@ float BKE_pbvh_node_get_tmin(PBVHNode *node);
 /**
  * Test if AABB is at least partially inside the #PBVHFrustumPlanes volume.
  */
-bool BKE_pbvh_node_frustum_contain_AABB(PBVHNode *node, void *frustum);
+bool BKE_pbvh_node_frustum_contain_AABB(PBVHNode *node, PBVHFrustumPlanes *frustum);
 /**
  * Test if AABB is at least partially outside the #PBVHFrustumPlanes volume.
  */
-bool BKE_pbvh_node_frustum_exclude_AABB(PBVHNode *node, void *frustum);
+bool BKE_pbvh_node_frustum_exclude_AABB(PBVHNode *node, PBVHFrustumPlanes *frustum);
 
 GSet *BKE_pbvh_bmesh_node_unique_verts(PBVHNode *node);
 GSet *BKE_pbvh_bmesh_node_other_verts(PBVHNode *node);
@@ -446,7 +445,7 @@ void BKE_pbvh_redraw_BB(PBVH *pbvh, float bb_min[3], float bb_max[3]);
 void BKE_pbvh_get_grid_updates(PBVH *pbvh, bool clear, void ***r_gridfaces, int *r_totface);
 void BKE_pbvh_grids_update(PBVH *pbvh,
                            CCGElem **grids,
-                           void **gridfaces,
+                           blender::Span<int> grid_to_face_map,
                            DMFlagMat *flagmats,
                            unsigned int **grid_hidden,
                            CCGKey *key);
@@ -463,7 +462,6 @@ void BKE_pbvh_face_sets_color_set(PBVH *pbvh, int seed, int color_default);
 
 /* Vertex Deformer. */
 
-float (*BKE_pbvh_vert_coords_alloc(PBVH *pbvh))[3];
 void BKE_pbvh_vert_coords_apply(PBVH *pbvh, const float (*vertCos)[3], int totvert);
 bool BKE_pbvh_is_deformed(PBVH *pbvh);
 
@@ -500,7 +498,7 @@ struct PBVHVertexIter {
 
   /* mesh */
   blender::MutableSpan<blender::float3> vert_positions;
-  blender::MutableSpan<blender::float3> vert_normals;
+  blender::Span<blender::float3> vert_normals;
   const bool *hide_vert;
   int totvert;
   const int *vert_indices;
@@ -517,8 +515,8 @@ struct PBVHVertexIter {
    * that compiler optimization's will skip the ones we don't use */
   BMVert *bm_vert;
   float *co;
-  float *no;
-  float *fno;
+  const float *no;
+  const float *fno;
   float *mask;
   bool visible;
 };
@@ -723,8 +721,7 @@ void BKE_pbvh_pmap_set(PBVH *pbvh, blender::GroupedSpan<int> pmap);
 
 namespace blender::bke::pbvh {
 Vector<PBVHNode *> search_gather(PBVH *pbvh,
-                                 BKE_pbvh_SearchCallback scb,
-                                 void *search_data,
+                                 FunctionRef<bool(PBVHNode &)> scb,
                                  PBVHNodeFlags leaf_flag = PBVH_Leaf);
 Vector<PBVHNode *> gather_proxies(PBVH *pbvh);
 

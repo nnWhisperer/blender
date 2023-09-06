@@ -752,7 +752,7 @@ void NLA_OT_actionclip_add(wmOperatorType *ot)
 
   /* props */
   /* TODO: this would be nicer as an ID-pointer. */
-  prop = RNA_def_enum(ot->srna, "action", DummyRNA_NULL_items, 0, "Action", "");
+  prop = RNA_def_enum(ot->srna, "action", rna_enum_dummy_NULL_items, 0, "Action", "");
   RNA_def_enum_funcs(prop, RNA_action_itemf);
   RNA_def_property_flag(prop, PROP_ENUM_NO_TRANSLATE);
   ot->prop = prop;
@@ -2271,9 +2271,7 @@ static int nlaedit_clear_scale_exec(bContext *C, wmOperator * /*op*/)
       /* strip must be selected, and must be action-clip only
        * (transitions don't have scale) */
       if ((strip->flag & NLASTRIP_FLAG_SELECT) && (strip->type == NLASTRIP_TYPE_CLIP)) {
-        PointerRNA strip_ptr;
-
-        RNA_pointer_create(nullptr, &RNA_NlaStrip, strip, &strip_ptr);
+        PointerRNA strip_ptr = RNA_pointer_create(nullptr, &RNA_NlaStrip, strip);
         RNA_float_set(&strip_ptr, "scale", 1.0f);
       }
     }

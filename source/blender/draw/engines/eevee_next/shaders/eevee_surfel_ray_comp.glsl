@@ -1,6 +1,9 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
- * For every surfel, compute the incomming radiance from both side.
+ * For every surfel, compute the incoming radiance from both side.
  * For that, walk the ray surfel linked-list and gather the light from the neighbor surfels.
  * This shader is dispatched for a random ray in a uniform hemisphere as we evaluate the
  * radiance in both directions.
@@ -21,6 +24,10 @@ float avg_albedo(vec3 albedo)
 
 void radiance_transfer(inout Surfel surfel, vec3 in_radiance, float in_visibility, vec3 L)
 {
+  /* Clamped brightness. */
+  float luma = max(1e-8, max_v3(in_radiance));
+  in_radiance *= 1.0 - max(0.0, luma - capture_info_buf.clamp_indirect) / luma;
+
   float NL = dot(surfel.normal, L);
   /* Lambertian BSDF. Albedo applied later depending on which side of the surfel was hit. */
   const float bsdf = M_1_PI;

@@ -225,9 +225,8 @@ static int pose_calculate_paths_invoke(bContext *C, wmOperator *op, const wmEven
   /* set default settings from existing/stored settings */
   {
     bAnimVizSettings *avs = &ob->pose->avs;
-    PointerRNA avs_ptr;
 
-    RNA_pointer_create(nullptr, &RNA_AnimVizMotionPaths, avs, &avs_ptr);
+    PointerRNA avs_ptr = RNA_pointer_create(nullptr, &RNA_AnimVizMotionPaths, avs);
     RNA_enum_set(op->ptr, "display_type", RNA_enum_get(&avs_ptr, "type"));
     RNA_enum_set(op->ptr, "range", RNA_enum_get(&avs_ptr, "range"));
     RNA_enum_set(op->ptr, "bake_location", RNA_enum_get(&avs_ptr, "bake_location"));
@@ -254,13 +253,12 @@ static int pose_calculate_paths_exec(bContext *C, wmOperator *op)
   /* grab baking settings from operator settings */
   {
     bAnimVizSettings *avs = &ob->pose->avs;
-    PointerRNA avs_ptr;
 
     avs->path_type = RNA_enum_get(op->ptr, "display_type");
     avs->path_range = RNA_enum_get(op->ptr, "range");
     animviz_motionpath_compute_range(ob, scene);
 
-    RNA_pointer_create(nullptr, &RNA_AnimVizMotionPaths, avs, &avs_ptr);
+    PointerRNA avs_ptr = RNA_pointer_create(nullptr, &RNA_AnimVizMotionPaths, avs);
     RNA_enum_set(&avs_ptr, "bake_location", RNA_enum_get(op->ptr, "bake_location"));
   }
 
@@ -700,7 +698,6 @@ static int pose_armature_layers_showall_exec(bContext *C, wmOperator *op)
 {
   Object *ob = CTX_data_active_object(C);
   bArmature *arm = armature_layers_get_data(&ob);
-  PointerRNA ptr;
   int maxLayers = RNA_boolean_get(op->ptr, "all") ? 32 : 16;
   /* hardcoded for now - we can only have 32 armature layers, so this should be fine... */
   bool layers[32] = {false};
@@ -714,7 +711,7 @@ static int pose_armature_layers_showall_exec(bContext *C, wmOperator *op)
    * although it would be faster to just set directly using bitflags, we still
    * need to setup a RNA pointer so that we get the "update" callbacks for free...
    */
-  RNA_id_pointer_create(&arm->id, &ptr);
+  PointerRNA ptr = RNA_id_pointer_create(&arm->id);
 
   for (int i = 0; i < maxLayers; i++) {
     layers[i] = true;
@@ -756,7 +753,6 @@ static int armature_layers_invoke(bContext *C, wmOperator *op, const wmEvent *ev
 {
   Object *ob = CTX_data_active_object(C);
   bArmature *arm = armature_layers_get_data(&ob);
-  PointerRNA ptr;
   /* hardcoded for now - we can only have 32 armature layers, so this should be fine... */
   bool layers[32];
 
@@ -767,7 +763,7 @@ static int armature_layers_invoke(bContext *C, wmOperator *op, const wmEvent *ev
 
   /* Get RNA pointer to armature data to use that to retrieve the layers as ints
    * to init the operator. */
-  RNA_id_pointer_create((ID *)arm, &ptr);
+  PointerRNA ptr = RNA_id_pointer_create((ID *)arm);
   RNA_boolean_get_array(&ptr, "layers", layers);
   RNA_boolean_set_array(op->ptr, "layers", layers);
 
@@ -780,7 +776,6 @@ static int armature_layers_exec(bContext *C, wmOperator *op)
 {
   Object *ob = CTX_data_active_object(C);
   bArmature *arm = armature_layers_get_data(&ob);
-  PointerRNA ptr;
   /* hardcoded for now - we can only have 32 armature layers, so this should be fine... */
   bool layers[32];
 
@@ -792,7 +787,7 @@ static int armature_layers_exec(bContext *C, wmOperator *op)
   RNA_boolean_get_array(op->ptr, "layers", layers);
 
   /* get pointer for armature, and write data there... */
-  RNA_id_pointer_create((ID *)arm, &ptr);
+  PointerRNA ptr = RNA_id_pointer_create((ID *)arm);
   RNA_boolean_set_array(&ptr, "layers", layers);
 
   /* NOTE: notifier might evolve. */
@@ -851,7 +846,6 @@ static int pose_bone_layers_invoke(bContext *C, wmOperator *op, const wmEvent *e
 /* Set the visible layers for the active armature (edit and pose modes) */
 static int pose_bone_layers_exec(bContext *C, wmOperator *op)
 {
-  PointerRNA ptr;
   /* hardcoded for now - we can only have 32 armature layers, so this should be fine... */
   bool layers[32];
 
@@ -878,7 +872,7 @@ static int pose_bone_layers_exec(bContext *C, wmOperator *op)
   /* set layers of pchans based on the values set in the operator props */
   CTX_DATA_BEGIN_WITH_ID (C, bPoseChannel *, pchan, selected_pose_bones, Object *, ob) {
     /* get pointer for pchan, and write flags this way */
-    RNA_pointer_create((ID *)ob->data, &RNA_Bone, pchan->bone, &ptr);
+    PointerRNA ptr = RNA_pointer_create((ID *)ob->data, &RNA_Bone, pchan->bone);
     RNA_boolean_set_array(&ptr, "layers", layers);
 
     if (prev_ob != ob) {
@@ -941,31 +935,13 @@ static int armature_bone_layers_invoke(bContext *C, wmOperator *op, const wmEven
 }
 
 /* Set the visible layers for the active armature (edit and pose modes) */
-static int armature_bone_layers_exec(bContext *C, wmOperator *op)
+static int armature_bone_layers_exec(bContext * /*C*/, wmOperator * /*op*/)
 {
-  Object *ob = CTX_data_edit_object(C);
-  PointerRNA ptr;
-  /* hardcoded for now - we can only have 32 armature layers, so this should be fine... */
-  bool layers[32];
-
-  /* get the values set in the operator properties */
-  RNA_boolean_get_array(op->ptr, "layers", layers);
-
-  /* set layers of pchans based on the values set in the operator props */
-  CTX_DATA_BEGIN_WITH_ID (C, EditBone *, ebone, selected_editable_bones, bArmature *, arm) {
-    /* get pointer for pchan, and write flags this way */
-    RNA_pointer_create((ID *)arm, &RNA_EditBone, ebone, &ptr);
-    RNA_boolean_set_array(&ptr, "layers", layers);
-  }
-  CTX_DATA_END;
-
-  ED_armature_edit_refresh_layer_used(static_cast<bArmature *>(ob->data));
-
-  /* NOTE: notifier might evolve. */
-  WM_event_add_notifier(C, NC_OBJECT | ND_POSE, ob);
-  DEG_id_tag_update((ID *)ob->data, ID_RECALC_PARAMETERS);
-
-  return OPERATOR_FINISHED;
+  // TODO: remove this entire operator, replacing it with a similar one for bone collections.
+  WM_report(
+      RPT_ERROR,
+      "Bone Layers have been converted to Bone Collections. This operator will be removed soon.");
+  return OPERATOR_CANCELLED;
 }
 
 void ARMATURE_OT_bone_layers(wmOperatorType *ot)

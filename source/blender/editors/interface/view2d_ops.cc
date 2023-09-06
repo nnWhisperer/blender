@@ -294,15 +294,15 @@ static int view_pan_modal(bContext *C, wmOperator *op, const wmEvent *event)
       }
 
       if (deltax != 0) {
-        RNA_int_set(op->ptr, "deltax", deltax);
         vpd->lastx = event->xy[0];
       }
       if (deltay != 0) {
-        RNA_int_set(op->ptr, "deltay", deltay);
         vpd->lasty = event->xy[1];
       }
 
       if (deltax || deltay) {
+        RNA_int_set(op->ptr, "deltax", deltax);
+        RNA_int_set(op->ptr, "deltay", deltay);
         view_pan_apply(C, op);
       }
       break;
@@ -1701,7 +1701,7 @@ static int view2d_smoothview_invoke(bContext *C, wmOperator * /*op*/, const wmEv
 
   float step;
   if (sms->time_allowed != 0.0) {
-    step = float((v2d->smooth_timer->duration) / sms->time_allowed);
+    step = float((v2d->smooth_timer->time_duration) / sms->time_allowed);
   }
   else {
     step = 1.0f;

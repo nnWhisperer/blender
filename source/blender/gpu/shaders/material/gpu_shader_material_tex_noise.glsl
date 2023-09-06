@@ -1,6 +1,6 @@
-#pragma BLENDER_REQUIRE(gpu_shader_common_hash.glsl)
-#pragma BLENDER_REQUIRE(gpu_shader_material_noise.glsl)
-#pragma BLENDER_REQUIRE(gpu_shader_material_fractal_noise.glsl)
+/* SPDX-FileCopyrightText: 2019-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /* The following offset functions generate random offsets to be added to texture
  * coordinates to act as a seed since the noise functions don't have seed values.
@@ -9,6 +9,10 @@
  * bad precision and not too small to be noticeable. We use float seed because
  * OSL only support float hashes.
  */
+
+#pragma BLENDER_REQUIRE(gpu_shader_common_hash.glsl)
+#pragma BLENDER_REQUIRE(gpu_shader_material_noise.glsl)
+#pragma BLENDER_REQUIRE(gpu_shader_material_fractal_noise.glsl)
 
 float random_float_offset(float seed)
 {

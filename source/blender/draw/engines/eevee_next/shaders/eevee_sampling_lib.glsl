@@ -1,8 +1,11 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * Sampling data accessors and random number generators.
  * Also contains some sample mapping functions.
- **/
+ */
 
 #pragma BLENDER_REQUIRE(common_math_lib.glsl)
 

@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2017-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma BLENDER_REQUIRE(common_view_lib.glsl)
 
@@ -35,7 +38,7 @@ void main()
 }
 
 /* Stubs */
-vec2 btdf_lut(float a, float b, float c)
+vec2 btdf_lut(float a, float b, float c, float d)
 {
   return vec2(0.0);
 }

@@ -2,7 +2,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later */
 
-#include "IO_types.h"
+#include "IO_types.hh"
 #include "usd.h"
 #include "usd_hierarchy_iterator.h"
 #include "usd_reader_geom.h"
@@ -301,6 +301,10 @@ static void import_startjob(void *customdata, bool *stop, bool *do_update, float
       data->was_canceled = true;
       return;
     }
+  }
+
+  if (data->params.import_skeletons) {
+    archive->process_armature_modifiers();
   }
 
   data->import_ok = !data->was_canceled;

@@ -707,7 +707,7 @@ class VIEW3D_HT_header(Header):
         #       (because internal RNA array iterator will free everything immediately...).
         # XXX This is an RNA internal issue, not sure how to fix it.
         # Note: Tried to add an accessor to get translated UI strings instead of manual call
-        #       to pgettext_iface below, but this fails because translated enumitems
+        #       to pgettext_iface below, but this fails because translated enum-items
         #       are always dynamically allocated.
         act_mode_item = bpy.types.Object.bl_rna.properties["mode"].enum_items[object_mode]
         act_mode_i18n_context = bpy.types.Object.bl_rna.properties["mode"].translation_context
@@ -755,13 +755,13 @@ class VIEW3D_HT_header(Header):
                 row.operator(
                     "grease_pencil.set_selection_mode",
                     text="",
-                    icon="GP_SELECT_POINTS",
+                    icon='GP_SELECT_POINTS',
                     depress=(tool_settings.gpencil_selectmode_edit == 'POINT'),
                 ).mode = 'POINT'
                 row.operator(
                     "grease_pencil.set_selection_mode",
                     text="",
-                    icon="GP_SELECT_STROKES",
+                    icon='GP_SELECT_STROKES',
                     depress=(tool_settings.gpencil_selectmode_edit == 'STROKE'),
                 ).mode = 'STROKE'
 
@@ -795,7 +795,7 @@ class VIEW3D_HT_header(Header):
                 subrow.enabled = not gpd.use_curve_edit
                 subrow.prop_enum(tool_settings, "gpencil_selectmode_edit", text="", value='SEGMENT')
 
-                # Curve edit submode
+                # Curve edit sub-mode.
                 row = layout.row(align=True)
                 row.prop(gpd, "use_curve_edit", text="",
                          icon='IPO_BEZIER')
@@ -866,7 +866,7 @@ class VIEW3D_HT_header(Header):
 
             if object_mode == 'PAINT_GPENCIL':
                 # FIXME: this is bad practice!
-                # Tool options are to be displayed in the topbar.
+                # Tool options are to be displayed in the top-bar.
                 if context.workspace.tools.from_space_view3d_mode(object_mode).idname == "builtin_brush.Draw":
                     settings = tool_settings.gpencil_sculpt.guide
                     row = layout.row(align=True)
@@ -883,12 +883,51 @@ class VIEW3D_HT_header(Header):
                     text="",
                     icon='MOD_MASK',
                 )
+
         elif object_mode == 'SCULPT':
+            # If the active tool supports it, show the canvas selector popover.
+            from bl_ui.space_toolsystem_common import ToolSelectPanelHelper
+            tool = ToolSelectPanelHelper.tool_active_from_context(context)
+            is_paint_tool = tool and tool.use_paint_canvas
+
+            shading = VIEW3D_PT_shading.get_shading(context)
+            color_type = shading.color_type
+
+            row = layout.row()
+            row.ui_units_x = 6
+            row.active = is_paint_tool and color_type == 'VERTEX'
+
+            if context.preferences.experimental.use_sculpt_texture_paint:
+                canvas_source = tool_settings.paint_mode.canvas_source
+                icon = 'GROUP_VCOL' if canvas_source == 'COLOR_ATTRIBUTE' else canvas_source
+                row.popover(panel="VIEW3D_PT_slots_paint_canvas", icon=icon)
+            else:
+                row.popover(panel="VIEW3D_PT_slots_color_attributes", icon="GROUP_VCOL")
+
             layout.popover(
                 panel="VIEW3D_PT_sculpt_automasking",
                 text="",
                 icon='MOD_MASK',
             )
+
+        elif object_mode == 'VERTEX_PAINT':
+            row = layout.row()
+            row.ui_units_x = 6
+            row.popover(panel="VIEW3D_PT_slots_color_attributes", icon="GROUP_VCOL")
+
+        elif object_mode == 'WEIGHT_PAINT':
+            row = layout.row()
+            row.ui_units_x = 6
+            row.popover(panel="VIEW3D_PT_slots_vertex_groups", icon="GROUP_VERTEX")
+
+        elif object_mode == 'TEXTURE_PAINT':
+            tool_mode = tool_settings.image_paint.mode
+            icon = 'MATERIAL' if tool_mode == 'MATERIAL' else 'IMAGE_DATA'
+
+            row = layout.row()
+            row.ui_units_x = 9
+            row.popover(panel="VIEW3D_PT_slots_projectpaint", icon=icon)
+            row.popover(panel="VIEW3D_PT_mask", icon="MOD_MASK", text="")
         else:
             # Transform settings depending on tool header visibility
             VIEW3D_HT_header.draw_xform_template(layout, context)
@@ -1280,8 +1319,7 @@ class VIEW3D_MT_view(Menu):
         layout.prop(view, "show_region_toolbar")
         layout.prop(view, "show_region_ui")
         layout.prop(view, "show_region_tool_header")
-        if prefs.experimental.use_asset_shelf:
-            layout.prop(view, "show_region_asset_shelf")
+        layout.prop(view, "show_region_asset_shelf")
         layout.prop(view, "show_region_hud")
 
         layout.separator()
@@ -2410,6 +2448,7 @@ class VIEW3D_MT_grease_pencil_add(Menu):
 class VIEW3D_MT_add(Menu):
     bl_label = "Add"
     bl_translation_context = i18n_contexts.operator_default
+    bl_options = {'SEARCH_ON_KEY_PRESS'}
 
     def draw(self, context):
         layout = self.layout
@@ -3816,7 +3855,7 @@ class VIEW3D_MT_pose(Menu):
         layout.separator()
 
         layout.menu("VIEW3D_MT_pose_motion")
-        layout.menu("VIEW3D_MT_pose_group")
+        layout.menu("VIEW3D_MT_bone_collections")
 
         layout.separator()
 
@@ -3901,26 +3940,35 @@ class VIEW3D_MT_pose_motion(Menu):
         layout.operator("pose.paths_clear", text="Clear")
 
 
-class VIEW3D_MT_pose_group(Menu):
-    bl_label = "Bone Groups"
+class VIEW3D_MT_bone_collections(Menu):
+    bl_label = "Bone Collections"
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object and context.active_object.type == 'ARMATURE'
 
     def draw(self, context):
         layout = self.layout
 
-        pose = context.active_object.pose
+        props = layout.operator("armature.collection_assign",
+                                text="Assign to New Collection")
+        props.name = "New Collection"
 
-        layout.operator_context = 'EXEC_AREA'
-        layout.operator("pose.group_assign", text="Assign to New Group").type = 0
+        arm = context.active_object.data
+        if not arm.collections.active:
+            return
 
-        if pose.bone_groups:
-            active_group = pose.bone_groups.active_index + 1
-            layout.operator("pose.group_assign", text="Assign to Group").type = active_group
+        layout.separator()
 
-            layout.separator()
+        layout.operator("armature.collection_assign",
+                        text="Assign to '%s'" % arm.collections.active.name)
+        layout.operator("armature.collection_unassign",
+                        text="Unassign from '%s'" % arm.collections.active.name)
 
-            # layout.operator_context = 'INVOKE_AREA'
-            layout.operator("pose.group_unassign")
-            layout.operator("pose.group_remove")
+        layout.separator()
+
+        layout.operator("armature.collection_remove",
+                        text="Remove Collection '%s'" % arm.collections.active.name)
 
 
 class VIEW3D_MT_pose_ik(Menu):
@@ -4807,6 +4855,15 @@ class VIEW3D_MT_edit_gpencil_delete(Menu):
         layout.operator("gpencil.delete", text="Delete Active Keyframe (Active Layer)").type = 'FRAME'
         layout.operator("gpencil.active_frames_delete_all", text="Delete Active Keyframes (All Layers)")
 
+
+class VIEW3D_MT_edit_greasepencil_delete(Menu):
+    bl_label = "Delete"
+
+    def draw(self, _context):
+        layout = self.layout
+
+        layout.operator_enum("grease_pencil.dissolve", "type")
+
 # Edit Curve
 # draw_curve is used by VIEW3D_MT_edit_curve and VIEW3D_MT_edit_surface
 
@@ -5573,7 +5630,8 @@ class VIEW3D_MT_edit_greasepencil(Menu):
     bl_label = "Grease Pencil"
 
     def draw(self, _context):
-        pass
+        layout = self.layout
+        layout.menu("VIEW3D_MT_edit_greasepencil_delete")
 
 
 class VIEW3D_MT_edit_greasepencil_stroke(Menu):
@@ -6089,8 +6147,8 @@ class VIEW3D_PT_collections(Panel):
 class VIEW3D_PT_object_type_visibility(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'HEADER'
-    bl_label = "View Object Types"
-    bl_ui_units_x = 7
+    bl_label = "Selectability & Visibility"
+    bl_ui_units_x = 8
 
     # Allows derived classes to pass view data other than context.space_data.
     # This is used by the official VR add-on, which passes XrSessionSettings
@@ -6100,33 +6158,30 @@ class VIEW3D_PT_object_type_visibility(Panel):
         layout.use_property_split = True
         layout.use_property_decorate = False
 
-        layout.label(text="Object Types Visibility")
+        layout.label(text="Selectability & Visibility")
         layout.separator()
-        col = layout.column()
+        col = layout.column(align=True)
 
         attr_object_types = (
-            # Geometry
-            ("mesh", "Mesh"),
-            ("curve", "Curve"),
-            ("surf", "Surface"),
-            ("meta", "Meta"),
-            ("font", "Text"),
-            ("curves", "Hair Curves"),
-            ("pointcloud", "Point Cloud"),
-            ("volume", "Volume"),
-            ("grease_pencil", "Grease Pencil"),
-            (None, None),
-            # Other
-            ("armature", "Armature"),
-            ("lattice", "Lattice"),
-            ("empty", "Empty"),
-            ("light", "Light"),
-            ("light_probe", "Light Probe"),
-            ("camera", "Camera"),
-            ("speaker", "Speaker"),
+            ("mesh", "Mesh", 'OUTLINER_OB_MESH'),
+            ("curve", "Curve", 'OUTLINER_OB_CURVE'),
+            ("surf", "Surface", 'OUTLINER_OB_SURFACE'),
+            ("meta", "Meta", 'OUTLINER_OB_META'),
+            ("font", "Text", 'OUTLINER_OB_FONT'),
+            ("curves", "Hair Curves", 'OUTLINER_OB_CURVES'),
+            ("pointcloud", "Point Cloud", 'OUTLINER_OB_POINTCLOUD'),
+            ("volume", "Volume", 'OUTLINER_OB_VOLUME'),
+            ("grease_pencil", "Grease Pencil", 'OUTLINER_OB_GREASEPENCIL'),
+            ("armature", "Armature", 'OUTLINER_OB_ARMATURE'),
+            ("lattice", "Lattice", 'OUTLINER_OB_LATTICE'),
+            ("empty", "Empty", 'OUTLINER_OB_EMPTY'),
+            ("light", "Light", 'OUTLINER_OB_LIGHT'),
+            ("light_probe", "Light Probe", 'OUTLINER_OB_LIGHTPROBE'),
+            ("camera", "Camera", 'OUTLINER_OB_CAMERA'),
+            ("speaker", "Speaker", 'OUTLINER_OB_SPEAKER'),
         )
 
-        for attr, attr_name in attr_object_types:
+        for attr, attr_name, attr_icon in attr_object_types:
             if attr is None:
                 col.separator()
                 continue
@@ -6140,10 +6195,7 @@ class VIEW3D_PT_object_type_visibility(Panel):
             icon_v = 'HIDE_OFF' if getattr(view, attr_v) else 'HIDE_ON'
 
             row = col.row(align=True)
-            row.alignment = 'RIGHT'
-
-            row.label(text=attr_name)
-            row.prop(view, attr_v, text="", icon=icon_v, emboss=False)
+            row.label(text=attr_name, icon=attr_icon)
 
             if show_select:
                 attr_s = "show_object_select_" + attr
@@ -6152,6 +6204,8 @@ class VIEW3D_PT_object_type_visibility(Panel):
                 rowsub = row.row(align=True)
                 rowsub.active = getattr(view, attr_v)
                 rowsub.prop(view, attr_s, text="", icon=icon_s, emboss=False)
+
+            row.prop(view, attr_v, text="", icon=icon_v, emboss=False)
 
     def draw(self, context):
         view = context.space_data
@@ -6210,7 +6264,7 @@ class VIEW3D_PT_shading_lighting(Panel):
                 system = prefs.system
 
                 if not system.use_studio_light_edit:
-                    sub.scale_y = 0.6  # smaller studiolight preview
+                    sub.scale_y = 0.6  # Smaller studio-light preview.
                     sub.template_icon_view(shading, "studio_light", scale_popup=3.0)
                 else:
                     sub.prop(
@@ -6303,13 +6357,8 @@ class VIEW3D_PT_shading_lighting(Panel):
 class VIEW3D_PT_shading_color(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'HEADER'
-    bl_label = "Color"
+    bl_label = "Wire Color"
     bl_parent_id = 'VIEW3D_PT_shading'
-
-    @classmethod
-    def poll(cls, context):
-        shading = VIEW3D_PT_shading.get_shading(context)
-        return shading.type in {'WIREFRAME', 'SOLID'}
 
     def _draw_color_type(self, context):
         layout = self.layout
@@ -6329,13 +6378,19 @@ class VIEW3D_PT_shading_color(Panel):
             layout.row().prop(shading, "background_color", text="")
 
     def draw(self, context):
+        layout = self.layout
         shading = VIEW3D_PT_shading.get_shading(context)
-        if shading.type == 'WIREFRAME':
-            self.layout.row().prop(shading, "wireframe_color_type", expand=True)
-        else:
+
+        self.layout.row().prop(shading, "wireframe_color_type", expand=True)
+        self.layout.separator()
+
+        if shading.type == 'SOLID':
+            layout.row().label(text="Color")
             self._draw_color_type(context)
             self.layout.separator()
-        self._draw_background_color(context)
+            self._draw_background_color(context)
+        elif shading.type == 'WIREFRAME':
+            self._draw_background_color(context)
 
 
 class VIEW3D_PT_shading_options(Panel):
@@ -7626,7 +7681,7 @@ class VIEW3D_PT_context_properties(Panel):
             rna_prop_ui.draw(self.layout, context, member, object, use_edit=False)
 
 
-# Grease Pencil Object - Multiframe falloff tools
+# Grease Pencil Object - Multi-frame falloff tools.
 class VIEW3D_PT_gpencil_multi_frame(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'HEADER'
@@ -8326,7 +8381,7 @@ class VIEW3D_AST_sculpt_brushes(bpy.types.AssetShelf):
         if not prefs.experimental.use_extended_asset_browser:
             return False
 
-        return bool(context.object and context.object.mode == 'SCULPT')
+        return context.mode == 'SCULPT'
 
     @classmethod
     def asset_poll(cls, asset):
@@ -8432,7 +8487,7 @@ classes = (
     VIEW3D_MT_pose_slide,
     VIEW3D_MT_pose_propagate,
     VIEW3D_MT_pose_motion,
-    VIEW3D_MT_pose_group,
+    VIEW3D_MT_bone_collections,
     VIEW3D_MT_pose_ik,
     VIEW3D_MT_pose_constraints,
     VIEW3D_MT_pose_names,
@@ -8477,6 +8532,7 @@ classes = (
     VIEW3D_MT_gpencil_autoweights,
     VIEW3D_MT_gpencil_edit_context_menu,
     VIEW3D_MT_edit_greasepencil,
+    VIEW3D_MT_edit_greasepencil_delete,
     VIEW3D_MT_edit_greasepencil_stroke,
     VIEW3D_MT_edit_curve,
     VIEW3D_MT_edit_curve_ctrlpoints,

@@ -33,8 +33,8 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLO_readfile.h"
-#include "readfile.h"
-#include "versioning_common.h"
+#include "readfile.hh"
+#include "versioning_common.hh"
 
 using blender::Map;
 using blender::StringRef;
@@ -185,17 +185,18 @@ void version_node_output_socket_name(bNodeTree *ntree,
 
 bNodeSocket *version_node_add_socket_if_not_exist(bNodeTree *ntree,
                                                   bNode *node,
-                                                  eNodeSocketInOut in_out,
+                                                  int in_out,
                                                   int type,
                                                   int subtype,
                                                   const char *identifier,
                                                   const char *name)
 {
-  bNodeSocket *sock = nodeFindSocket(node, in_out, identifier);
+  bNodeSocket *sock = nodeFindSocket(node, eNodeSocketInOut(in_out), identifier);
   if (sock != nullptr) {
     return sock;
   }
-  return nodeAddStaticSocket(ntree, node, in_out, type, subtype, identifier, name);
+  return nodeAddStaticSocket(
+      ntree, node, eNodeSocketInOut(in_out), type, subtype, identifier, name);
 }
 
 void version_node_id(bNodeTree *ntree, const int node_type, const char *new_name)
@@ -492,7 +493,7 @@ void do_versions_after_setup(Main *new_bmain, BlendFileReadReport *reports)
    *     decision to apply some versioning on some data should mostly rely on the data itself.
    *   - Unlike the regular do_version code, this one should _not_ be assumed as 'valid forever'.
    *     It is closer to the Editing or BKE code in that respect, changes to the logic or data
-   *     model of an ID will require carefull update here as well.
+   *     model of an ID will require a careful update here as well.
    *
    * Another critical weakness of this code is that it is currently _not_ performed on data linked
    * during an editing session, but only on data linked while reading a whole blendfile. This will

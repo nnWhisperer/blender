@@ -26,7 +26,7 @@
 
 #include "BLT_translation.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 static void lightprobe_init_data(ID *id)
 {
@@ -40,7 +40,6 @@ static void lightprobe_foreach_id(ID *id, LibraryForeachIDData *data)
 {
   LightProbe *probe = (LightProbe *)id;
 
-  BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, probe->image, IDWALK_CB_USER);
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, probe->visibility_grp, IDWALK_CB_NOP);
 }
 
@@ -51,12 +50,6 @@ static void lightprobe_blend_write(BlendWriter *writer, ID *id, const void *id_a
   /* write LibData */
   BLO_write_id_struct(writer, LightProbe, id_address, &prb->id);
   BKE_id_blend_write(writer, &prb->id);
-}
-
-static void lightprobe_blend_read_lib(BlendLibReader *reader, ID *id)
-{
-  LightProbe *prb = (LightProbe *)id;
-  BLO_read_id_address(reader, &prb->id, &prb->visibility_grp);
 }
 
 IDTypeInfo IDType_ID_LP = {
@@ -81,8 +74,7 @@ IDTypeInfo IDType_ID_LP = {
 
     /*blend_write*/ lightprobe_blend_write,
     /*blend_read_data*/ nullptr,
-    /*blend_read_lib*/ lightprobe_blend_read_lib,
-    /*blend_read_expand*/ nullptr,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 

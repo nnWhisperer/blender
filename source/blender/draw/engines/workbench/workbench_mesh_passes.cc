@@ -172,10 +172,10 @@ void OpaquePass::draw(Manager &manager,
     opaque_fb.bind();
 
     manager.submit(gbuffer_in_front_ps_, view);
-    if (resources.depth_in_front_tx.is_valid()) {
-      /* Only needed when transparent infront is needed */
-      GPU_texture_copy(resources.depth_in_front_tx, resources.depth_tx);
-    }
+  }
+
+  if (resources.depth_in_front_tx.is_valid()) {
+    GPU_texture_copy(resources.depth_in_front_tx, resources.depth_tx);
   }
 
   if (!gbuffer_ps_.is_empty()) {
@@ -190,6 +190,8 @@ void OpaquePass::draw(Manager &manager,
 
   bool needs_stencil_copy = shadow_pass && !gbuffer_in_front_ps_.is_empty();
 
+  Texture *depth_stencil_tx = nullptr;
+
   if (needs_stencil_copy) {
     shadow_depth_stencil_tx.ensure_2d(GPU_DEPTH24_STENCIL8,
                                       resolution,
@@ -198,21 +200,23 @@ void OpaquePass::draw(Manager &manager,
                                           GPU_TEXTURE_USAGE_MIP_SWIZZLE_VIEW);
     GPU_texture_copy(shadow_depth_stencil_tx, resources.depth_tx);
 
-    deferred_ps_stencil_tx = shadow_depth_stencil_tx.stencil_view();
+    depth_stencil_tx = shadow_depth_stencil_tx.ptr();
 
-    opaque_fb.ensure(GPU_ATTACHMENT_TEXTURE(deferred_ps_stencil_tx));
+    opaque_fb.ensure(GPU_ATTACHMENT_TEXTURE(*depth_stencil_tx));
     opaque_fb.bind();
     GPU_framebuffer_clear_stencil(opaque_fb, 0);
   }
   else {
     shadow_depth_stencil_tx.free();
-    deferred_ps_stencil_tx = resources.depth_tx.stencil_view();
+    depth_stencil_tx = resources.depth_tx.ptr();
   }
 
   if (shadow_pass) {
     shadow_pass->draw(
-        manager, view, resources, *deferred_ps_stencil_tx, !gbuffer_in_front_ps_.is_empty());
+        manager, view, resources, **depth_stencil_tx, !gbuffer_in_front_ps_.is_empty());
   }
+
+  deferred_ps_stencil_tx = resources.stencil_view.extract(manager, *depth_stencil_tx);
 
   opaque_fb.ensure(GPU_ATTACHMENT_NONE, GPU_ATTACHMENT_TEXTURE(resources.color_tx));
   opaque_fb.bind();
@@ -342,7 +346,7 @@ void TransparentDepthPass::sync(const SceneState &scene_state, SceneResources &r
       ePipelineType::OPAQUE, eLightingType::FLAT, clip, resources.shader_cache);
 
   if (merge_sh_ == nullptr) {
-    merge_sh_ = GPU_shader_create_from_info_name("workbench_next_merge_depth");
+    merge_sh_ = GPU_shader_create_from_info_name("workbench_merge_depth");
   }
   merge_ps_.init();
   merge_ps_.shader_set(merge_sh_);

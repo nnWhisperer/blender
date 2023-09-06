@@ -39,7 +39,7 @@
 #include "PIL_time.h"
 
 #include "BKE_appdir.h"
-#include "BKE_cloth.h"
+#include "BKE_cloth.hh"
 #include "BKE_collection.h"
 #include "BKE_dynamicpaint.h"
 #include "BKE_fluid.h"
@@ -53,7 +53,7 @@
 #include "BKE_scene.h"
 #include "BKE_softbody.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 #include "BIK_api.h"
 

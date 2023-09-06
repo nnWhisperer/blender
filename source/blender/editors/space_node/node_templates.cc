@@ -26,6 +26,8 @@
 #include "BKE_context.h"
 #include "BKE_lib_id.h"
 #include "BKE_main.h"
+#include "BKE_node_runtime.hh"
+#include "BKE_node_tree_interface.hh"
 #include "BKE_node_tree_update.h"
 
 #include "RNA_access.hh"
@@ -315,7 +317,6 @@ static Vector<NodeLinkItem> ui_node_link_items(NodeLinkArg *arg,
   /* XXX this should become a callback for node types! */
   if (arg->node_type->type == NODE_GROUP) {
     bNodeTree *ngroup;
-    int i;
 
     for (ngroup = (bNodeTree *)arg->bmain->nodetrees.first; ngroup;
          ngroup = (bNodeTree *)ngroup->id.next)
@@ -327,7 +328,6 @@ static Vector<NodeLinkItem> ui_node_link_items(NodeLinkArg *arg,
       }
     }
 
-    i = 0;
     for (ngroup = (bNodeTree *)arg->bmain->nodetrees.first; ngroup;
          ngroup = (bNodeTree *)ngroup->id.next)
     {
@@ -337,17 +337,19 @@ static Vector<NodeLinkItem> ui_node_link_items(NodeLinkArg *arg,
         continue;
       }
 
-      ListBase *lb = (in_out == SOCK_IN ? &ngroup->inputs : &ngroup->outputs);
-      bNodeSocket *stemp;
-      int index;
-      for (stemp = (bNodeSocket *)lb->first, index = 0; stemp; stemp = stemp->next, index++, i++) {
+      Span<bNodeTreeInterfaceSocket *> iosockets = (in_out == SOCK_IN ?
+                                                        ngroup->interface_inputs() :
+                                                        ngroup->interface_outputs());
+      for (const int index : iosockets.index_range()) {
+        bNodeTreeInterfaceSocket *iosock = iosockets[index];
         NodeLinkItem item;
         item.socket_index = index;
         /* NOTE: int stemp->type is not fully reliable, not used for node group
          * interface sockets. use the typeinfo->type instead.
          */
-        item.socket_type = stemp->typeinfo->type;
-        item.socket_name = stemp->name;
+        const bNodeSocketType *typeinfo = iosock->socket_typeinfo();
+        item.socket_type = typeinfo->type;
+        item.socket_name = iosock->name;
         item.node_name = ngroup->id.name + 2;
         item.ngroup = ngroup;
 
@@ -361,10 +363,10 @@ static Vector<NodeLinkItem> ui_node_link_items(NodeLinkArg *arg,
 
     r_node_decl.emplace(NodeDeclaration());
     blender::nodes::build_node_declaration(*arg->node_type, *r_node_decl);
-    Span<SocketDeclarationPtr> socket_decls = (in_out == SOCK_IN) ? r_node_decl->inputs :
-                                                                    r_node_decl->outputs;
+    Span<SocketDeclaration *> socket_decls = (in_out == SOCK_IN) ? r_node_decl->inputs :
+                                                                   r_node_decl->outputs;
     int index = 0;
-    for (const SocketDeclarationPtr &socket_decl_ptr : socket_decls) {
+    for (const SocketDeclaration *socket_decl_ptr : socket_decls) {
       const SocketDeclaration &socket_decl = *socket_decl_ptr;
       NodeLinkItem item;
       item.socket_index = index++;
@@ -649,7 +651,6 @@ static void ui_template_node_link_menu(bContext *C, uiLayout *layout, void *but_
   bNodeSocket *sock = arg->sock;
   bNodeTreeType *ntreetype = arg->ntree->typeinfo;
 
-  UI_block_flag_enable(block, UI_BLOCK_NO_FLIP | UI_BLOCK_IS_FLIP);
   UI_block_layout_set_current(block, layout);
   split = uiLayoutSplit(layout, 0.0f, false);
 
@@ -709,7 +710,7 @@ static void ui_template_node_link_menu(bContext *C, uiLayout *layout, void *but_
 }  // namespace blender::ed::space_node
 
 void uiTemplateNodeLink(
-    uiLayout *layout, bContext *C, bNodeTree *ntree, bNode *node, bNodeSocket *input)
+    uiLayout *layout, bContext * /*C*/, bNodeTree *ntree, bNode *node, bNodeSocket *input)
 {
   using namespace blender::ed::space_node;
 
@@ -723,9 +724,7 @@ void uiTemplateNodeLink(
   arg->node = node;
   arg->sock = input;
 
-  PointerRNA node_ptr;
-  RNA_pointer_create((ID *)ntree, &RNA_Node, node, &node_ptr);
-  node_socket_color_get(*C, *ntree, node_ptr, *input, socket_col);
+  node_socket_color_get(*input->typeinfo, socket_col);
 
   UI_block_layout_set_current(block, layout);
 
@@ -764,9 +763,7 @@ static void ui_node_draw_input(
 static void ui_node_draw_node(
     uiLayout &layout, bContext &C, bNodeTree &ntree, bNode &node, int depth)
 {
-  PointerRNA nodeptr;
-
-  RNA_pointer_create(&ntree.id, &RNA_Node, &node, &nodeptr);
+  PointerRNA nodeptr = RNA_pointer_create(&ntree.id, &RNA_Node, &node);
 
   if (node.typeinfo->draw_buttons) {
     if (node.type != NODE_GROUP) {
@@ -783,7 +780,6 @@ static void ui_node_draw_node(
 static void ui_node_draw_input(
     uiLayout &layout, bContext &C, bNodeTree &ntree, bNode &node, bNodeSocket &input, int depth)
 {
-  PointerRNA inputptr, nodeptr;
   uiBlock *block = uiLayoutGetBlock(&layout);
   uiLayout *row = nullptr;
   bool dependency_loop;
@@ -802,8 +798,8 @@ static void ui_node_draw_input(
   }
 
   /* socket RNA pointer */
-  RNA_pointer_create(&ntree.id, &RNA_NodeSocket, &input, &inputptr);
-  RNA_pointer_create(&ntree.id, &RNA_Node, &node, &nodeptr);
+  PointerRNA inputptr = RNA_pointer_create(&ntree.id, &RNA_NodeSocket, &input);
+  PointerRNA nodeptr = RNA_pointer_create(&ntree.id, &RNA_Node, &node);
 
   row = uiLayoutRow(&layout, true);
   /* Decorations are added manually here. */

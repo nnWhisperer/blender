@@ -81,9 +81,9 @@ Documentation Checking
 Spell Checkers
    This runs the spell checker from the developer tools repositor.
 
-   * check_spelling_c:      Check for spelling errors (C/C++ only),
-   * check_spelling_osl:    Check for spelling errors (OSL only).
-   * check_spelling_py:     Check for spelling errors (Python only).
+   * check_spelling_c:       Check for spelling errors (C/C++ only),
+   * check_spelling_py:      Check for spelling errors (Python only).
+   * check_spelling_shaders: Check for spelling errors (GLSL,OSL & MSL only).
 
    Note: an additional word-list is maintained at: 'tools/check_source/check_spelling_c_config.py'
 
@@ -95,9 +95,6 @@ Spell Checkers
 
 Utilities
    Not associated with building Blender.
-
-   * authors:
-     Update the AUTHORS file using GIT history.
 
    * icons:
      Updates PNG icons from SVG files.
@@ -495,24 +492,31 @@ check_spelling_py: .FORCE
 	@cd "$(BUILD_DIR)" ; \
 	PYTHONIOENCODING=utf_8 $(PYTHON) \
 	    "$(BLENDER_DIR)/tools/check_source/check_spelling.py" \
-	    "$(BLENDER_DIR)/scripts"
+	    --cache-file=$(CHECK_SPELLING_CACHE) \
+	    --match=".*\.(py)$$" \
+	    "$(BLENDER_DIR)/scripts" \
+	    "$(BLENDER_DIR)/source" \
+	    "$(BLENDER_DIR)/tools"
 
 check_spelling_c: .FORCE
 	@cd "$(BUILD_DIR)" ; \
 	PYTHONIOENCODING=utf_8 $(PYTHON) \
 	    "$(BLENDER_DIR)/tools/check_source/check_spelling.py" \
 	    --cache-file=$(CHECK_SPELLING_CACHE) \
+	    --match=".*\.(c|cc|cpp|cxx|h|hh|hpp|hxx|inl|m|mm)$$" \
 	    "$(BLENDER_DIR)/source" \
 	    "$(BLENDER_DIR)/intern/cycles" \
 	    "$(BLENDER_DIR)/intern/guardedalloc" \
-	    "$(BLENDER_DIR)/intern/ghost" \
+	    "$(BLENDER_DIR)/intern/ghost"
 
-check_spelling_osl: .FORCE
+check_spelling_shaders: .FORCE
 	@cd "$(BUILD_DIR)" ; \
 	PYTHONIOENCODING=utf_8 $(PYTHON) \
 	    "$(BLENDER_DIR)/tools/check_source/check_spelling.py" \
 	    --cache-file=$(CHECK_SPELLING_CACHE) \
-	    "$(BLENDER_DIR)/intern/cycles/kernel/shaders"
+	    --match=".*\.(osl|msl|glsl)$$" \
+	    "$(BLENDER_DIR)/intern/" \
+	    "$(BLENDER_DIR)/source/"
 
 check_descriptions: .FORCE
 	@$(BLENDER_BIN) --background -noaudio --factory-startup --python \
@@ -549,9 +553,6 @@ source_archive_complete: .FORCE
 	    -DCMAKE_BUILD_TYPE_INIT:STRING=$(BUILD_TYPE) -DPACKAGE_USE_UPSTREAM_SOURCES=OFF
 # This assumes CMake is still using a default `PACKAGE_DIR` variable:
 	@$(PYTHON) ./build_files/utils/make_source_archive.py --include-packages "$(BUILD_DIR)/source_archive/packages"
-
-authors: .FORCE
-	@$(PYTHON) ./tools/utils/authors_git_gen.py
 
 INKSCAPE_BIN?="inkscape"
 icons: .FORCE

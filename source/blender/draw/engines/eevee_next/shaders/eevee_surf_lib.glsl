@@ -1,3 +1,6 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 #pragma BLENDER_REQUIRE(common_math_lib.glsl)
 #pragma BLENDER_REQUIRE(gpu_shader_codegen_lib.glsl)
@@ -72,7 +75,7 @@ void init_globals_curves()
 
 void init_globals_gpencil()
 {
-  /* Undo backface flip as the gpencil normal is already pointing towards the camera. */
+  /* Undo back-face flip as the grease-pencil normal is already pointing towards the camera. */
   g_data.N = g_data.Ni = interp.N;
 }
 
@@ -125,10 +128,10 @@ void init_interface()
 #endif
 }
 
-#ifdef GPU_VERTEX_SHADER
+#if defined(GPU_VERTEX_SHADER) && defined(MAT_SHADOW)
 void shadow_viewport_layer_set(int view_id, int lod)
 {
-  /* We still render to a layered framebuffer in the case of Metal + Tile Based Renderer.
+  /* We still render to a layered frame-buffer in the case of Metal + Tile Based Renderer.
    * Since it needs correct depth buffering, each view needs to not overlap each others.
    * It doesn't matter much for other platform, so we use that as a way to pass the view id. */
   gpu_Layer = view_id;
@@ -136,7 +139,7 @@ void shadow_viewport_layer_set(int view_id, int lod)
 }
 #endif
 
-#ifdef GPU_FRAGMENT_SHADER
+#if defined(GPU_FRAGMENT_SHADER) && defined(MAT_SHADOW)
 int shadow_view_id_get()
 {
   return gpu_Layer;

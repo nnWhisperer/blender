@@ -52,6 +52,7 @@
 #include "BKE_ipo.h"
 #include "BKE_key.h"
 #include "BKE_lib_id.h"
+#include "BKE_lib_query.h"
 #include "BKE_main.h"
 #include "BKE_nla.h"
 
@@ -61,7 +62,7 @@
 
 #include "SEQ_iterator.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 #ifdef WIN32
 #  include "BLI_math_base.h" /* M_PI */
@@ -95,6 +96,20 @@ static void ipo_free_data(ID *id)
 
   if (G.debug & G_DEBUG) {
     printf("Freed %d (Unconverted) Ipo-Curves from IPO '%s'\n", n, ipo->id.name + 2);
+  }
+}
+
+static void ipo_foreach_id(ID *id, LibraryForeachIDData *data)
+{
+  Ipo *ipo = reinterpret_cast<Ipo *>(id);
+  const int flag = BKE_lib_query_foreachid_process_flags_get(data);
+
+  if (flag & IDWALK_DO_DEPRECATED_POINTERS) {
+    LISTBASE_FOREACH (IpoCurve *, icu, &ipo->curve) {
+      if (icu->driver) {
+        BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, icu->driver->ob, IDWALK_CB_NOP);
+      }
+    }
   }
 }
 
@@ -139,28 +154,6 @@ static void ipo_blend_read_data(BlendDataReader *reader, ID *id)
   }
 }
 
-static void ipo_blend_read_lib(BlendLibReader *reader, ID *id)
-{
-  Ipo *ipo = (Ipo *)id;
-
-  LISTBASE_FOREACH (IpoCurve *, icu, &ipo->curve) {
-    if (icu->driver) {
-      BLO_read_id_address(reader, id, &icu->driver->ob);
-    }
-  }
-}
-
-static void ipo_blend_read_expand(BlendExpander *expander, ID *id)
-{
-  Ipo *ipo = (Ipo *)id;
-
-  LISTBASE_FOREACH (IpoCurve *, icu, &ipo->curve) {
-    if (icu->driver) {
-      BLO_expand(expander, icu->driver->ob);
-    }
-  }
-}
-
 IDTypeInfo IDType_ID_IP = {
     /*id_code*/ ID_IP,
     /*id_filter*/ 0,
@@ -176,15 +169,14 @@ IDTypeInfo IDType_ID_IP = {
     /*copy_data*/ nullptr,
     /*free_data*/ ipo_free_data,
     /*make_local*/ nullptr,
-    /*foreach_id*/ nullptr,
+    /*foreach_id*/ ipo_foreach_id,
     /*foreach_cache*/ nullptr,
     /*foreach_path*/ nullptr,
     /*owner_pointer_get*/ nullptr,
 
     /*blend_write*/ nullptr,
     /*blend_read_data*/ ipo_blend_read_data,
-    /*blend_read_lib*/ ipo_blend_read_lib,
-    /*blend_read_expand*/ ipo_blend_read_expand,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 

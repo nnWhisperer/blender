@@ -19,7 +19,6 @@
 #include "DNA_object_types.h"
 
 #include "BLI_bounds.hh"
-#include "BLI_edgehash.h"
 #include "BLI_endian_switch.h"
 #include "BLI_ghash.h"
 #include "BLI_hash.h"
@@ -30,7 +29,9 @@
 #include "BLI_math_matrix.h"
 #include "BLI_math_vector.hh"
 #include "BLI_memarena.h"
+#include "BLI_ordered_edge.hh"
 #include "BLI_resource_scope.hh"
+#include "BLI_set.hh"
 #include "BLI_span.hh"
 #include "BLI_string.h"
 #include "BLI_task.hh"
@@ -65,7 +66,7 @@
 #include "DEG_depsgraph.h"
 #include "DEG_depsgraph_query.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 using blender::float3;
 using blender::MutableSpan;
@@ -131,11 +132,17 @@ static void mesh_copy_data(Main *bmain, ID *id_dst, const ID *id_src, const int 
    * when the source is persistent and edits to the destination mesh don't affect the caches.
    * Caches will be "un-shared" as necessary later on. */
   mesh_dst->runtime->bounds_cache = mesh_src->runtime->bounds_cache;
+  mesh_dst->runtime->vert_normals_cache = mesh_src->runtime->vert_normals_cache;
+  mesh_dst->runtime->face_normals_cache = mesh_src->runtime->face_normals_cache;
   mesh_dst->runtime->loose_verts_cache = mesh_src->runtime->loose_verts_cache;
   mesh_dst->runtime->verts_no_face_cache = mesh_src->runtime->verts_no_face_cache;
   mesh_dst->runtime->loose_edges_cache = mesh_src->runtime->loose_edges_cache;
   mesh_dst->runtime->looptris_cache = mesh_src->runtime->looptris_cache;
   mesh_dst->runtime->looptri_faces_cache = mesh_src->runtime->looptri_faces_cache;
+  mesh_dst->runtime->vert_to_face_offset_cache = mesh_src->runtime->vert_to_face_offset_cache;
+  mesh_dst->runtime->vert_to_face_map_cache = mesh_src->runtime->vert_to_face_map_cache;
+  mesh_dst->runtime->vert_to_corner_map_cache = mesh_src->runtime->vert_to_corner_map_cache;
+  mesh_dst->runtime->corner_to_face_map_cache = mesh_src->runtime->corner_to_face_map_cache;
 
   /* Only do tessface if we have no faces. */
   const bool do_tessface = ((mesh_src->totface_legacy != 0) && (mesh_src->faces_num == 0));
@@ -211,10 +218,16 @@ static void mesh_free_data(ID *id)
 static void mesh_foreach_id(ID *id, LibraryForeachIDData *data)
 {
   Mesh *mesh = reinterpret_cast<Mesh *>(id);
+  const int flag = BKE_lib_query_foreachid_process_flags_get(data);
+
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, mesh->texcomesh, IDWALK_CB_NEVER_SELF);
   BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, mesh->key, IDWALK_CB_USER);
   for (int i = 0; i < mesh->totcol; i++) {
     BKE_LIB_FOREACHID_PROCESS_IDSUPER(data, mesh->mat[i], IDWALK_CB_USER);
+  }
+
+  if (flag & IDWALK_DO_DEPRECATED_POINTERS) {
+    BKE_LIB_FOREACHID_PROCESS_ID_NOCHECK(data, mesh->ipo, IDWALK_CB_USER);
   }
 }
 
@@ -298,6 +311,10 @@ static void mesh_blend_read_data(BlendDataReader *reader, ID *id)
 {
   Mesh *mesh = reinterpret_cast<Mesh *>(id);
   BLO_read_pointer_array(reader, (void **)&mesh->mat);
+  /* This check added for python created meshes. */
+  if (!mesh->mat) {
+    mesh->totcol = 0;
+  }
 
   /* Deprecated pointers to custom data layers are read here for backward compatibility
    * with files where these were owning pointers rather than a view into custom data. */
@@ -349,35 +366,6 @@ static void mesh_blend_read_data(BlendDataReader *reader, ID *id)
   }
 }
 
-static void mesh_blend_read_lib(BlendLibReader *reader, ID *id)
-{
-  Mesh *me = reinterpret_cast<Mesh *>(id);
-  /* This check added for python created meshes. */
-  if (me->mat) {
-    for (int i = 0; i < me->totcol; i++) {
-      BLO_read_id_address(reader, id, &me->mat[i]);
-    }
-  }
-  else {
-    me->totcol = 0;
-  }
-
-  BLO_read_id_address(reader, id, &me->ipo);  // XXX: deprecated: old anim sys
-  BLO_read_id_address(reader, id, &me->key);
-  BLO_read_id_address(reader, id, &me->texcomesh);
-}
-
-static void mesh_read_expand(BlendExpander *expander, ID *id)
-{
-  Mesh *me = reinterpret_cast<Mesh *>(id);
-  for (int a = 0; a < me->totcol; a++) {
-    BLO_expand(expander, me->mat[a]);
-  }
-
-  BLO_expand(expander, me->key);
-  BLO_expand(expander, me->texcomesh);
-}
-
 IDTypeInfo IDType_ID_ME = {
     /*id_code*/ ID_ME,
     /*id_filter*/ FILTER_ID_ME,
@@ -400,8 +388,7 @@ IDTypeInfo IDType_ID_ME = {
 
     /*blend_write*/ mesh_blend_write,
     /*blend_read_data*/ mesh_blend_read_data,
-    /*blend_read_lib*/ mesh_blend_read_lib,
-    /*blend_read_expand*/ mesh_read_expand,
+    /*blend_read_after_liblink*/ nullptr,
 
     /*blend_read_undo_preserve*/ nullptr,
 
@@ -486,6 +473,7 @@ static bool is_uv_bool_sublayer(const CustomDataLayer &layer)
 static int customdata_compare(
     CustomData *c1, CustomData *c2, const int total_length, Mesh *m1, const float thresh)
 {
+  using namespace blender;
   CustomDataLayer *l1, *l2;
   int layer_count1 = 0, layer_count2 = 0, j;
   const uint64_t cd_mask_non_generic = CD_MASK_MDEFORMVERT;
@@ -553,18 +541,17 @@ static int customdata_compare(
 
           if (StringRef(l1->name) == ".edge_verts") {
             int etot = m1->totedge;
-            EdgeHash *eh = BLI_edgehash_new_ex(__func__, etot);
-
-            for (j = 0; j < etot; j++, e1++) {
-              BLI_edgehash_insert(eh, (*e1)[0], (*e1)[1], e1);
+            Set<OrderedEdge> ordered_edges;
+            ordered_edges.reserve(etot);
+            for (const int2 value : Span(e1, etot)) {
+              ordered_edges.add(value);
             }
 
-            for (j = 0; j < etot; j++, e2++) {
-              if (!BLI_edgehash_lookup(eh, (*e2)[0], (*e2)[1])) {
+            for (j = 0; j < etot; j++) {
+              if (!ordered_edges.contains(e2[j])) {
                 return MESHCMP_EDGEUNKNOWN;
               }
             }
-            BLI_edgehash_free(eh, nullptr);
           }
           else {
             for (j = 0; j < total_length; j++) {
@@ -1071,9 +1058,6 @@ Mesh *BKE_mesh_new_nomain_from_template_ex(const Mesh *me_src,
     CustomData_add_layer(&me_dst->fdata_legacy, CD_MFACE, CD_SET_DEFAULT, me_dst->totface_legacy);
   }
 
-  /* Expect that normals aren't copied at all, since the destination mesh is new. */
-  BLI_assert(BKE_mesh_vert_normals_are_dirty(me_dst));
-
   return me_dst;
 }
 
@@ -1289,7 +1273,7 @@ float (*BKE_mesh_orco_verts_get(Object *ob))[3]
   return vcos;
 }
 
-void BKE_mesh_orco_verts_transform(Mesh *me, float (*orco)[3], int totvert, int invert)
+void BKE_mesh_orco_verts_transform(Mesh *me, float (*orco)[3], int totvert, const bool invert)
 {
   float texspace_location[3], texspace_size[3];
 
@@ -1795,7 +1779,7 @@ void BKE_mesh_calc_normals_split_ex(const Mesh *mesh,
       mesh->faces(),
       mesh->corner_verts(),
       mesh->corner_edges(),
-      {},
+      mesh->corner_to_face_map(),
       mesh->vert_normals(),
       mesh->face_normals(),
       sharp_edges,

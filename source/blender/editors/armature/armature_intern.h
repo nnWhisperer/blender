@@ -74,6 +74,17 @@ void ARMATURE_OT_layers_show_all(struct wmOperatorType *ot);
 void ARMATURE_OT_armature_layers(struct wmOperatorType *ot);
 void ARMATURE_OT_bone_layers(struct wmOperatorType *ot);
 
+void ARMATURE_OT_collection_add(struct wmOperatorType *ot);
+void ARMATURE_OT_collection_remove(struct wmOperatorType *ot);
+void ARMATURE_OT_collection_move(struct wmOperatorType *ot);
+void ARMATURE_OT_collection_assign(struct wmOperatorType *ot);
+void ARMATURE_OT_collection_unassign(struct wmOperatorType *ot);
+void ARMATURE_OT_collection_select(struct wmOperatorType *ot);
+void ARMATURE_OT_collection_deselect(struct wmOperatorType *ot);
+
+void ARMATURE_OT_move_to_collection(struct wmOperatorType *ot);
+void ARMATURE_OT_assign_to_collection(struct wmOperatorType *ot);
+
 /** \} */
 
 /* -------------------------------------------------------------------- */
@@ -195,8 +206,9 @@ void poseAnim_mapping_autoKeyframe(struct bContext *C,
                                    float cframe);
 
 /**
- * Find the next F-Curve for a PoseChannel with matching path...
- * - path is not just the pfl rna_path, since that path doesn't have property info yet.
+ * Find the next F-Curve for a PoseChannel with matching path.
+ * - `path` is not just the #tPChanFCurveLink (`pfl`) rna_path,
+ *   since that path doesn't have property info yet.
  */
 LinkData *poseAnim_mapping_getNextFCurve(ListBase *fcuLinks, LinkData *prev, const char *path);
 

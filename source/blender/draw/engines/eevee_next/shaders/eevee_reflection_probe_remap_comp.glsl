@@ -1,5 +1,8 @@
+/* SPDX-FileCopyrightText: 2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
-/* Shader to convert cubemap to octahedral projection. */
+/* Shader to convert cube-map to octahedral projection. */
 
 #pragma BLENDER_REQUIRE(eevee_octahedron_lib.glsl)
 

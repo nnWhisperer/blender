@@ -1,9 +1,12 @@
+/* SPDX-FileCopyrightText: 2022-2023 Blender Authors
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later */
 
 /**
  * Forward lighting evaluation: Lighting is evaluated during the geometry rasterization.
  *
  * This is used by alpha blended materials and materials using Shader to RGB nodes.
- **/
+ */
 
 #pragma BLENDER_REQUIRE(common_hair_lib.glsl)
 #pragma BLENDER_REQUIRE(common_math_lib.glsl)

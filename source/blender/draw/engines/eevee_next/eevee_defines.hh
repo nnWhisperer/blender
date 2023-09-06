@@ -13,6 +13,9 @@
 #  pragma once
 #endif
 
+/* Look Up Tables. */
+#define LUT_WORKGROUP_SIZE 16
+
 /* Hierarchical Z down-sampling. */
 #define HIZ_MIP_COUNT 8
 /* NOTE: The shader is written to update 5 mipmaps using LDS. */
@@ -130,11 +133,10 @@
 /* Only during surface shading (forward and deferred eval). */
 #define SHADOW_TILEMAPS_TEX_SLOT 4
 #define SHADOW_ATLAS_TEX_SLOT 5
-#define SSS_TRANSMITTANCE_TEX_SLOT 6
-#define IRRADIANCE_ATLAS_TEX_SLOT 7
-#define REFLECTION_PROBE_TEX_SLOT 8
-#define VOLUME_SCATTERING_TEX_SLOT 9
-#define VOLUME_TRANSMITTANCE_TEX_SLOT 10
+#define IRRADIANCE_ATLAS_TEX_SLOT 6
+#define REFLECTION_PROBE_TEX_SLOT 7
+#define VOLUME_SCATTERING_TEX_SLOT 8
+#define VOLUME_TRANSMITTANCE_TEX_SLOT 9
 
 /* Images. */
 #define RBUFS_COLOR_SLOT 0

@@ -72,7 +72,6 @@
 #include "BKE_node.hh"
 #include "BKE_nla.h"
 #include "BKE_screen.h"
-#include "BKE_simulation_state_serialize.hh"
 #include "BKE_workspace.h"
 
 #include "RNA_access.hh"
@@ -81,7 +80,7 @@
 
 #include "BLO_readfile.h"
 
-#include "readfile.h"
+#include "readfile.hh"
 
 #include "SEQ_channels.h"
 #include "SEQ_effects.h"
@@ -90,7 +89,7 @@
 #include "SEQ_sequencer.h"
 #include "SEQ_time.h"
 
-#include "versioning_common.h"
+#include "versioning_common.hh"
 
 static CLG_LogRef LOG = {"blo.readfile.doversion"};
 
@@ -319,10 +318,10 @@ static void do_versions_idproperty_ui_data(Main *bmain)
     LISTBASE_FOREACH (bNode *, node, &ntree->nodes) {
       version_idproperty_ui_data(node->prop);
     }
-    LISTBASE_FOREACH (bNodeSocket *, socket, &ntree->inputs) {
+    LISTBASE_FOREACH (bNodeSocket *, socket, &ntree->inputs_legacy) {
       version_idproperty_ui_data(socket->prop);
     }
-    LISTBASE_FOREACH (bNodeSocket *, socket, &ntree->outputs) {
+    LISTBASE_FOREACH (bNodeSocket *, socket, &ntree->outputs_legacy) {
       version_idproperty_ui_data(socket->prop);
     }
   }
@@ -545,8 +544,11 @@ static bNodeTree *add_realize_node_tree(Main *bmain)
 {
   bNodeTree *node_tree = ntreeAddTree(bmain, "Realize Instances 2.93 Legacy", "GeometryNodeTree");
 
-  ntreeAddSocketInterface(node_tree, SOCK_IN, "NodeSocketGeometry", "Geometry");
-  ntreeAddSocketInterface(node_tree, SOCK_OUT, "NodeSocketGeometry", "Geometry");
+  node_tree->tree_interface.add_socket("Geometry",
+                                       "",
+                                       "NodeSocketGeometry",
+                                       NODE_INTERFACE_SOCKET_INPUT | NODE_INTERFACE_SOCKET_OUTPUT,
+                                       nullptr);
 
   bNode *group_input = nodeAddStaticNode(nullptr, node_tree, NODE_GROUP_INPUT);
   group_input->locx = -400.0f;
@@ -4516,22 +4518,6 @@ void blo_do_versions_300(FileData *fd, Library * /*lib*/, Main *bmain)
 
   if (!MAIN_VERSION_FILE_ATLEAST(bmain, 306, 11)) {
     BKE_animdata_main_cb(bmain, version_liboverride_nla_frame_start_end, nullptr);
-
-    /* Store simulation bake directory in geometry nodes modifier. */
-    LISTBASE_FOREACH (Object *, ob, &bmain->objects) {
-      LISTBASE_FOREACH (ModifierData *, md, &ob->modifiers) {
-        if (md->type != eModifierType_Nodes) {
-          continue;
-        }
-        NodesModifierData *nmd = reinterpret_cast<NodesModifierData *>(md);
-        if (nmd->simulation_bake_directory) {
-          continue;
-        }
-        const std::string bake_dir = blender::bke::sim::get_default_modifier_bake_directory(
-            *bmain, *ob, *md);
-        nmd->simulation_bake_directory = BLI_strdup(bake_dir.c_str());
-      }
-    }
 
     LISTBASE_FOREACH (bScreen *, screen, &bmain->screens) {
       LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {

@@ -14,10 +14,6 @@
 
 #include "BLI_assert.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct AnimData;
 struct Object;
 
@@ -72,6 +68,9 @@ typedef struct LightProbe {
   float grid_dilation_threshold;
   float grid_dilation_radius;
   char _pad1[4];
+  /** Light intensity clamp. */
+  float grid_clamp_direct;
+  float grid_clamp_indirect;
 
   /** Surface element density for scene surface cache. In surfel per unit distance. */
   float surfel_density;
@@ -81,10 +80,6 @@ typedef struct LightProbe {
    */
   int resolution;
 
-  /** Object to use as a parallax origin. */
-  struct Object *parallax_ob;
-  /** Image to use on as lighting data. */
-  struct Image *image;
   /** Object visibility group, inclusive or exclusive. */
   struct Collection *visibility_grp;
 } LightProbe;
@@ -374,7 +369,3 @@ enum {
 };
 
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif

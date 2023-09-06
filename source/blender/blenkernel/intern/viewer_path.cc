@@ -13,7 +13,7 @@
 
 #include "MEM_guardedalloc.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 using blender::IndexRange;
 using blender::StringRef;
@@ -114,26 +114,6 @@ void BKE_viewer_path_blend_read_data(BlendDataReader *reader, ViewerPath *viewer
       case VIEWER_PATH_ELEM_TYPE_MODIFIER: {
         auto *typed_elem = reinterpret_cast<ModifierViewerPathElem *>(elem);
         BLO_read_data_address(reader, &typed_elem->modifier_name);
-        break;
-      }
-    }
-  }
-}
-
-void BKE_viewer_path_blend_read_lib(BlendLibReader *reader, ID *self_id, ViewerPath *viewer_path)
-{
-  LISTBASE_FOREACH (ViewerPathElem *, elem, &viewer_path->path) {
-    switch (ViewerPathElemType(elem->type)) {
-      case VIEWER_PATH_ELEM_TYPE_ID: {
-        auto *typed_elem = reinterpret_cast<IDViewerPathElem *>(elem);
-        BLO_read_id_address(reader, self_id, &typed_elem->id);
-        break;
-      }
-      case VIEWER_PATH_ELEM_TYPE_MODIFIER:
-      case VIEWER_PATH_ELEM_TYPE_GROUP_NODE:
-      case VIEWER_PATH_ELEM_TYPE_SIMULATION_ZONE:
-      case VIEWER_PATH_ELEM_TYPE_VIEWER_NODE:
-      case VIEWER_PATH_ELEM_TYPE_REPEAT_ZONE: {
         break;
       }
     }

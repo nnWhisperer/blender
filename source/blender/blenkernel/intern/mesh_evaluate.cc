@@ -19,7 +19,6 @@
 #include "BLI_alloca.h"
 #include "BLI_array_utils.hh"
 #include "BLI_bitmap.h"
-#include "BLI_edgehash.h"
 #include "BLI_index_range.hh"
 #include "BLI_math_geom.h"
 #include "BLI_span.hh"
@@ -464,6 +463,10 @@ void BKE_mesh_calc_volume(const float (*vert_positions)[3],
 }
 
 /** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Mesh Displacement Data Flip
+ * \{ */
 
 void BKE_mesh_mdisp_flip(MDisps *md, const bool use_loop_mdisp_flip)
 {

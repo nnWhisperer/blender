@@ -47,7 +47,7 @@ enum eDebugMode : uint32_t {
    */
   DEBUG_LIGHT_CULLING = 1u,
   /**
-   * Show incorrectly downsample tiles in red.
+   * Show incorrectly down-sample tiles in red.
    */
   DEBUG_HIZ_VALIDATION = 2u,
   /**
@@ -78,6 +78,17 @@ enum eDebugMode : uint32_t {
    * Show random color for each tile. Verify distribution and LOD transitions.
    */
   DEBUG_SHADOW_TILEMAP_RANDOM_COLOR = 13u,
+};
+
+/** \} */
+
+/* -------------------------------------------------------------------- */
+/** \name Look-Up Table Generation
+ * \{ */
+
+enum PrecomputeType : uint32_t {
+  LUT_GGX_BRDF_SPLIT_SUM = 0u,
+  LUT_GGX_BTDF_SPLIT_SUM = 1u,
 };
 
 /** \} */
@@ -229,10 +240,12 @@ BLI_STATIC_ASSERT_ALIGN(FilmSample, 16)
 struct FilmData {
   /** Size of the film in pixels. */
   int2 extent;
-  /** Offset of the film in the full-res frame, in pixels. */
+  /** Offset to convert from Display space to Film space, in pixels. */
   int2 offset;
-  /** Extent used by the render buffers when rendering the main views. */
+  /** Size of the render buffers when rendering the main views, in pixels. */
   int2 render_extent;
+  /** Offset to convert from Film space to Render space, in pixels. */
+  int2 render_offset;
   /**
    * Sub-pixel offset applied to the window matrix.
    * NOTE: In final film pixel unit.
@@ -254,7 +267,7 @@ struct FilmData {
   bool1 any_render_pass_2;
   /** Controlled by user in lookdev mode or by render settings. */
   float background_opacity;
-  float _pad0;
+  float _pad0, _pad1, _pad2;
   /** Output counts per type. */
   int color_len, value_len;
   /** Index in color_accum_img or value_accum_img of each pass. -1 if pass is not enabled. */
@@ -459,6 +472,8 @@ struct VolumesInfoData {
   packed_int3 tex_size;
   float light_clamp;
   packed_float3 inv_tex_size;
+  int tile_size;
+  int tile_size_lod;
   float shadow_steps;
   bool1 use_lights;
   bool1 use_soft_shadows;
@@ -466,8 +481,6 @@ struct VolumesInfoData {
   float depth_far;
   float depth_distribution;
   float _pad0;
-  float _pad1;
-  float _pad2;
 };
 BLI_STATIC_ASSERT_ALIGN(VolumesInfoData, 16)
 
@@ -1023,6 +1036,11 @@ struct CaptureInfoData {
   int scene_bound_x_max;
   int scene_bound_y_max;
   int scene_bound_z_max;
+  /* Max intensity a ray can have. */
+  float clamp_direct;
+  float clamp_indirect;
+  float _pad1;
+  float _pad2;
   /** Minimum distance between a grid sample and a surface. Used to compute virtual offset. */
   float min_distance_to_surface;
   /** Maximum world scale offset an irradiance grid sample can be baked with. */
@@ -1240,12 +1258,13 @@ BLI_STATIC_ASSERT_ALIGN(ReflectionProbeData, 16)
 #define UTIL_TEX_UV_BIAS (0.5f / UTIL_TEX_SIZE)
 
 #define UTIL_BLUE_NOISE_LAYER 0
-#define UTIL_LTC_MAT_LAYER 1
-#define UTIL_LTC_MAG_LAYER 2
-#define UTIL_BSDF_LAYER 2
-#define UTIL_BTDF_LAYER 3
-#define UTIL_DISK_INTEGRAL_LAYER 3
-#define UTIL_DISK_INTEGRAL_COMP 2
+#define UTIL_SSS_TRANSMITTANCE_PROFILE_LAYER 1
+#define UTIL_LTC_MAT_LAYER 2
+#define UTIL_LTC_MAG_LAYER 3
+#define UTIL_BSDF_LAYER 3
+#define UTIL_BTDF_LAYER 4
+#define UTIL_DISK_INTEGRAL_LAYER 4
+#define UTIL_DISK_INTEGRAL_COMP 3
 
 /* __cplusplus is true when compiling with MSL, so include if inside a shader. */
 #if !defined(__cplusplus) || defined(GPU_SHADER)
@@ -1265,9 +1284,19 @@ float4 utility_tx_sample(sampler2DArray util_tx, float2 uv, float layer)
 float4 utility_tx_sample_lut(sampler2DArray util_tx, float2 uv, float layer)
 {
   /* Scale and bias coordinates, for correct filtered lookup. */
-  uv = uv * ((UTIL_TEX_SIZE - 1.0) / UTIL_TEX_SIZE) + (0.5 / UTIL_TEX_SIZE);
+  uv = uv * UTIL_TEX_UV_SCALE + UTIL_TEX_UV_BIAS;
   return textureLod(util_tx, float3(uv, layer), 0.0);
 }
+
+/* Sample LTC or BSDF LUTs with `cos_theta` and `roughness` as inputs. */
+float4 utility_tx_sample_lut(sampler2DArray util_tx, float cos_theta, float roughness, float layer)
+{
+  /* LUTs are parameterized by `sqrt(1.0 - cos_theta)` for more precision near grazing incidence.
+   */
+  vec2 coords = vec2(roughness, sqrt(clamp(1.0 - cos_theta, 0.0, 1.0)));
+  return utility_tx_sample_lut(util_tx, coords, layer);
+}
+
 #endif
 
 /** \} */

@@ -45,7 +45,7 @@
 #include "SEQ_time.h"
 #include "SEQ_utils.h"
 
-#include "BLO_read_write.h"
+#include "BLO_read_write.hh"
 
 #include "image_cache.h"
 #include "prefetch.h"
@@ -856,88 +856,6 @@ void SEQ_blend_read(BlendDataReader *reader, ListBase *seqbase)
   SEQ_for_each_callback(seqbase, seq_read_data_cb, reader);
 }
 
-struct Read_lib_data {
-  BlendLibReader *reader;
-  Scene *scene;
-};
-
-static bool seq_read_lib_cb(Sequence *seq, void *user_data)
-{
-  Read_lib_data *data = (Read_lib_data *)user_data;
-  BlendLibReader *reader = data->reader;
-  Scene *sce = data->scene;
-
-  IDP_BlendReadLib(reader, &sce->id, seq->prop);
-
-  if (seq->ipo) {
-    /* XXX: deprecated - old animation system. */
-    BLO_read_id_address(reader, &sce->id, &seq->ipo);
-  }
-  if (seq->scene) {
-    BLO_read_id_address(reader, &sce->id, &seq->scene);
-  }
-  if (seq->clip) {
-    BLO_read_id_address(reader, &sce->id, &seq->clip);
-  }
-  if (seq->mask) {
-    BLO_read_id_address(reader, &sce->id, &seq->mask);
-  }
-  if (seq->scene_camera) {
-    BLO_read_id_address(reader, &sce->id, &seq->scene_camera);
-  }
-  if (seq->sound) {
-    BLO_read_id_address(reader, &sce->id, &seq->sound);
-  }
-  if (seq->type == SEQ_TYPE_TEXT) {
-    TextVars *t = static_cast<TextVars *>(seq->effectdata);
-    BLO_read_id_address(reader, &sce->id, &t->text_font);
-  }
-
-  SEQ_modifier_blend_read_lib(reader, sce, &seq->modifiers);
-
-  return true;
-}
-
-void SEQ_blend_read_lib(BlendLibReader *reader, Scene *scene, ListBase *seqbase)
-{
-  Read_lib_data data = {reader, scene};
-  SEQ_for_each_callback(seqbase, seq_read_lib_cb, &data);
-}
-
-static bool seq_blend_read_expand(Sequence *seq, void *user_data)
-{
-  BlendExpander *expander = (BlendExpander *)user_data;
-
-  IDP_BlendReadExpand(expander, seq->prop);
-
-  if (seq->scene) {
-    BLO_expand(expander, seq->scene);
-  }
-  if (seq->scene_camera) {
-    BLO_expand(expander, seq->scene_camera);
-  }
-  if (seq->clip) {
-    BLO_expand(expander, seq->clip);
-  }
-  if (seq->mask) {
-    BLO_expand(expander, seq->mask);
-  }
-  if (seq->sound) {
-    BLO_expand(expander, seq->sound);
-  }
-
-  if (seq->type == SEQ_TYPE_TEXT && seq->effectdata) {
-    TextVars *data = static_cast<TextVars *>(seq->effectdata);
-    BLO_expand(expander, data->text_font);
-  }
-  return true;
-}
-
-void SEQ_blend_read_expand(BlendExpander *expander, ListBase *seqbase)
-{
-  SEQ_for_each_callback(seqbase, seq_blend_read_expand, expander);
-}
-
 static bool seq_doversion_250_sound_proxy_update_cb(Sequence *seq, void *user_data)
 {
   Main *bmain = static_cast<Main *>(user_data);
@@ -1000,6 +918,15 @@ static bool seq_update_seq_cb(Sequence *seq, void *user_data)
       if (scene->id.recalc & ID_RECALC_AUDIO || seq->sound->id.recalc & ID_RECALC_AUDIO) {
         BKE_sound_update_scene_sound(seq->scene_sound, seq->sound);
       }
+
+      void *sound = seq->sound->playback_handle;
+
+      if (!BLI_listbase_is_empty(&seq->modifiers)) {
+        LISTBASE_FOREACH (SequenceModifierData *, smd, &seq->modifiers) {
+          sound = SEQ_sound_modifier_recreator(seq, smd, sound);
+        }
+      }
+      BKE_sound_update_sequence_handle(seq->scene_sound, sound);
     }
     BKE_sound_set_scene_sound_volume(
         seq->scene_sound, seq->volume, (seq->flag & SEQ_AUDIO_VOLUME_ANIMATED) != 0);

@@ -503,7 +503,7 @@ struct uiAfterFunc {
   uiBlockInteraction_CallbackData custom_interaction_callbacks;
   uiBlockInteraction_Handle *custom_interaction_handle;
 
-  bContextStore *context;
+  std::optional<bContextStore> context;
 
   char undostr[BKE_UNDO_STR_MAX];
   char drawstr[UI_MAX_DRAW_STR];
@@ -789,7 +789,7 @@ static void ui_handle_afterfunc_add_operator_ex(wmOperatorType *ot,
   }
 
   if (context_but && context_but->context) {
-    after->context = CTX_store_copy(context_but->context);
+    after->context = *context_but->context;
   }
 
   if (context_but) {
@@ -905,7 +905,7 @@ static void ui_apply_but_func(bContext *C, uiBut *but)
   }
 
   if (but->context) {
-    after->context = CTX_store_copy(but->context);
+    after->context = *but->context;
   }
 
   ui_but_drawstr_without_sep_char(but, after->drawstr, sizeof(after->drawstr));
@@ -1020,7 +1020,7 @@ static void ui_apply_but_funcs_after(bContext *C)
     MEM_delete(afterf);
 
     if (after.context) {
-      CTX_store_set(C, after.context);
+      CTX_store_set(C, &after.context.value());
     }
 
     if (after.popup_op) {
@@ -1053,7 +1053,6 @@ static void ui_apply_but_funcs_after(bContext *C)
 
     if (after.context) {
       CTX_store_set(C, nullptr);
-      CTX_store_free(after.context);
     }
 
     if (after.func) {
@@ -3237,10 +3236,18 @@ static void ui_textedit_move(uiBut *but,
 
     if (select) {
       if (has_sel == false) {
-        data->sel_pos_init = pos_prev;
+        /* Holding shift but with no previous selection. */
+        but->selsta = but->pos;
+        but->selend = pos_prev;
       }
-      but->selsta = but->pos;
-      but->selend = data->sel_pos_init;
+      else if (but->selsta == pos_prev) {
+        /* Previous selection, extending start position. */
+        but->selsta = but->pos;
+      }
+      else {
+        /* Previous selection, extending end position. */
+        but->selend = but->pos;
+      }
     }
     if (but->selend < but->selsta) {
       std::swap(but->selsta, but->selend);
@@ -3473,7 +3480,12 @@ static void ui_textedit_begin(bContext *C, uiBut *but, uiHandleButtonData *data)
   /* set cursor pos to the end of the text */
   but->editstr = data->str;
   but->pos = len;
-  but->selsta = 0;
+  if (bool(but->flag2 & UI_BUT2_ACTIVATE_ON_INIT_NO_SELECT)) {
+    but->selsta = len;
+  }
+  else {
+    but->selsta = 0;
+  }
   but->selend = len;
 
   /* Initialize undo history tracking. */
@@ -4309,6 +4321,9 @@ static void ui_block_open_begin(bContext *C, uiBut *but, uiHandleButtonData *dat
   }
   else if (menufunc) {
     data->menu = ui_popup_menu_create(C, data->region, but, menufunc, arg);
+    if (MenuType *mt = UI_but_menutype_get(but)) {
+      STRNCPY(data->menu->menu_idname, mt->idname);
+    }
     if (but->block->handle) {
       data->menu->popup = but->block->handle->popup;
     }
@@ -4892,9 +4907,9 @@ static int ui_do_but_EXIT(bContext *C, uiBut *but, uiHandleButtonData *data, con
 
     if (ELEM(event->type, LEFTMOUSE, EVT_PADENTER, EVT_RETKEY) && event->val == KM_PRESS) {
       int ret = WM_UI_HANDLER_BREAK;
-      /* XXX: (a bit ugly) Special case handling for file-browser drag button. */
-      if (ui_but_drag_is_draggable(but) && but->imb &&
-          ui_but_contains_point_px_icon(but, data->region, event))
+      /* XXX: (a bit ugly) Special case handling for file-browser drag buttons (icon and filename
+       * label). */
+      if (ui_but_drag_is_draggable(but) && ui_but_contains_point_px_icon(but, data->region, event))
       {
         ret = WM_UI_HANDLER_CONTINUE;
       }
@@ -6362,10 +6377,9 @@ static int ui_do_but_COLOR(bContext *C, uiBut *but, uiHandleButtonData *data, co
             }
 
             if (updated) {
-              PointerRNA brush_ptr;
               PropertyRNA *brush_color_prop;
 
-              RNA_id_pointer_create(&brush->id, &brush_ptr);
+              PointerRNA brush_ptr = RNA_id_pointer_create(&brush->id);
               brush_color_prop = RNA_struct_find_property(&brush_ptr, "color");
               RNA_property_update(C, &brush_ptr, brush_color_prop);
             }
@@ -9101,6 +9115,11 @@ void ui_but_activate_event(bContext *C, ARegion *region, uiBut *but)
 
 void ui_but_activate_over(bContext *C, ARegion *region, uiBut *but)
 {
+  /* If there is an active button then add UI_SELECT_DRAW to the to-be-activated one. */
+  if (ui_region_find_active_but(CTX_wm_region(C))) {
+    but->flag |= UI_SELECT_DRAW;
+  }
+
   button_activate_init(C, region, but, BUTTON_ACTIVATE_OVER);
 }
 
@@ -10263,6 +10282,41 @@ float ui_block_calc_pie_segment(uiBlock *block, const float event_xy[2])
   return len;
 }
 
+static int ui_handle_menu_letter_press(
+    bContext *C, ARegion *region, uiPopupBlockHandle *menu, const wmEvent *event, uiBlock *block)
+{
+  /* Start menu search on key press if enabled. */
+  if (menu->menu_idname[0]) {
+    MenuType *mt = WM_menutype_find(menu->menu_idname, false);
+    if (bool(mt->flag & MenuTypeFlag::SearchOnKeyPress)) {
+      uiAfterFunc *after = ui_afterfunc_new();
+      wmOperatorType *ot = WM_operatortype_find("WM_OT_search_single_menu", false);
+      after->optype = ot;
+      after->opcontext = WM_OP_INVOKE_DEFAULT;
+      after->opptr = MEM_cnew<PointerRNA>(__func__);
+      WM_operator_properties_create_ptr(after->opptr, ot);
+      RNA_string_set(after->opptr, "menu_idname", menu->menu_idname);
+      RNA_string_set(after->opptr, "initial_query", event->utf8_buf);
+      menu->menuretval = UI_RETURN_OK;
+      return WM_UI_HANDLER_BREAK;
+    }
+  }
+
+  /* Handle accelerator keys that allow "pressing" a menu entry by pressing a single key. */
+  LISTBASE_FOREACH (uiBut *, but, &block->buttons) {
+    if (!(but->flag & UI_BUT_DISABLED) && but->menu_key == event->type) {
+      if (but->type == UI_BTYPE_BUT) {
+        UI_but_execute(C, region, but);
+      }
+      else {
+        ui_handle_button_activate_by_type(C, region, but);
+      }
+      return WM_UI_HANDLER_BREAK;
+    }
+  }
+  return WM_UI_HANDLER_CONTINUE;
+}
+
 static int ui_handle_menu_event(bContext *C,
                                 const wmEvent *event,
                                 uiPopupBlockHandle *menu,
@@ -10475,19 +10529,18 @@ static int ui_handle_menu_event(bContext *C,
             if (val == KM_PRESS) {
               /* Determine scroll operation. */
               uiMenuScrollType scrolltype;
-              const bool ui_block_flipped = (block->flag & UI_BLOCK_IS_FLIP) != 0;
 
               if (ELEM(type, EVT_PAGEUPKEY, EVT_HOMEKEY)) {
-                scrolltype = ui_block_flipped ? MENU_SCROLL_TOP : MENU_SCROLL_BOTTOM;
+                scrolltype = MENU_SCROLL_TOP;
               }
               else if (ELEM(type, EVT_PAGEDOWNKEY, EVT_ENDKEY)) {
-                scrolltype = ui_block_flipped ? MENU_SCROLL_BOTTOM : MENU_SCROLL_TOP;
+                scrolltype = MENU_SCROLL_BOTTOM;
               }
               else if (ELEM(type, EVT_UPARROWKEY, WHEELUPMOUSE)) {
-                scrolltype = ui_block_flipped ? MENU_SCROLL_UP : MENU_SCROLL_DOWN;
+                scrolltype = MENU_SCROLL_UP;
               }
               else {
-                scrolltype = ui_block_flipped ? MENU_SCROLL_DOWN : MENU_SCROLL_UP;
+                scrolltype = MENU_SCROLL_DOWN;
               }
 
               if (ui_menu_pass_event_to_parent_if_nonactive(
@@ -10704,20 +10757,7 @@ static int ui_handle_menu_event(bContext *C,
                     menu, but, level, is_parent_menu, retval)) {
               break;
             }
-
-            for (but = static_cast<uiBut *>(block->buttons.first); but; but = but->next) {
-              if (!(but->flag & UI_BUT_DISABLED) && but->menu_key == event->type) {
-                if (but->type == UI_BTYPE_BUT) {
-                  UI_but_execute(C, region, but);
-                }
-                else {
-                  ui_handle_button_activate_by_type(C, region, but);
-                }
-                break;
-              }
-            }
-
-            retval = WM_UI_HANDLER_BREAK;
+            retval = ui_handle_menu_letter_press(C, region, menu, event, block);
           }
           break;
         }
@@ -11045,10 +11085,10 @@ static int ui_pie_handler(bContext *C, const wmEvent *event, uiPopupBlockHandle 
   if (menu->scrolltimer == nullptr) {
     menu->scrolltimer = WM_event_timer_add(
         CTX_wm_manager(C), CTX_wm_window(C), TIMER, PIE_MENU_INTERVAL);
-    menu->scrolltimer->duration = 0.0;
+    menu->scrolltimer->time_duration = 0.0;
   }
 
-  const double duration = menu->scrolltimer->duration;
+  const double duration = menu->scrolltimer->time_duration;
 
   float event_xy[2] = {float(event->xy[0]), float(event->xy[1])};
 
