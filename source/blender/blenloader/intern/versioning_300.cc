@@ -69,8 +69,8 @@
 #include "BKE_main_namemap.h"
 #include "BKE_mesh.hh"
 #include "BKE_modifier.h"
-#include "BKE_node.hh"
 #include "BKE_nla.h"
+#include "BKE_node.hh"
 #include "BKE_screen.h"
 #include "BKE_workspace.h"
 
@@ -1060,23 +1060,17 @@ static void version_nla_action_strip_hold(Main *bmain)
   ID *id;
   FOREACH_MAIN_ID_BEGIN (bmain, id) {
     AnimData *adt = BKE_animdata_from_id(id);
-    if (adt == nullptr) {
+    /* We only want to preserve existing behavior if there's an action and 1 or more NLA strips. */
+    if (adt == nullptr || BLI_listbase_is_empty(&adt->nla_tracks) || adt->action == nullptr ||
+        adt->act_extendmode != NLASTRIP_EXTEND_HOLD_FORWARD)
+    {
       continue;
     }
 
-    if (&adt->nla_tracks != nullptr && adt->action != nullptr) {
-      bool has_nla_strip = false;
-
-      LISTBASE_FOREACH (NlaTrack *, track, &adt->nla_tracks) {
-        if(BLI_listbase_count(&track->strips) > 0){
-          has_nla_strip = true;
-        }
-      }
-      /* Only update action extend mode if there's a strip present. */
-      if (adt->act_extendmode == NLASTRIP_EXTEND_HOLD_FORWARD && has_nla_strip) {
-        adt->act_extendmode = NLASTRIP_EXTEND_HOLD;
-      }
+    if (BKE_nlatrack_has_strips(&adt->nla_tracks)) {
+      adt->act_extendmode = NLASTRIP_EXTEND_HOLD;
     }
+
     FOREACH_MAIN_ID_END;
   }
 }
