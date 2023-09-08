@@ -1061,7 +1061,7 @@ static void version_nla_action_strip_hold(Main *bmain)
   FOREACH_MAIN_ID_BEGIN (bmain, id) {
     AnimData *adt = BKE_animdata_from_id(id);
     /* We only want to preserve existing behavior if there's an action and 1 or more NLA strips. */
-    if (adt == nullptr || BLI_listbase_is_empty(&adt->nla_tracks) || adt->action == nullptr ||
+    if (adt == nullptr || adt->action == nullptr ||
         adt->act_extendmode != NLASTRIP_EXTEND_HOLD_FORWARD)
     {
       continue;
