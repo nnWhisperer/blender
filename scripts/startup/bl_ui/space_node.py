@@ -241,8 +241,6 @@ class NODE_MT_add(bpy.types.Menu):
         elif snode.tree_type == 'ShaderNodeTree':
             layout.menu_contents("NODE_MT_shader_node_add_all")
         elif snode.tree_type == 'TextureNodeTree':
-            props = layout.operator("node.add_search", text="Search...", icon='VIEWZOOM')
-            layout.separator()
             layout.menu_contents("NODE_MT_texture_node_add_all")
         elif nodeitems_utils.has_node_categories(context):
             # Actual node sub-menus are defined by draw functions from node categories.
@@ -931,7 +929,6 @@ class NODE_PT_node_tree_interface(Panel):
                 active_item.draw(context, layout)
 
             if active_item.item_type == 'PANEL':
-                layout.prop(active_item, "name")
                 layout.prop(active_item, "description")
                 layout.prop(active_item, "default_closed", text="Closed by Default")
 

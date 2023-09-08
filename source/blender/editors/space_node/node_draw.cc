@@ -526,7 +526,6 @@ static void node_update_basis_from_declaration(
       if (!is_parent_collapsed) {
         locy -= NODE_DY;
         is_first = false;
-        need_spacer_after_item = true;
       }
 
       SET_FLAG_FROM_TEST(
@@ -1758,6 +1757,12 @@ static void node_draw_panels_background(const bNode &node, uiBlock &block)
 
   const nodes::NodeDeclaration &decl = *node.declaration();
   const rctf &rct = node.runtime->totr;
+  float color_panel[4];
+  UI_GetThemeColorBlend4f(TH_BACK, TH_NODE, 0.2f, color_panel);
+
+  /* True if the last panel is open, draw bottom gap as background. */
+  bool is_last_panel_visible = false;
+  float last_panel_content_y = 0.0f;
 
   int panel_i = 0;
   for (const nodes::ItemDeclarationPtr &item_decl : decl.items) {
@@ -1769,31 +1774,38 @@ static void node_draw_panels_background(const bNode &node, uiBlock &block)
     }
 
     const bNodePanelState &state = node.panel_states()[panel_i];
+    const bke::bNodePanelRuntime &runtime = node.runtime->panels[panel_i];
+
     /* Don't draw hidden or collapsed panels. */
-    if (state.is_collapsed() || state.is_parent_collapsed()) {
+    const bool is_visible = !(state.is_collapsed() || state.is_parent_collapsed());
+    is_last_panel_visible = is_visible;
+    last_panel_content_y = runtime.max_content_y;
+    if (!is_visible) {
       ++panel_i;
       continue;
     }
-    const bke::bNodePanelRuntime &runtime = node.runtime->panels[panel_i];
-
-    const rctf content_rect = {
-        rct.xmin,
-        rct.xmax,
-        runtime.min_content_y,
-        runtime.max_content_y,
-    };
 
     UI_block_emboss_set(&block, UI_EMBOSS_NONE);
 
     /* Panel background. */
-    float color_panel[4];
-    UI_GetThemeColorBlend4f(TH_BACK, TH_NODE, 0.2f, color_panel);
+    const rctf content_rect = {rct.xmin, rct.xmax, runtime.min_content_y, runtime.max_content_y};
     UI_draw_roundbox_corner_set(UI_CNR_NONE);
     UI_draw_roundbox_4fv(&content_rect, true, BASIS_RAD, color_panel);
 
     UI_block_emboss_set(&block, UI_EMBOSS);
 
     ++panel_i;
+  }
+
+  /* If last item is an open panel, extend the panel background to cover the bottom border. */
+  if (is_last_panel_visible) {
+    UI_block_emboss_set(&block, UI_EMBOSS_NONE);
+
+    const rctf content_rect = {rct.xmin, rct.xmax, rct.ymin, last_panel_content_y};
+    UI_draw_roundbox_corner_set(UI_CNR_BOTTOM_RIGHT | UI_CNR_BOTTOM_LEFT);
+    UI_draw_roundbox_4fv(&content_rect, true, BASIS_RAD, color_panel);
+
+    UI_block_emboss_set(&block, UI_EMBOSS);
   }
 }
 
@@ -1857,7 +1869,7 @@ static void node_draw_panels(bNodeTree &ntree, const bNode &node, uiBlock &block
                           panel_decl->name.c_str(),
                           int(rct.xmin + NODE_MARGIN_X + 0.4f),
                           int(runtime.location_y - NODE_DYS),
-                          short(rct.xmax - rct.xmin - 0.35f * U.widget_unit),
+                          short(rct.xmax - rct.xmin - (30.0f * UI_SCALE_FAC)),
                           short(NODE_DY),
                           nullptr,
                           0,
@@ -2568,31 +2580,7 @@ static void node_draw_basis(const bContext &C,
   /* Show/hide icons. */
   float iconofs = rct.xmax - 0.35f * U.widget_unit;
 
-  /* Preview. */
-  if (node_is_previewable(snode, ntree, node)) {
-    iconofs -= iconbutw;
-    UI_block_emboss_set(&block, UI_EMBOSS_NONE);
-    uiBut *but = uiDefIconBut(&block,
-                              UI_BTYPE_BUT_TOGGLE,
-                              0,
-                              ICON_MATERIAL,
-                              iconofs,
-                              rct.ymax - NODE_DY,
-                              iconbutw,
-                              UI_UNIT_Y,
-                              nullptr,
-                              0,
-                              0,
-                              0,
-                              0,
-                              "");
-    UI_but_func_set(but,
-                    node_toggle_button_cb,
-                    POINTER_FROM_INT(node.identifier),
-                    (void *)"NODE_OT_preview_toggle");
-    UI_block_emboss_set(&block, UI_EMBOSS);
-  }
-  /* Group edit. */
+  /* Group edit. This icon should be the first for the node groups. */
   if (node.type == NODE_GROUP) {
     iconofs -= iconbutw;
     UI_block_emboss_set(&block, UI_EMBOSS_NONE);
@@ -2617,6 +2605,30 @@ static void node_draw_basis(const bContext &C,
     if (node.id) {
       UI_but_icon_indicator_number_set(but, ID_REAL_USERS(node.id));
     }
+    UI_block_emboss_set(&block, UI_EMBOSS);
+  }
+  /* Preview. */
+  if (node_is_previewable(snode, ntree, node)) {
+    iconofs -= iconbutw;
+    UI_block_emboss_set(&block, UI_EMBOSS_NONE);
+    uiBut *but = uiDefIconBut(&block,
+                              UI_BTYPE_BUT_TOGGLE,
+                              0,
+                              ICON_MATERIAL,
+                              iconofs,
+                              rct.ymax - NODE_DY,
+                              iconbutw,
+                              UI_UNIT_Y,
+                              nullptr,
+                              0,
+                              0,
+                              0,
+                              0,
+                              "");
+    UI_but_func_set(but,
+                    node_toggle_button_cb,
+                    POINTER_FROM_INT(node.identifier),
+                    (void *)"NODE_OT_preview_toggle");
     UI_block_emboss_set(&block, UI_EMBOSS);
   }
   if (node.type == NODE_CUSTOM && node.typeinfo->ui_icon != ICON_NONE) {
