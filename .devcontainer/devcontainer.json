@@ -1,0 +1,31 @@
+{
+"image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+        "password": ""
+    },
+    "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+        "packages": "build-essential,git,subversion,cmake,libx11-dev,libxxf86vm-dev,libxcursor-dev,libxi-dev,libxrandr-dev,libxinerama-dev,libegl-dev,libwayland-dev,wayland-protocols,libxkbcommon-dev,libdbus-1-dev,linux-libc-dev"
+    }
+  },
+  "customizations": {
+		"vscode": {
+			"[python]": {
+				"editor.defaultFormatter": "ms-python.black-formatter"
+			  },
+			"extensions": [
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack",
+				"ms-vscode.makefile-tools",
+				"jbenden.c-cpp-flylint",
+				"xaver.clang-format",
+				"cschlosser.doxdocgen",
+				"gruntfuggly.todo-tree",
+				"streetsidesoftware.code-spell-checker",
+				"github.vscode-github-actions",
+				"ms-python.python",
+				"ms-python.black-formatter"
+			]
+		}
+	}
+}
