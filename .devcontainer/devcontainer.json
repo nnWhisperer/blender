@@ -20,6 +20,7 @@
 				"editor.defaultFormatter": "ms-python.black-formatter"
 			  },
 			"editor.formatOnSave": true,
+			"editor.formatOnSaveMode": "modifications",
 			"extensions": [
 				"ms-vscode.cpptools",
 				"ms-vscode.cpptools-extension-pack",
