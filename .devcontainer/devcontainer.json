@@ -1,12 +1,17 @@
 {
-"image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
     "ghcr.io/devcontainers/features/desktop-lite:1": {
         "password": ""
     },
     "ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
         "packages": "build-essential,git,subversion,cmake,libx11-dev,libxxf86vm-dev,libxcursor-dev,libxi-dev,libxrandr-dev,libxinerama-dev,libegl-dev,libwayland-dev,wayland-protocols,libxkbcommon-dev,libdbus-1-dev,linux-libc-dev"
-    }
+	},
+	"ghcr.io/dhoeric/features/act:1": {},
+	"ghcr.io/devcontainers-contrib/features/black:2": {},
+	"ghcr.io/devcontainers-contrib/features/pipx-package:1": {
+		"package": "gorilla-cli"
+	}
   },
   "customizations": {
 		"vscode": {
