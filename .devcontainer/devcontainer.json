@@ -13,17 +13,18 @@
 		"package": "gorilla-cli"
 	}
   },
+"postCreateCommand": "mkdir -p /workspaces/lib && cd /workspaces/lib && svn checkout https://svn.blender.org/svnroot/bf-blender/trunk/lib/linux_x86_64_glibc_228 && cd /workspaces/blender && make update",
   "customizations": {
 		"vscode": {
 			"[python]": {
 				"editor.defaultFormatter": "ms-python.black-formatter"
 			  },
+			"editor.formatOnSave": true,
 			"extensions": [
 				"ms-vscode.cpptools",
 				"ms-vscode.cpptools-extension-pack",
 				"ms-vscode.makefile-tools",
 				"jbenden.c-cpp-flylint",
-				"xaver.clang-format",
 				"cschlosser.doxdocgen",
 				"streetsidesoftware.code-spell-checker",
 				"github.vscode-github-actions",
