@@ -19,8 +19,8 @@
 			"[python]": {
 				"editor.defaultFormatter": "ms-python.black-formatter"
 			  },
-			"editor.formatOnSave": true,
 			"editor.formatOnSaveMode": "modifications",
+			"editor.formatOnSave": true,
 			"extensions": [
 				"ms-vscode.cpptools",
 				"ms-vscode.cpptools-extension-pack",
