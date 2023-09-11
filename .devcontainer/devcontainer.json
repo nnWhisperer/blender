@@ -25,7 +25,6 @@
 				"jbenden.c-cpp-flylint",
 				"xaver.clang-format",
 				"cschlosser.doxdocgen",
-				"gruntfuggly.todo-tree",
 				"streetsidesoftware.code-spell-checker",
 				"github.vscode-github-actions",
 				"ms-python.python",
