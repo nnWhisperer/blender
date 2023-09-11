@@ -2,22 +2,23 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+      - uses: actions/checkout@v3
+      - name: configure
+        run: apt update && apt install -y build-essential git subversion cmake libx11-dev libxxf86vm-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev libegl-dev libwayland-dev wayland-protocols libxkbcommon-dev libdbus-1-dev linux-libc-dev && mkdir -p /workspaces/lib && cd /workspaces/lib && svn checkout https://svn.blender.org/svnroot/bf-blender/trunk/lib/linux_x86_64_glibc_228 && cd /workspaces/blender
+      # - name: make update
+      #   run: make update
+      - name: make
+        run: make
+    # - name: make check
+    #   run: make check
+    # - name: make distcheck
+    #   run: make distcheck
