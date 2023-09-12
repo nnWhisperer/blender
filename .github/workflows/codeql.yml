@@ -82,6 +82,11 @@ jobs:
       run: make
       working-directory: ./blender
 
+    # Remove unnecessary build files to free up space, only for C++
+    - name: Clean build files (C++ only)
+      if: matrix.language == 'cpp'
+      run: make clean  # Replace with your clean command
+
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
       with:
