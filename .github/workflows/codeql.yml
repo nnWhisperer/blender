@@ -86,6 +86,7 @@ jobs:
     - name: Clean build files (C++ only)
       if: matrix.language == 'cpp'
       run: make clean  # Replace with your clean command
+      working-directory: ./blender
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
