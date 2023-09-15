@@ -88,7 +88,7 @@ enum eDebugMode : uint32_t {
 
 enum PrecomputeType : uint32_t {
   LUT_GGX_BRDF_SPLIT_SUM = 0u,
-  LUT_GGX_BTDF_SPLIT_SUM = 1u,
+  LUT_GGX_BSDF_SPLIT_SUM = 1u,
 };
 
 /** \} */
@@ -267,12 +267,13 @@ struct FilmData {
   bool1 any_render_pass_2;
   /** Controlled by user in lookdev mode or by render settings. */
   float background_opacity;
-  float _pad0, _pad1, _pad2;
+  float _pad0, _pad1;
   /** Output counts per type. */
   int color_len, value_len;
   /** Index in color_accum_img or value_accum_img of each pass. -1 if pass is not enabled. */
   int mist_id;
   int normal_id;
+  int position_id;
   int vector_id;
   int diffuse_light_id;
   int diffuse_color_id;
@@ -364,6 +365,7 @@ struct RenderBuffersInfoData {
   /* Color. */
   int color_len;
   int normal_id;
+  int position_id;
   int diffuse_light_id;
   int diffuse_color_id;
   int specular_light_id;
@@ -375,6 +377,7 @@ struct RenderBuffersInfoData {
   int value_len;
   int shadow_id;
   int ambient_occlusion_id;
+  int _pad0, _pad1, _pad2;
 };
 BLI_STATIC_ASSERT_ALIGN(RenderBuffersInfoData, 16)
 
@@ -1311,6 +1314,23 @@ float4 utility_tx_sample_lut(sampler2DArray util_tx, float2 uv, float layer)
   /* Scale and bias coordinates, for correct filtered lookup. */
   uv = uv * UTIL_TEX_UV_SCALE + UTIL_TEX_UV_BIAS;
   return textureLod(util_tx, float3(uv, layer), 0.0);
+}
+
+/* Sample GGX BSDF LUT. */
+float4 utility_tx_sample_bsdf_lut(sampler2DArray util_tx, float2 uv, float layer)
+{
+  /* Scale and bias coordinates, for correct filtered lookup. */
+  uv = uv * UTIL_TEX_UV_SCALE + UTIL_TEX_UV_BIAS;
+  layer = layer * UTIL_BTDF_LAYER_COUNT + UTIL_BTDF_LAYER;
+
+  float layer_floored;
+  float interp = modf(layer, layer_floored);
+
+  float4 tex_low = textureLod(util_tx, float3(uv, layer_floored), 0.0);
+  float4 tex_high = textureLod(util_tx, float3(uv, layer_floored + 1.0), 0.0);
+
+  /* Manual trilinear interpolation. */
+  return mix(tex_low, tex_high, interp);
 }
 
 /* Sample LTC or BSDF LUTs with `cos_theta` and `roughness` as inputs. */

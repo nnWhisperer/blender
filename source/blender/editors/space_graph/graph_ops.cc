@@ -459,7 +459,7 @@ void graphedit_operatortypes()
   WM_operatortype_append(GRAPH_OT_interpolation_type);
   WM_operatortype_append(GRAPH_OT_extrapolation_type);
   WM_operatortype_append(GRAPH_OT_easing_type);
-  WM_operatortype_append(GRAPH_OT_sample);
+  WM_operatortype_append(GRAPH_OT_bake_keys);
   WM_operatortype_append(GRAPH_OT_keys_to_samples);
   WM_operatortype_append(GRAPH_OT_samples_to_keys);
   WM_operatortype_append(GRAPH_OT_sound_to_samples);
@@ -522,7 +522,7 @@ void ED_operatormacros_graph()
 void graphedit_keymap(wmKeyConfig *keyconf)
 {
   /* keymap for all regions */
-  WM_keymap_ensure(keyconf, "Graph Editor Generic", SPACE_GRAPH, 0);
+  WM_keymap_ensure(keyconf, "Graph Editor Generic", SPACE_GRAPH, RGN_TYPE_WINDOW);
 
   /* channels */
   /* Channels are not directly handled by the Graph Editor module,
@@ -533,7 +533,7 @@ void graphedit_keymap(wmKeyConfig *keyconf)
    */
 
   /* keyframes */
-  WM_keymap_ensure(keyconf, "Graph Editor", SPACE_GRAPH, 0);
+  WM_keymap_ensure(keyconf, "Graph Editor", SPACE_GRAPH, RGN_TYPE_WINDOW);
 }
 
 /** \} */
