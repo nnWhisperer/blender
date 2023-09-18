@@ -26,7 +26,7 @@ jobs:
         run: mkdir lib && cd lib
         working-directory: .
       - name: install lib dev dependencies
-        run: apt install -y autoconf automake bison libtool yasm tcl ninja-build meson python3-mako patchelf flex libxt-dev
+        run: sudo apt install -y autoconf automake bison libtool yasm tcl ninja-build meson python3-mako patchelf flex libxt-dev
       # - name: make update
       #   run: make update
       - name: make deps
