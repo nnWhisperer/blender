@@ -1,0 +1,34 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: ["build-deps"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+            set-safe-directory: ..
+            path: ./blender
+      - name: configure
+        run: sudo apt update && sudo apt install -y build-essential git subversion cmake libx11-dev libxxf86vm-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev libegl-dev libwayland-dev wayland-protocols libxkbcommon-dev libdbus-1-dev linux-libc-dev
+      - name: lib files
+        run: mkdir lib && cd lib
+        working-directory: .
+      - name: install lib dev dependencies
+        run: apt install -y autoconf automake bison libtool yasm tcl ninja-build meson python3-mako patchelf flex libxt-dev
+      # - name: make update
+      #   run: make update
+      - name: make deps
+        run: make deps
+        working-directory: ./blender
+      - name: make
+        run: make
+        working-directory: ./blender
+    # - name: make check
+    #   run: make check
+    # - name: make distcheck
+    #   run: make distcheck
